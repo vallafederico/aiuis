@@ -1,16 +1,19 @@
 import { Title } from "@solidjs/meta";
 
 import Section from "~/components/Section";
+import Aa from "~/components/Aa";
 
 import { setLocationCallback } from "~/hooks/useLocationCallback";
 import { animateAlpha } from "~/animation/alpha.js";
 
 import { queryFaqAi } from "~/ais/faq";
 
-const queryFaq = async () => {
-  const response = await queryFaqAi();
-  console.log("response: ", response);
-};
+const links = [
+  {
+    label: "Form Faqs",
+    to: "/interface/form-faq",
+  },
+];
 
 export default function Home() {
   setLocationCallback();
@@ -21,9 +24,13 @@ export default function Home() {
       <Section class="px-gx h-[50vh]">
         <h1 use:animateAlpha>Home</h1>
 
-        <div class="py-[20vh]">
-          <button onClick={queryFaq}>Query Faq</button>
-        </div>
+        <ul use:animateAlpha class="mt-md">
+          {links.map((link) => (
+            <li>
+              <Aa to={link.to}>{link.label}</Aa>
+            </li>
+          ))}
+        </ul>
       </Section>
     </main>
   );

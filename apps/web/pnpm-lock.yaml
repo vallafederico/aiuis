@@ -1,0 +1,741 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@vercel/blob':
+        specifier: ^2.4.0
+        version: 2.4.0
+
+  ../..: {}
+
+  ../../../../EXP/_wiggle-bones/wiggle-bones: {}
+
+  ../../../../EXP/astro-bp: {}
+
+  ../../../../EXP/astro-sanity-mix/web: {}
+
+  ../../../../EXP/astro-sanity-mix/web/cms: {}
+
+  ../../../../EXP/astro-sanity/lonely-light: {}
+
+  ../../../../EXP/astro-sanity/mad-meridian: {}
+
+  ../../../../EXP/astro-sanity/mad-meridian/cms: {}
+
+  ../../../../EXP/astro-sanity/test1: {}
+
+  ../../../../EXP/bottom-liquid-fuck: {}
+
+  ../../../../EXP/class-state-test: {}
+
+  ../../../../EXP/codrops: {}
+
+  ../../../../EXP/create-thing: {}
+
+  ../../../../EXP/ecommerce/hydrogen-2-vercel-test: {}
+
+  ../../../../EXP/ecommerce/hydrogen-quickstart: {}
+
+  ../../../../EXP/ecommerce/test: {}
+
+  ../../../../EXP/ecommerce/v0: {}
+
+  ../../../../EXP/ecommerce/v1: {}
+
+  ../../../../EXP/fiber/00: {}
+
+  ../../../../EXP/fiber/01: {}
+
+  ../../../../EXP/fiber/02: {}
+
+  ../../../../EXP/fiber/03: {}
+
+  ../../../../EXP/fiber/04: {}
+
+  ../../../../EXP/gl-exp/vertical-slider: {}
+
+  ../../../../EXP/gpgpu: {}
+
+  ../../../../EXP/gpgpu-stuffs: {}
+
+  ../../../../EXP/gsplat: {}
+
+  ../../../../EXP/heyy: {}
+
+  ../../../../EXP/heyy/package: {}
+
+  ../../../../EXP/heyy/web: {}
+
+  ../../../../EXP/lib/ogl: {}
+
+  ../../../../EXP/live-relight/00: {}
+
+  ../../../../EXP/ogl: {}
+
+  ../../../../EXP/package-starter: {}
+
+  ../../../../EXP/package-starter/package: {}
+
+  ../../../../EXP/package-starter/web: {}
+
+  ../../../../EXP/real-head: {}
+
+  ../../../../EXP/remix-bp: {}
+
+  ../../../../EXP/route-remix-test: {}
+
+  ../../../../EXP/sanity-starter: {}
+
+  ../../../../EXP/scrape-breezy-page: {}
+
+  ../../../../EXP/sheen: {}
+
+  ../../../../EXP/smooothy: {}
+
+  ../../../../EXP/smooothy/package: {}
+
+  ../../../../EXP/smooothy/web: {}
+
+  ../../../../EXP/smoothy-bak: {}
+
+  ../../../../EXP/solid-ts/solistart-bp: {}
+
+  ../../../../EXP/solid-ts/turbo-solid: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/apps/cms: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/apps/next: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/apps/solid: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/packages/config: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/packages/gl-context: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/packages/sanity: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/packages/seo: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/packages/tailwind: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/packages/three: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/scripts/optimise: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/scripts/sanity-yaml: {}
+
+  ../../../../EXP/solid-ts/turbo-solid/scripts/sync-sanity: {}
+
+  ../../../../EXP/state-webgl: {}
+
+  ../../../../EXP/three-script: {}
+
+  ../../../../EXP/toy-bricks: {}
+
+  ../../../../EXP/tsl: {}
+
+  ../../../../EXP/turbo-test: {}
+
+  ../../../../EXP/turbo-test/app: {}
+
+  ../../../../EXP/turbo-test/cms: {}
+
+  ../../../../EXP/ultimate-slider: {}
+
+  ../../../../EXP/vanilla-gpu: {}
+
+  ../../../../EXP/vanilla-gpu/resources: {}
+
+  ../../../../EXP/vat-bloom: {}
+
+  ../../../../EXP/vat-old: {}
+
+  ../../../../EXP/vat-process: {}
+
+  ../../../../EXP/vertex-animation-texture/example: {}
+
+  ../../../../EXP/video: {}
+
+  ../../../../EXP/visual-editing: {}
+
+  ../../../../EXP/visual-editing/apps/astro: {}
+
+  ../../../../EXP/visual-editing/apps/live-next: {}
+
+  ../../../../EXP/visual-editing/apps/next: {}
+
+  ../../../../EXP/visual-editing/apps/next-with-i18n: {}
+
+  ../../../../EXP/visual-editing/apps/nuxt: {}
+
+  ../../../../EXP/visual-editing/apps/page-builder-demo: {}
+
+  ../../../../EXP/visual-editing/apps/remix: {}
+
+  ../../../../EXP/visual-editing/apps/studio: {}
+
+  ../../../../EXP/visual-editing/apps/svelte: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/env: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/eslint-config: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/package.config: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/prettier-config: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/sanity-extracted-schema: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/sanity-schema: {}
+
+  ../../../../EXP/visual-editing/packages/@repo/studio-url: {}
+
+  ../../../../EXP/visual-editing/packages/comlink: {}
+
+  ../../../../EXP/visual-editing/packages/comlink/playground: {}
+
+  ../../../../EXP/visual-editing/packages/core-loader: {}
+
+  ../../../../EXP/visual-editing/packages/insert-menu: {}
+
+  ../../../../EXP/visual-editing/packages/next-loader: {}
+
+  ../../../../EXP/visual-editing/packages/presentation-comlink: {}
+
+  ../../../../EXP/visual-editing/packages/preview-url-secret: {}
+
+  ../../../../EXP/visual-editing/packages/react-loader: {}
+
+  ../../../../EXP/visual-editing/packages/svelte-loader: {}
+
+  ../../../../EXP/visual-editing/packages/vercel-protection-bypass: {}
+
+  ../../../../EXP/visual-editing/packages/visual-editing: {}
+
+  ../../../../EXP/visual-editing/packages/visual-editing-csm: {}
+
+  ../../../../EXP/visual-editing/packages/visual-editing-types: {}
+
+  ../../../../EXP/webflow-cloud/test: {}
+
+  ../../../../EXP/webflow-dev-setup: {}
+
+  ../../../../EXP/workshop/giga-webgl-base: {}
+
+  ../../../../EXP/workshop/ws-three-vite: {}
+
+  ../../../../LIBS/codeflowco/src/smooth-scroll: {}
+
+  ../../../../LIBS/codeflowco/src/stagger-text: {}
+
+  ../../../../LIBS/flow-stack: {}
+
+  ../../../../LIBS/flow-stack/src/riveTool: {}
+
+  ../../../../LIBS/flow-stack/src/smoothScroll: {}
+
+  ../../../../LIBS/flow-stack/src/staggerText: {}
+
+  ../../../../LIBS/flow-stack/src/videoScroll: {}
+
+  ../../../../LIBS/gl-asset: {}
+
+  ../../../../LIBS/hacking-webflow: {}
+
+  ../../../../LIBS/hacking-webflow/src/default: {}
+
+  ../../../../LIBS/hacking-webflow/src/riveTool: {}
+
+  ../../../../LIBS/hacking-webflow/src/router: {}
+
+  ../../../../LIBS/hacking-webflow/src/smoothScroll: {}
+
+  ../../../../LIBS/hacking-webflow/src/staggerText: {}
+
+  ../../../../LIBS/hacking-webflow/src/videoScroll: {}
+
+  ../../../../LIBS/msdf-tools: {}
+
+  ../../../../LIBS/ogl: {}
+
+  ../../../../LIBS/tiny-audio: {}
+
+  ../../../../LIBS/tiny-audio/playground: {}
+
+  ../../../../LIBS/ttween: {}
+
+  ../../../../LIBS/ttween/playground: {}
+
+  ../../../../LIBS/usehey: {}
+
+  ../../../../PROD/aimail: {}
+
+  ../../../../PROD/base-test: {}
+
+  ../../../../_offbrand/aize-phase0: {}
+
+  ../../../../_offbrand/casablanca: {}
+
+  ../../../../_offbrand/deployboy: {}
+
+  ../../../../_offbrand/frontify-ai: {}
+
+  ../../../../_offbrand/gravityteam: {}
+
+  ../../../../_offbrand/qed: {}
+
+  ../../../../_offbrand/steven: {}
+
+  ../../../../_offbrand/treasuryspring: {}
+
+  ../../../../_offbrand/unleash-ai: {}
+
+  ../../../../_offbrand/unleash-ai/apps/cms: {}
+
+  ../../../../_offbrand/unleash-ai/apps/cms/plugins/media-with-jump: {}
+
+  ../../../../_offbrand/unleash-ai/apps/web: {}
+
+  ../../../../_offbrand/unleash-ai/packages/ai: {}
+
+  ../../../../_offbrand/unleash-ai/packages/animation: {}
+
+  ../../../../_offbrand/unleash-ai/packages/config: {}
+
+  ../../../../_offbrand/unleash-ai/packages/form-tests: {}
+
+  ../../../../_offbrand/unleash-ai/packages/forms: {}
+
+  ../../../../_offbrand/unleash-ai/packages/forms-migration: {}
+
+  ../../../../_offbrand/unleash-ai/packages/gtm: {}
+
+  ../../../../_offbrand/unleash-ai/packages/hooks: {}
+
+  ../../../../_offbrand/unleash-ai/packages/providers: {}
+
+  ../../../../_offbrand/unleash-ai/packages/sanity: {}
+
+  ../../../../_offbrand/unleash-ai/packages/scrape-tools: {}
+
+  ../../../../_offbrand/unleash-ai/packages/seo: {}
+
+  ../../../../_offbrand/unleash-ai/packages/stores: {}
+
+  ../../../../_offbrand/unleash-ai/packages/theatre: {}
+
+  ../../../../_offbrand/unleash-ai/packages/three: {}
+
+  ../../../../_offbrand/unleash-ai/packages/types: {}
+
+  ../../../../_offbrand/unleash-ai/packages/ui: {}
+
+  ../../../../_offbrand/unleash-ai/packages/utils: {}
+
+  ../../../../_offbrand/unleash-ai/scripts/ga-report-bun: {}
+
+  ../../../../_offbrand/unleash-ai/scripts/pinecone-folder-upload-bun: {}
+
+  ../../../../_offbrand/unleash-ai/scripts/scrape-images-bun: {}
+
+  ../../../../_offbrand/unleash-ai/scripts/scrape-meta: {}
+
+  ../../../../app/filesumo: {}
+
+  ../../../../app/ssscript: {}
+
+  ../../../../app/ssscript/apps/app: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/rules: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/skills: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/starter-basic: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/starter-multi-entry: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/starter-multiple-entries: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/starter-page-transitions: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/starter-single-entry: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/debug/starter-template: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/bundle/macos/Ssscript.app/Contents/Resources/starter-basic: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/bundle/macos/Ssscript.app/Contents/Resources/starter-multi-entry: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/rules: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/skills: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/starter-basic: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/starter-multi-entry: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/starter-multiple-entries: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/starter-page-transitions: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/starter-single-entry: {}
+
+  ../../../../app/ssscript/apps/app/src-tauri/target/release/starter-template: {}
+
+  ../../../../app/ssscript/apps/app/starter-basic-bundle: {}
+
+  ../../../../app/ssscript/apps/app/starter-multi-entry-bundle: {}
+
+  ../../../../app/ssscript/apps/app/starter-multiple-entries-bundle: {}
+
+  ../../../../app/ssscript/apps/app/starter-page-transitions-bundle: {}
+
+  ../../../../app/ssscript/apps/app/starter-single-entry-bundle: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_21-56-11/Ssscript.app/Contents/Resources/rules: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_21-56-11/Ssscript.app/Contents/Resources/skills: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_21-56-11/Ssscript.app/Contents/Resources/starter-multiple-entries: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_21-56-11/Ssscript.app/Contents/Resources/starter-page-transitions: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_21-56-11/Ssscript.app/Contents/Resources/starter-single-entry: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_22-03-46/Ssscript.app/Contents/Resources/rules: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_22-03-46/Ssscript.app/Contents/Resources/skills: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_22-03-46/Ssscript.app/Contents/Resources/starter-multiple-entries: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_22-03-46/Ssscript.app/Contents/Resources/starter-page-transitions: {}
+
+  ../../../../app/ssscript/apps/app/versions/2026-03-25_22-03-46/Ssscript.app/Contents/Resources/starter-single-entry: {}
+
+  ../../../../app/ssscript/apps/bp: {}
+
+  ../../../../app/ssscript/apps/discord-bot: {}
+
+  ../../../../app/ssscript/apps/docs: {}
+
+  ../../../../app/ssscript/apps/extension: {}
+
+  ../../../../app/ssscript/apps/prompt-lab: {}
+
+  ../../../../app/ssscript/apps/web: {}
+
+  ../../../../app/ssscript/apps/web/bundled/starter-basic: {}
+
+  ../../../../app/ssscript/apps/web/bundled/starter-multi-entry: {}
+
+  ../../../../app/ssscript/apps/web/bundled/starter-multiple-entries: {}
+
+  ../../../../app/ssscript/apps/web/bundled/starter-page-transitions: {}
+
+  ../../../../app/ssscript/apps/web/bundled/starter-single-entry: {}
+
+  ../../../../app/ssscript/apps/web/bundled/starter-template: {}
+
+  ../../../../app/ssscript/packages/agent-prompts: {}
+
+  ../../../../app/ssscript/packages/agent-runtime: {}
+
+  ../../../../app/ssscript/packages/component-catalog: {}
+
+  ../../../../app/ssscript/packages/config: {}
+
+  ../../../../app/ssscript/packages/content: {}
+
+  ../../../../app/ssscript/packages/css: {}
+
+  ../../../../app/ssscript/packages/data: {}
+
+  ../../../../app/ssscript/packages/eslint-config: {}
+
+  ../../../../app/ssscript/packages/icon: {}
+
+  ../../../../app/ssscript/packages/patterns: {}
+
+  ../../../../app/ssscript/packages/release: {}
+
+  ../../../../app/ssscript/packages/skills: {}
+
+  ../../../../app/ssscript/packages/starter-config: {}
+
+  ../../../../app/ssscript/packages/starter-template: {}
+
+  ../../../../app/ssscript/packages/starter-template/assembled/starter-basic: {}
+
+  ../../../../app/ssscript/packages/starter-template/assembled/starter-multi-entry: {}
+
+  ../../../../app/ssscript/packages/starter-template/starter-basic: {}
+
+  ../../../../app/ssscript/packages/starter-template/starter-multi-entry: {}
+
+  ../../../../app/ssscript/packages/typescript-config: {}
+
+  ../../../../app/ssscript/packages/ui: {}
+
+  ../../../../app/ssscript/packages/webflow-xscp: {}
+
+  ../../../../census: {}
+
+  ../../../../census/apps/next: {}
+
+  ../../../../census/packages/config: {}
+
+  ../../../../census/packages/dev-tweakpane: {}
+
+  ../../../../census/packages/gl-context: {}
+
+  ../../../../census/packages/icons: {}
+
+  ../../../../census/packages/tailwind: {}
+
+  ../../../../census/packages/three: {}
+
+  ../../../../census/scripts/optimise: {}
+
+  ../../../../starters: {}
+
+  ../../../../starters/astro: {}
+
+  ../../../../starters/sanity: {}
+
+  ../../../../starters/tooling/watch-asset: {}
+
+  ../../../../starters/turbo: {}
+
+  ../../../../starters/turbo/packages/eslint-config: {}
+
+  ../../../../starters/turbo/packages/typescript-config: {}
+
+  ../../../../starters/turbo/packages/ui: {}
+
+  ../../../../starters/vite: {}
+
+  ../../../../starters/webflow/full: {}
+
+  ../../../../starters/webflow/tiny: {}
+
+  ../../../../starters/webgl/ogl: {}
+
+  ../../../../starters/webgl/three: {}
+
+  ../../../../starters/webgl/three-new: {}
+
+  ../../../../starters/webgl/three-v2: {}
+
+  ../../../../starters/webgl/twgl: {}
+
+  ../../../../starters/webgl/vanilla: {}
+
+  ../../../aimail: {}
+
+  ../../../aimail/apps/web: {}
+
+  ../../../aimail/packages/sanity: {}
+
+  ../../../aimail/scripts/optimise: {}
+
+  ../../../aimail/scripts/sync-sanity: {}
+
+  ../../../alivekey: {}
+
+  ../../../alivekey/scripts/font: {}
+
+  ../../../archival-lsd: {}
+
+  ../../../archival-lsd/cms: {}
+
+  ../../../autopilot-activeframe: {}
+
+  ../../../autopilot-activeframe/af: {}
+
+  ../../../codeflowco: {}
+
+  ../../../codeflowco-final: {}
+
+  ../../../codeflowco-final/apps/cms: {}
+
+  ../../../codeflowco-final/apps/web: {}
+
+  ../../../codeflowco-final/apps/webflow: {}
+
+  ../../../codeflowco-final/packages/sanity: {}
+
+  ../../../codeflowco-final/scripts/optimise: {}
+
+  ../../../codeflowco-final/scripts/sync-sanity: {}
+
+  ../../../codeflowco/apps/cms: {}
+
+  ../../../codeflowco/apps/web: {}
+
+  ../../../codeflowco/apps/webflow: {}
+
+  ../../../codeflowco/packages/sanity: {}
+
+  ../../../codeflowco/scripts/optimise: {}
+
+  ../../../codeflowco/scripts/sync-sanity: {}
+
+  ../../../doc-gen: {}
+
+  ../../../doc-gen/apps/cms: {}
+
+  ../../../doc-gen/apps/web: {}
+
+  ../../../doc-gen/packages/config: {}
+
+  ../../../doc-gen/packages/sanity: {}
+
+  ../../../doc-gen/packages/seo: {}
+
+  ../../../doc-gen/scripts/optimise: {}
+
+  ../../../doc-gen/scripts/sanity-yaml: {}
+
+  ../../../doc-gen/scripts/sync-sanity: {}
+
+  ../../../extropic/extropic-ai: {}
+
+  ../../../extropic/extropic-ai/apps/web: {}
+
+  ../../../extropic/extropic-ai/packages/eslint-config: {}
+
+  ../../../extropic/extropic-ai/packages/typescript-config: {}
+
+  ../../../extropic/extropic-ai/packages/ui: {}
+
+  ../../../extropic/extropic-exp: {}
+
+  ../../../eye2/eye2: {}
+
+  ../../../federico/federicooo: {}
+
+  ../../../federico/federicooo/apps/cms: {}
+
+  ../../../federico/federicooo/apps/web: {}
+
+  ../../../hunecon.styleguide: {}
+
+  ../../../ilya-2025: {}
+
+  ../../../m-i-n-a: {}
+
+  ../../../m-i-n-a/apps/cms: {}
+
+  ../../../m-i-n-a/apps/web: {}
+
+  ../../../m-i-n-a/packages/config: {}
+
+  ../../../m-i-n-a/packages/sanity: {}
+
+  ../../../m-i-n-a/packages/seo: {}
+
+  ../../../m-i-n-a/scripts/optimise: {}
+
+  ../../../m-i-n-a/scripts/sanity-yaml: {}
+
+  ../../../m-i-n-a/scripts/sync-sanity: {}
+
+  ../../../offbrand-voxsouls: {}
+
+  ../../../remix-website: {}
+
+  ../../../smooothy-webflow: {}
+
+  ../../../solid-docs/docs/solid-docs: {}
+
+  ../../../ssscript-website: {}
+
+  ../../../studyhall: {}
+
+  ../../../studyhall/apps/cms: {}
+
+  ../../../studyhall/apps/web: {}
+
+  ../../../studyhall/packages/config: {}
+
+  ../../../toast-analytics: {}
+
+  ../../../toast-analytics/apps/cms: {}
+
+  ../../../toast-analytics/apps/web: {}
+
+  ../../../toast-analytics/packages/config: {}
+
+  ../../../toast-analytics/packages/sanity: {}
+
+  ../../../toast-analytics/packages/seo: {}
+
+  ../../../toast-analytics/scripts/sanity-yaml: {}
+
+  ../../../toast-analytics/scripts/sync-sanity: {}
+
+  ../../../v0-ping-pong-game: {}
+
+  ../../scripts/optimise: {}
+
+  ../../scripts/sync-sanity: {}
+
+  ../cms: {}
+
+packages:
+
+  '@vercel/blob@2.4.0':
+    resolution: {integrity: sha512-ncQ8CRb6XoEAYJwjOTRGpACRT6h/AeY+/33gLyeVxG5BIes27OPm1jmqreF+JHjcTmGhClTP+kBpmyLfbV0xew==}
+    engines: {node: '>=20.0.0'}
+
+  async-retry@1.3.3:
+    resolution: {integrity: sha512-wfr/jstw9xNi/0teMHrRW7dsz3Lt5ARhYNZ2ewpadnhaIp5mbALhOAP+EAdsC7t4Z6wqsDVv9+W6gm1Dk9mEyw==}
+
+  is-buffer@2.0.5:
+    resolution: {integrity: sha512-i2R6zNFDwgEHJyQUtJEk0XFi1i0dPFn/oqjK3/vPCcDeJvW5NQ83V8QbicfF1SupOaB0h8ntgBC2YiE7dfyctQ==}
+    engines: {node: '>=4'}
+
+  is-node-process@1.2.0:
+    resolution: {integrity: sha512-Vg4o6/fqPxIjtxgUH5QLJhwZ7gW5diGCVlXpuUfELC62CuxM1iHcRe51f2W1FDy04Ai4KJkagKjx3XaqyfRKXw==}
+
+  retry@0.13.1:
+    resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
+    engines: {node: '>= 4'}
+
+  throttleit@2.1.0:
+    resolution: {integrity: sha512-nt6AMGKW1p/70DF/hGBdJB57B8Tspmbp5gfJ8ilhLnt7kkr2ye7hzD6NVG8GGErk2HWF34igrL2CXmNIkzKqKw==}
+    engines: {node: '>=18'}
+
+  undici@6.25.0:
+    resolution: {integrity: sha512-ZgpWDC5gmNiuY9CnLVXEH8rl50xhRCuLNA97fAUnKi8RRuV4E6KG31pDTsLVUKnohJE0I3XDrTeEydAXRw47xg==}
+    engines: {node: '>=18.17'}
+
+snapshots:
+
+  '@vercel/blob@2.4.0':
+    dependencies:
+      async-retry: 1.3.3
+      is-buffer: 2.0.5
+      is-node-process: 1.2.0
+      throttleit: 2.1.0
+      undici: 6.25.0
+
+  async-retry@1.3.3:
+    dependencies:
+      retry: 0.13.1
+
+  is-buffer@2.0.5: {}
+
+  is-node-process@1.2.0: {}
+
+  retry@0.13.1: {}
+
+  throttleit@2.1.0: {}
+
+  undici@6.25.0: {}
