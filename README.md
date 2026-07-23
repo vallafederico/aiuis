@@ -1,50 +1,51 @@
-# Stuffs
+# aiuis
 
-## Web
+Solid Start monorepo (from the turbo-solid template, sanity/shopify/next/astro
+stripped out). Content is file-based mdx, webgl is the native
+[`ssscript-webgl`](../LIBS/ssscript-webgl) engine, pnpm-linked from
+`workspace/LIBS`.
 
-## CMS
-
-- [ ] add Vercel deploy
-- [ ] add guides
-
-## Packages
-
-- [ ] Sanity Solid
-- [ ] Ecommerce Package (Shopify Utils)
-- [ ] Solid Hooks (?)
-- [ ] localisation
-
-## Scripts
-
-- [ ] sanity importers
-- [ ] sanity/web sync
-
----
-
-### Sanity/web sync
-
-- Creates new component in /web based on name of sanity schema
-  - if you change the component in sanity you only override the props so you get type error but the component doesn't break
-  - find a fix for custom types
-
-```tsx
-interface SliceNameProps {
-  SLICE_PROP_1: "from sanity";
-  SLICE_PROP_2: "from sanity" || any;
-}
-
-export default function SliceName({
-  SLICE_PROP_1,
-  SLICE_PROP_2,
-}: SliceNameProps) {
-  return <section class="px-gx py-gy">slice name</section>;
-}
-
+```bash
+pnpm install
+pnpm web        # dev (turbo dev --filter=web)
+pnpm build      # build everything
+pnpm msdf       # fonts + svgs → msdf atlases (public/msdf)
+pnpm optimise   # images → webp/avif, fonts → woff2
 ```
 
-- Registers in the respective index.ts the files and puts it into an array
-- register it to pageSlices
+## Layout
 
-- if it's a page, create a new page + sanity query with the corresponding name
+| Path | What |
+|------|------|
+| `apps/web` | solid start app |
+| `packages/content` | mdx CMS — collections, frontmatter schemas, rendering ([docs](packages/content/docs.md)) |
+| `packages/router` | `@acme/router` — page transitions |
+| `packages/tailwind`, `packages/config` | shared theme + config |
+| `scripts/msdf` | fonts/svgs → msdf textures ([docs](scripts/msdf/README.md)) |
+| `scripts/optimise` | image/font optimisers |
+| `config.ts` | script config: `OPTIMISE`, `MSDF` |
 
-- Auto fill files if you create it inside /slices or inside /pages
+## Content (`@local/content`)
+
+`.md`/`.mdx` files in `apps/web/src/content/<collection>/`, zod-validated
+frontmatter, components inside the markdown — astro-style. Demo at
+`/_/content`. See `packages/content/docs.md`.
+
+## WebGL (`@ssscript/webgl`)
+
+- `<Canvas />` (app.tsx) owns the engine — one fullscreen fixed canvas
+- `<GlItem />` — DOM-tracked quads with custom shaders (wgsl-ish or raw
+  `#version 300 es` glsl)
+- `msdf-text.ts` — draws text on the background plane from an msdf atlas;
+  demo at `/_/webgl`
+- editing the lib in `workspace/LIBS/ssscript-webgl` (`pnpm dev` there)
+  hard-reloads this app via `vite-plugin-gl-reload`
+
+## Fonts & palette
+
+- **alte-haas** (AlteHaasGroteskBold) — the site font, everything DOM
+- **garara** (variable, wght 0–20) — webgl-only, rendered from its msdf atlas
+- ttf sources in `apps/web/src/assets/fonts/` → `pnpm optimise` emits woff2,
+  `pnpm msdf` emits atlases
+- palette hangs off `--color-key` (full blue) in `apps/web/src/app.css`;
+  `--color-paper` is derived from it — swap key to re-skin

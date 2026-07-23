@@ -1,34 +1,53 @@
 import "./app.css";
-
-import { MetaProvider, Title } from "@solidjs/meta";
-import { Router } from "@solidjs/router";
+import { Link, MetaProvider } from "@solidjs/meta";
+import {
+  Router,
+  useLayoutTransition,
+  type TransitionContextValue,
+} from "@acme/router";
+import { clientOnly } from "@solidjs/start";
 import { FileRoutes } from "@solidjs/start/router";
-import { Suspense } from "solid-js";
-import { useViewport } from "./hooks/useViewport";
-// import { Scroll } from "./app/scroll";
 
-import { Nav } from "./components/Nav";
-import Grid from "./components/Grid";
+import { Suspense, type JSX } from "solid-js";
+import { useViewport } from "~/lib/hooks/useViewport";
 
-import { useLocationCallback } from "./hooks/useLocationCallback";
-import Canvas from "./components/Canvas";
+import { Nav } from "~/components/Nav";
+import Grid from "~/components/Grid";
+
+import gsap from "~/lib/gsap";
+import { Scroll } from "~/lib/utils/scroll";
+import { scroll } from "~/lib/utils/scroll";
+
+const ClientCanvas = clientOnly(() => import("~/components/webgl/Canvas"));
+
+const FADE_DURATION = 0.4;
+
+const resetScroll = (_ctx: TransitionContextValue) => {
+  Scroll.lenis?.scrollTo(0, { immediate: true });
+  Scroll.refresh();
+};
 
 export default function App() {
-  useLocationCallback();
   useViewport();
 
   return (
     <Router
       root={(props) => (
         <MetaProvider>
-          <Title>SolidStart - Basic</Title>
+          <Link
+            rel="robots"
+            type="text/plain"
+            href="/api/robots.txt"
+          />
+
           <Nav />
           <Grid />
 
-          <div data-scroll>
-            <Suspense>{props.children}</Suspense>
-          </div>
-          <Canvas />
+          <Suspense>
+            <GlobalLayout>{props.children}</GlobalLayout>
+          </Suspense>
+
+          <ClientCanvas />
         </MetaProvider>
       )}
     >
@@ -38,3 +57,37 @@ export default function App() {
     </Router>
   );
 }
+
+const GlobalLayout = ({
+  children,
+}: {
+  children: JSX.Element;
+}) => {
+  useLayoutTransition({
+    onEnter: (ctx) => resetScroll(ctx),
+    leave: (_ctx, el) =>
+      new Promise((resolve) => {
+        gsap.to(el, {
+          opacity: 0,
+          duration: FADE_DURATION,
+          onComplete: resolve,
+        });
+      }),
+    enter: (_ctx, el) => {
+      gsap.set(el, { opacity: 0 });
+      return new Promise((resolve) => {
+        gsap.fromTo(
+          el,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: FADE_DURATION,
+            onComplete: resolve,
+          },
+        );
+      });
+    },
+  });
+
+  return <main use:scroll>{children}</main>;
+};

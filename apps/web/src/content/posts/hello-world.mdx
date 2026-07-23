@@ -1,0 +1,24 @@
+---
+title: Hello, content
+description: mdx + frontmatter + components, no cms in sight
+date: 2026-07-22
+tags: [meta]
+---
+
+import Callout from "~/components/content/Callout";
+
+This file lives in `src/content/posts/`, gets validated against the zod schema
+in `src/content/config.ts`, and renders as a solid component.
+
+<Callout kind="info">
+  This callout is a solid component **imported inside the markdown** — the
+  astro pattern.
+</Callout>
+
+## Provider components
+
+<Marker>This tag isn't imported anywhere in the file</Marker> — it's injected
+by the route through `MDXContent`'s `components` prop, like astro/mdx
+shortcodes.
+
+Frontmatter is in scope too: this post is titled “{frontmatter.title}”.

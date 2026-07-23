@@ -1,0 +1,23 @@
+/**
+ * Shared Tailwind theme for the monorepo.
+ * Import this in your app's main CSS after @import "tailwindcss".
+ *
+ * Consuming apps must add @source paths for any packages that use
+ * Tailwind classes (see app.css for an example glob for the three package).
+ *
+ * Includes shared :root tokens, grid system, and fluid type. Fluid type
+ * uses --fluid-width (default 1920) on html.
+ */
+@import "./variables.css";
+@import "./grid.css";
+@import "./fluid.css";
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: none;
+  scrollbar-color: var(--color-gray) transparent;
+}
+
+@theme {
+  /* Shared design tokens; extend in app CSS as needed */
+}

@@ -1,16 +1,10 @@
+/* alte-haas ships bold only — the whole site runs on it.
+   garara (variable, wght 0–20) is webgl-only: it renders from the msdf
+   atlas in public/msdf, never through css. */
 @font-face {
-  font-family: "soh";
-  src: url("/fonts/Sohne-Buch-webh.woff2") format("woff2");
-
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "soh";
-  src: url("/fonts/Sohne-Halbfett-webh.woff2") format("woff2");
-  font-weight: 800;
+  font-family: "alte-haas";
+  src: url("/fonts/AlteHaasGroteskBold.woff2") format("woff2");
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }

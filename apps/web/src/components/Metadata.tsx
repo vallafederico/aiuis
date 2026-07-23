@@ -11,9 +11,9 @@ export default function Metadata({
   description = DEFAULTS.description,
   image = DEFAULTS.image,
 }: {
-  title: string;
-  description: string;
-  image: { src: string; alt: string };
+  title?: string;
+  description?: string;
+  image?: { src: string; alt: string };
 }) {
   return (
     <>

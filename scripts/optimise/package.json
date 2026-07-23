@@ -4,7 +4,7 @@
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
-    "bun": "^1.2.2"
+    "bun": "^1.3.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -13,6 +13,7 @@
     "dev": "bun run --watch index.ts"
   },
   "dependencies": {
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "wawoff2": "^2.0.1"
   }
 }

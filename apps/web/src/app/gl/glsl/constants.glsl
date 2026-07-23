@@ -1,2 +1,0 @@
-#define MPI 3.1415926538
-#define MTAU 6.28318530718
