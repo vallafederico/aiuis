@@ -1,0 +1,16 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "aiuis",
+	"main": ".output/server/index.mjs",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": ["nodejs_compat"],
+	// prerendered pages + /public land here; served before the worker,
+	// misses fall through to ssr
+	"assets": {
+		"directory": ".output/public",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	}
+}

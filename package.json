@@ -11,7 +11,8 @@
     "typecheck": "turbo run typecheck",
     "check": "turbo run typecheck test",
     "optimise": "turbo run optimise",
-    "msdf": "turbo run msdf"
+    "msdf": "turbo run msdf",
+    "deploy:web": "pnpm --filter web deploy"
   },
   "devDependencies": {
     "@local/tailwind": "workspace:*",

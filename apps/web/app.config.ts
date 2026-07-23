@@ -29,14 +29,10 @@ export default defineConfig({
 	// serves /llms.txt and per-page /<path>/llms.txt from the cms
 	middleware: "./src/middleware.ts",
 	server: {
-		preset: "vercel",
+		// cloudflare workers + static assets — deploy with `pnpm deploy` (wrangler)
+		preset: "cloudflare_module",
 		prerender: {
 			crawlLinks: true,
-		},
-		vercel: {
-			config: {
-				bypassToken: process.env.VERCEL_BYPASS_TOKEN,
-			},
 		},
 	},
 	vite: {

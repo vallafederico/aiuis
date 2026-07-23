@@ -7,7 +7,10 @@
     "dev": "vinxi dev --host",
     "build": "vinxi build",
     "start": "vinxi start",
-    "version": "vinxi version"
+    "version": "vinxi version",
+    "deploy": "pnpm build && wrangler deploy",
+    "preview": "wrangler dev",
+    "deploy:web": "pnpm --filter web run deploy"
   },
   "dependencies": {
     "@crawl-me-maybe/sitemap": "^0.0.1",
@@ -40,6 +43,7 @@
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4.1.15",
     "vite-plugin-glsl": "^1.5.4",
-    "vite-plugin-solid-svg": "^0.8.1"
+    "vite-plugin-solid-svg": "^0.8.1",
+    "wrangler": "^4.27.0"
   }
 }

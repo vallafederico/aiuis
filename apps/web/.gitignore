@@ -29,3 +29,5 @@ Thumbs.db
 
 
 .npmrc
+# cloudflare
+.wrangler
