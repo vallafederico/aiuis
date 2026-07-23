@@ -9,8 +9,7 @@
     "start": "vinxi start",
     "version": "vinxi version",
     "deploy": "pnpm build && wrangler deploy",
-    "preview": "wrangler dev",
-    "deploy:web": "pnpm --filter web run deploy"
+    "preview": "wrangler dev"
   },
   "dependencies": {
     "@crawl-me-maybe/sitemap": "^0.0.1",
