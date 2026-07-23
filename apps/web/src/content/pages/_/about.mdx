@@ -1,0 +1,15 @@
+---
+title: About Us
+description: A custom-developed page pulling its copy from the cms.
+image:
+  src: /og/about.png
+  alt: About us
+llms: ./about.llms.txt
+---
+
+This block is `src/content/pages/_/about.mdx`, rendered by the `<Slot />` in
+`routes/_/about/(about).tsx` — same name in the cms and in the router, nothing
+else to wire.
+
+<Marker>Provider components work here without an import</Marker>, and the
+page's head — title, description, og image — comes from the frontmatter above.

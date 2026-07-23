@@ -1,4 +1,3 @@
-import sitemapPlugin from "@crawl-me-maybe/sitemap";
 import { defineConfig } from "@solidjs/start/config";
 import { contentPlugin } from "@local/content/vite";
 import glsl from "vite-plugin-glsl";
@@ -18,16 +17,6 @@ const plugins = [
 		root: "/",
 	}),
 	componentDataAttr(),
-	sitemapPlugin({
-		domain: "https://yourdomain.com",
-		outDir: "dist",
-		sitemaps: {
-			pages: async () => [
-				{ url: "/", updated: "2025-10-17" },
-				{ url: "/about", updated: "2025-10-16" },
-			],
-		},
-	}),
 	solidSvg({
 		defaultAsComponent: true,
 	}),
@@ -37,6 +26,8 @@ const plugins = [
 export default defineConfig({
 	// .mdx/.md files are compiled to solid components by @local/content's plugin
 	extensions: ["mdx", "md"],
+	// serves /llms.txt and per-page /<path>/llms.txt from the cms
+	middleware: "./src/middleware.ts",
 	server: {
 		preset: "vercel",
 		prerender: {

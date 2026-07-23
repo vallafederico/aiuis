@@ -38,7 +38,7 @@ export const MSDF = {
 		paths: ["/apps/web/src/assets/msdf/svg"], // source svg files
 		outDir: "/apps/web/public/msdf",
 		size: 1024, // output texture size, px — sized down on screen, keeps edges crisp
-		distanceRange: 8, // sdf spread in px
+		distanceRange: 64, // sdf spread in px — also caps the max progressive-blur radius
 	},
 	/* pngs → single-channel sdf textures (bitmaps can't be msdf — no vectors) */
 	pngs: {

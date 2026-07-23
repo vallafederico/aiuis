@@ -1,0 +1,7 @@
+# About Us
+
+A custom-developed page pulling its copy from the cms.
+
+This document is the llms.txt pair of /_/about — linked from the page's
+frontmatter (`llms: ./about.llms.txt`), it overrides the base llms.txt for
+this url only.

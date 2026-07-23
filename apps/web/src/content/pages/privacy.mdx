@@ -1,0 +1,17 @@
+---
+title: Privacy Policy
+description: A cms-only page — no route file, rendered by the catch-all.
+updated: 2026-07-23
+---
+
+# Privacy Policy
+
+This page has no `.tsx` route. It's just `src/content/pages/privacy.mdx`,
+resolved by the catch-all route and rendered with the default page layout —
+head metadata included.
+
+## Adding pages
+
+Drop a file in `src/content/pages/` and it's routable: `team.mdx` becomes
+`/team`, `legal/imprint.mdx` becomes `/legal/imprint`, `index` files collapse
+to their folder. Set `draft: true` and the page only resolves in dev.

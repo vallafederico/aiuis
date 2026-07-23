@@ -21,19 +21,19 @@
   --color-paper: color-mix(in oklab, white 96%, var(--color-key));
 
   --text-base-0: var(--text-base);
-  --text-base-1: 1.2;
+  --text-base-1: 1;
   --text-base-length: 2;
 
   --text-xs-0: var(--text-xs);
-  --text-xs-1: 1.2;
+  --text-xs-1: 1;
   --text-xs-length: 2;
 
   --text-sm-0: var(--text-sm);
-  --text-sm-1: 1.2;
+  --text-sm-1: 1;
   --text-sm-length: 2;
 
   --text-md-0: var(--text-md);
-  --text-md-1: 1.2;
+  --text-md-1: 1;
   --text-md-length: 2;
 
   --text-lg-0: var(--text-lg);
@@ -45,7 +45,7 @@
   --text-xl-length: 2;
 
   --text-xxl-0: var(--text-xxl);
-  --text-xxl-1: 0.9;
+  --text-xxl-1: 1;
   --text-xxl-length: 2;
 
   --spacing-gx: var(--gx);
@@ -119,6 +119,7 @@ img {
 /* main styles */
 body {
   @apply font-sans text-base text-key bg-paper;
+  letter-spacing: -0.06em; /* figma -6% */
 }
 
 main {

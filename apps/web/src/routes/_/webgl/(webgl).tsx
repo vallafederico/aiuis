@@ -22,13 +22,15 @@ export default function WebGl() {
           text={"msdf text\ntype controls"}
           font="AlteHaasGroteskBold"
           fontSize={100}
-          tracking={0.02}
-          lineHeight={0.95}
         />
       </Section>
       <Section class="flex-center px-gx flex h-screen gap-16">
         <SdfImage name="logo" class="w-[14vw]" />
-        <SdfImage name="logotype" class="w-[30vw]" />
+        <SdfImage
+          name="logotype"
+          class="w-[30vw]"
+          blur={{ radius: 24, angle: 180, from: 0.2 }}
+        />
         <GlItem
           class="size-[40vmin]"
           options={{ shaders: { fragment: uvFragment } }}

@@ -1,12 +1,15 @@
 import { Title } from "@solidjs/meta";
 import { A } from "@acme/router";
 import { For } from "solid-js";
+import { pagePath } from "@local/content";
 import Section from "~/components/Section";
 import { getCollection } from "~/content";
 
 const posts = getCollection("posts", (post) => !post.data.draft).sort(
 	(a, b) => b.data.date.getTime() - a.data.date.getTime(),
 );
+
+const pages = getCollection("pages");
 
 export default function Content() {
 	return (
@@ -29,6 +32,28 @@ export default function Content() {
 								</A>
 								<span class="ml-3 text-sm opacity-50">
 									{post.data.date.toISOString().slice(0, 10)}
+								</span>
+							</li>
+						)}
+					</For>
+				</ul>
+
+				<h2 class="mt-10">Pages</h2>
+				<p class="max-w-[60ch] opacity-60">
+					Documents in <code>src/content/pages</code> route by file path — on
+					their own via the catch-all, or through a <code>&lt;Slot /&gt;</code>{" "}
+					in a custom page with the same name.
+				</p>
+
+				<ul class="mt-6 flex flex-col items-start gap-3">
+					<For each={pages}>
+						{(page) => (
+							<li>
+								<A animate-hover="underline" href={pagePath(page.slug)}>
+									{page.data.title}
+								</A>
+								<span class="ml-3 text-sm opacity-50">
+									{pagePath(page.slug)}
 								</span>
 							</li>
 						)}

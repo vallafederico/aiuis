@@ -9,16 +9,19 @@ import { isServer } from "solid-js/web";
 import { createItem, type ItemController } from "@ssscript/webgl";
 import { webgl } from "~/lib/stores/webglStore";
 import { buildMsdfTextFragment, loadMsdfFont } from "./msdf-text";
+import type { ProgressiveBlur } from "./sdf-texture";
 
 type MsdfTextProps = JSX.HTMLAttributes<HTMLDivElement> & {
   text: string;
   font?: string;
-  /** extra advance between glyphs, in em */
+  /** extra advance between glyphs, in em (default −0.06, figma −6%) */
   tracking?: number;
-  /** line spacing multiplier over the font's own line height */
+  /** line height as a multiplier of font size, figma-style (default 1) */
   lineHeight?: number;
   /** sizes the element from the text metrics instead of a width class, px */
   fontSize?: number;
+  /** figma-style progressive blur ramp across the element */
+  blur?: ProgressiveBlur;
 };
 
 /**
@@ -36,6 +39,7 @@ export default function MsdfText(props: MsdfTextProps) {
     "tracking",
     "lineHeight",
     "fontSize",
+    "blur",
   ]);
   const [aspect, setAspect] = createSignal<number>();
   const [pxWidth, setPxWidth] = createSignal<number>();
@@ -50,7 +54,7 @@ export default function MsdfText(props: MsdfTextProps) {
   createEffect(() => {
     if (!webgl.loaded) return;
     // tracked — the item rebuilds when any of these change
-    const { text, font, tracking, lineHeight, fontSize } = local;
+    const { text, font, tracking, lineHeight, fontSize, blur } = local;
     const current = ++generation;
 
     loadMsdfFont(font ?? "Garara")
@@ -59,7 +63,7 @@ export default function MsdfText(props: MsdfTextProps) {
         const { fragment, aspect, width } = buildMsdfTextFragment(
           metrics,
           text,
-          { tracking, lineHeight },
+          { tracking, lineHeight, blur },
         );
         setAspect(aspect);
         setPxWidth(
@@ -69,7 +73,7 @@ export default function MsdfText(props: MsdfTextProps) {
         item = createItem(el, {
           texture,
           shaders: { fragment },
-          uni: { value2: el.clientWidth || 1 },
+          uni: { value2: el.clientWidth || 1, value3: blur?.radius ?? 0 },
         });
         // element size settles after the style update — sync next frame
         window.requestAnimationFrame(syncWidth);
@@ -96,7 +100,9 @@ export default function MsdfText(props: MsdfTextProps) {
     >
       {/* real text, hidden via opacity — selectable, indexable, read by
           screen readers; the webgl quad draws the visible version */}
-      <span class="whitespace-pre-line opacity-0">{local.text}</span>
+      <span data-selectable class="whitespace-pre-line opacity-0">
+        {local.text}
+      </span>
     </div>
   );
 }

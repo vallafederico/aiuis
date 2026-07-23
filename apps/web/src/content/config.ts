@@ -1,12 +1,13 @@
 import { defineCollection, z } from "@local/content";
 
+// every collection gets the base metadata (title, description, image, draft)
+// for free — schemas here only add collection-specific fields
 export const collections = {
+	/** routed documents: file path = url path (pages/about.mdx → /about) */
+	pages: defineCollection({}),
 	posts: defineCollection({
 		schema: z.object({
-			title: z.string(),
-			description: z.string().optional(),
 			date: z.coerce.date(),
-			draft: z.boolean().default(false),
 			tags: z.array(z.string()).default([]),
 		}),
 	}),

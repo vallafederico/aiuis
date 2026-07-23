@@ -8,6 +8,8 @@
 		"./vite": "./vite.js"
 	},
 	"dependencies": {
+		"@solidjs/meta": "^0.29.4",
+		"@solidjs/router": "^0.15.3",
 		"@vinxi/plugin-mdx": "^3.7.2",
 		"remark-frontmatter": "^5.0.0",
 		"remark-mdx-frontmatter": "^5.2.0",

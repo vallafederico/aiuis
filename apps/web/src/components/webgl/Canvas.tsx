@@ -1,14 +1,10 @@
 import { onCleanup, onMount } from "solid-js";
 import { createScene, type Scene, type SceneOptions } from "@ssscript/webgl";
-import { setWebgl } from "~/lib/stores/webglStore";
-
-let scene: Scene | null = null;
-
-/** Current scene — null until <Canvas /> has mounted (client only). */
-export const getScene = () => scene;
+import { setScene, setWebgl } from "~/lib/stores/webglStore";
 
 export default function Canvas(props: { options?: SceneOptions }) {
   let canvas!: HTMLCanvasElement;
+  let scene: Scene | null = null;
 
   onMount(async () => {
     scene = createScene(canvas, {
@@ -18,6 +14,7 @@ export default function Canvas(props: { options?: SceneOptions }) {
       autoInit: false,
     });
     await scene.init();
+    setScene(scene);
     if (import.meta.env.DEV) (window as unknown as { __scene?: Scene }).__scene = scene;
     setWebgl({ loaded: true });
   });
@@ -25,6 +22,7 @@ export default function Canvas(props: { options?: SceneOptions }) {
   onCleanup(() => {
     scene?.destroy();
     scene = null;
+    setScene(null);
     setWebgl({ loaded: false });
   });
 

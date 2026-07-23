@@ -1,4 +1,4 @@
-import { Title } from "@solidjs/meta";
+import { Slot } from "@local/content/solid";
 import { animateAlpha } from "~/animation/alpha";
 import Section from "~/components/Section";
 import GridExample from "~/components/GridExample";
@@ -12,10 +12,14 @@ export default function About() {
 
   return (
     <div class="pt-navh min-h-[100vh]">
-      <Title>About</Title>
-
       <Section class="py-20 px-gx">
         <h1>About</h1>
+
+        {/* head metadata + body from content/pages/_/about.mdx — same name
+            in the cms and in the router */}
+        <article class="mt-8 flex max-w-[65ch] flex-col gap-4">
+          <Slot />
+        </article>
       </Section>
 
       <GridExample />

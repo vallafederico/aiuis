@@ -7,6 +7,9 @@ import {
 } from "@acme/router";
 import { clientOnly } from "@solidjs/start";
 import { FileRoutes } from "@solidjs/start/router";
+import { ContentProvider } from "@local/content/solid";
+import * as content from "~/content";
+import { mdxComponents } from "~/components/content/mdx";
 
 import { Suspense, type JSX } from "solid-js";
 import { useViewport } from "~/lib/hooks/useViewport";
@@ -34,20 +37,22 @@ export default function App() {
     <Router
       root={(props) => (
         <MetaProvider>
-          <Link
-            rel="robots"
-            type="text/plain"
-            href="/api/robots.txt"
-          />
+          <ContentProvider content={content} components={mdxComponents}>
+            <Link
+              rel="robots"
+              type="text/plain"
+              href="/robots.txt"
+            />
 
-          <Nav />
-          <Grid />
+            <Nav />
+            <Grid />
 
-          <Suspense>
-            <GlobalLayout>{props.children}</GlobalLayout>
-          </Suspense>
+            <Suspense>
+              <GlobalLayout>{props.children}</GlobalLayout>
+            </Suspense>
 
-          <ClientCanvas />
+            <ClientCanvas />
+          </ContentProvider>
         </MetaProvider>
       )}
     >

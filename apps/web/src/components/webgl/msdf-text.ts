@@ -1,4 +1,5 @@
 import { loadTexture, type TextureLoaderResult } from "@ssscript/webgl";
+import { sdfBlurGlsl, type ProgressiveBlur } from "./sdf-texture";
 
 type BmChar = {
   char: string;
@@ -43,6 +44,9 @@ export type MsdfTextLayout = {
   tracking?: number;
   /** line spacing multiplier over the font's own line height */
   lineHeight?: number;
+  /** figma-style progressive blur ramp — radius soft-caps at the font's
+   * distanceRange × magnification, keep it subtle on text */
+  blur?: ProgressiveBlur;
 };
 
 /**
@@ -60,8 +64,9 @@ export function buildMsdfTextFragment(
   const { scaleW, scaleH } = font.common;
   const distanceRange = font.distanceField?.distanceRange ?? 4;
   const chars = new Map(font.chars.map((c) => [c.char, c]));
-  const trackingPx = (layout.tracking ?? 0) * font.info.size;
-  const lineSpacing = (layout.lineHeight ?? 1) * font.common.lineHeight;
+  // figma-style defaults: tracking −6%, line height 100% of the font size
+  const trackingPx = (layout.tracking ?? -0.06) * font.info.size;
+  const lineSpacing = (layout.lineHeight ?? 1) * font.info.size;
 
   // pen advance in font px, top-down y like bmfont
   const glyphs: { src: number[]; dst: number[] }[] = [];
@@ -130,6 +135,7 @@ const vec4 DST[GLYPHS] = vec4[](
 );
 const float ATLAS_W = ${fmt(scaleW)};
 const float PX_RANGE = ${fmt(distanceRange)};
+${sdfBlurGlsl(layout.blur)}
 
 float median3(vec3 c) { return max(min(c.r, c.g), min(c.b, c.r)); }
 
@@ -148,8 +154,9 @@ void main() {
     // analytic aa: sdf px scaled by atlas→screen magnification (no derivatives)
     float glyphScreenPx = (d.z - d.x) * widthPx;
     float glyphAtlasPx = abs(SRC[i].z - SRC[i].x) * ATLAS_W;
-    float screenSd = sd * PX_RANGE * (glyphScreenPx / max(glyphAtlasPx, 0.0001));
-    alpha = max(alpha, inside * clamp(screenSd + 0.5, 0.0, 1.0));
+    float glyphMag = glyphScreenPx / max(glyphAtlasPx, 0.0001);
+    float screenSd = sd * PX_RANGE * glyphMag;
+    alpha = max(alpha, inside * blurAlpha(screenSd, PX_RANGE * glyphMag * 0.5, vUv));
   }
 
   // premultiplied alpha — misses stay transparent

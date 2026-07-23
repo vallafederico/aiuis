@@ -8,11 +8,17 @@ import {
 import { isServer } from "solid-js/web";
 import { createItem, type ItemController } from "@ssscript/webgl";
 import { webgl } from "~/lib/stores/webglStore";
-import { buildSdfFragment, loadSdf } from "./sdf-texture";
+import {
+  buildSdfFragment,
+  loadSdf,
+  type ProgressiveBlur,
+} from "./sdf-texture";
 
 type SdfImageProps = JSX.HTMLAttributes<HTMLDivElement> & {
   /** sdf texture name in public/msdf (from svgs or pngs via `pnpm msdf`) */
   name: string;
+  /** figma-style progressive blur ramp across the element */
+  blur?: ProgressiveBlur;
 };
 
 /**
@@ -22,7 +28,7 @@ type SdfImageProps = JSX.HTMLAttributes<HTMLDivElement> & {
  *   <SdfImage name="logo" class="w-[20vw]" />
  */
 export default function SdfImage(props: SdfImageProps) {
-  const [local, rest] = splitProps(props, ["name"]);
+  const [local, rest] = splitProps(props, ["name", "blur"]);
   const [aspect, setAspect] = createSignal<number>();
 
   let el!: HTMLDivElement;
@@ -35,6 +41,7 @@ export default function SdfImage(props: SdfImageProps) {
   createEffect(() => {
     if (!webgl.loaded) return;
     const name = local.name;
+    const blur = local.blur;
     const current = ++generation;
 
     loadSdf(name)
@@ -44,8 +51,8 @@ export default function SdfImage(props: SdfImageProps) {
         item?.destroy();
         item = createItem(el, {
           texture,
-          shaders: { fragment: buildSdfFragment(meta) },
-          uni: { value2: el.clientWidth || 1 },
+          shaders: { fragment: buildSdfFragment(meta, blur) },
+          uni: { value2: el.clientWidth || 1, value3: blur?.radius ?? 0 },
         });
         window.requestAnimationFrame(syncWidth);
         window.addEventListener("resize", syncWidth);
