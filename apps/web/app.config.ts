@@ -55,8 +55,7 @@ export default defineConfig({
 		},
 		server: {
 			fs: {
-				// @ssscript/webgl is pnpm-linked from workspace/LIBS — allow serving it in dev
-				allow: [".", "../..", "../../../LIBS/ssscript-webgl"],
+				allow: [".", "../.."],
 			},
 		},
 	},

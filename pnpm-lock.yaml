@@ -64,8 +64,8 @@ importers:
         specifier: ^1.2.0
         version: 1.3.2(solid-js@1.9.9)(vinxi@0.5.11(@parcel/watcher@2.6.0)(@types/node@26.1.1)(db0@0.3.4)(ioredis@5.11.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.49.0)(yaml@2.9.0))(vite@6.4.3(@types/node@26.1.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.49.0)(yaml@2.9.0))
       '@ssscript/webgl':
-        specifier: link:../../../LIBS/ssscript-webgl
-        version: link:../../../LIBS/ssscript-webgl
+        specifier: workspace:*
+        version: link:../../packages/webgl
       classix:
         specifier: ^2.2.4
         version: 2.2.17
@@ -152,6 +152,8 @@ importers:
         version: 5.9.3
 
   packages/tailwind: {}
+
+  packages/webgl: {}
 
   scripts/msdf:
     dependencies:
