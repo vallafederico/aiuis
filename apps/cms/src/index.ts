@@ -1,6 +1,8 @@
 import { Hono } from "hono"
-import { requireDevSecret } from "./core/auth.js"
+import { requireDevSecret, resolveIdentity } from "./core/auth.js"
+import type { AuthedIdentity } from "./core/auth.js"
 import { reindexFromR2 } from "./core/revision.js"
+import { CmsMcpAgent } from "./mcp/agent.js"
 
 export interface Env {
   DB: D1Database
@@ -11,6 +13,9 @@ export interface Env {
   LOCK_ROOM: DurableObjectNamespace
   CMS_DEV_SECRET: string
 }
+
+// Re-export for wrangler DO binding
+export { CmsMcpAgent }
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -41,21 +46,32 @@ app.post("/dev/reindex", async (c) => {
   return c.json(result)
 })
 
+// Streamable HTTP clients hit /mcp itself; Hono's "/mcp/*" alone would 404 it
+app.on(["GET", "POST", "DELETE"], ["/mcp", "/mcp/*"], async (c) => {
+  let identity: AuthedIdentity
+  try {
+    identity = await resolveIdentity(c.req.raw, c.env)
+  } catch {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+  const doId = c.env.MCP_AGENT.idFromName(identity.principal)
+  const stub = c.env.MCP_AGENT.get(doId)
+  const headers = new Headers(c.req.raw.headers)
+  headers.set("X-Cms-Identity", JSON.stringify(identity))
+  const proxiedReq = new Request(c.req.url, {
+    method: c.req.method,
+    headers,
+    body: c.req.raw.body,
+  })
+  return stub.fetch(proxiedReq)
+})
+
 export default {
   fetch: app.fetch,
 }
 
-export class CmsMcpAgent implements DurableObject {
-  constructor(private state: DurableObjectState, private env: Env) {}
-
-  async fetch(_request: Request): Promise<Response> {
-    return new Response("Not implemented", { status: 501 })
-  }
-}
-
 export class LockRoom implements DurableObject {
   constructor(private state: DurableObjectState, private env: Env) {}
-
   async fetch(_request: Request): Promise<Response> {
     return new Response("Not implemented", { status: 501 })
   }

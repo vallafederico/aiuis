@@ -1,4 +1,3 @@
-import { A } from "@acme/router";
 import { For, Show } from "solid-js";
 import MsdfText from "./webgl/MsdfText";
 import SdfImage from "./webgl/SdfImage";
@@ -8,20 +7,17 @@ const NAV_CRUMBS: { to: string; text: string }[] = [
   { to: "/", text: "Index" },
   { to: "/exp/1", text: "Exp 1" },
   { to: "/exp/1/", text: "Index" },
-  { to: "/exp/1/", text: "FAQs" },
+  { to: "/exp/1/", text: "Displaying Thinking" },
   { to: "/exp/1/", text: "Index" },
 ];
 
-// Solid blue per spec: #2200ff = rgb(34, 0, 255) normalized
-const BLUE: [number, number, number] = [34 / 255, 0, 1];
-
-function getCrumbAlpha(i: number, total: number): number {
-  // current crumb (last) is always 1.0; preceding ones fade
-  const fromEnd = total - 1 - i;
-  if (fromEnd === 0) return 1.0;
-  if (fromEnd === 1) return 0.4;
-  return 0.2;
-}
+// function getCrumbAlpha(i: number, total: number): number {
+//   // current crumb (last) is always 1.0; preceding ones fade
+//   const fromEnd = total - 1 - i;
+//   if (fromEnd === 0) return 1.0;
+//   if (fromEnd === 1) return 0.4;
+//   return 0.2;
+// }
 
 export const Nav = () => {
   return (
@@ -125,9 +121,18 @@ export const Nav = () => {
             class="w-full tracking-wider font-garara
               flex-center"
           >
-            <span class="font-[0]">0</span>
-            <span class="font-[10]">0</span>
-            <span class="font-[10]">2</span>
+            <MsdfText
+              text="0"
+              font="Garara-0"
+            />
+            <MsdfText
+              text="0"
+              font="Garara-10"
+            />
+            <MsdfText
+              text="2"
+              font="Garara-10"
+            />
           </div>
         </div>
       </nav>
@@ -149,9 +154,18 @@ const ListBlock = ({
     <div class="flex flex-col gap-1">
       <div class="flex items-center">
         <p class="w-10 font-[10] tracking-wider font-garara">
-          {title.charAt(0).toUpperCase()}.
+          <MsdfText
+            text={title.charAt(0).toUpperCase() + "."}
+            font="Garara-10"
+          />
         </p>
-        <h2 class="text-2xl -tracking-widest">{title}</h2>
+        <h2 class="text-2xl -tracking-widest">
+          <MsdfText
+            text={title}
+            font="AlteHaasGroteskBold"
+            tracking={-0.12}
+          />
+        </h2>
       </div>
       <ul>
         <For each={items}>
@@ -180,9 +194,17 @@ const ListItem = ({
   return (
     <li class="flex items-center">
       <p class="w-15 text-[.7em] font-garara font-[10]">
-        {number}.
+        <MsdfText
+          text={number + "."}
+          font="Garara-10"
+        />
       </p>
-      <a href={href}>{title}</a>
+      <a href={href}>
+        <MsdfText
+          text={title}
+          font="AlteHaasGroteskBold"
+        />
+      </a>
     </li>
   );
 };
@@ -204,10 +226,18 @@ const Breadcrumbs = ({
               href={crumb.to}
               class="text-sm"
             >
-              {crumb.text}
+              <MsdfText
+                text={crumb.text}
+                font="AlteHaasGroteskBold"
+              />
             </a>
             <Show when={index() < items.length - 1}>
-              <span class="px-2 text-sm">/</span>
+              <span class="px-2 text-sm">
+                <MsdfText
+                  text="/"
+                  font="AlteHaasGroteskBold"
+                />
+              </span>
             </Show>
           </>
         )}

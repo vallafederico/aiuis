@@ -31,6 +31,20 @@ export const MSDF = {
 		distanceRange: 8, // sdf spread in px — feed as uPxRange to the shader
 		textureSize: [2048, 2048] as [number, number], // atlas page size
 		charset: undefined as string | undefined, // string of chars; default ascii
+		/**
+		 * Variable-font weight instances to emit as separate atlases.
+		 * Each entry pre-instances the source TTF at the given axis values
+		 * (via fonttools varLib.instancer) and generates an atlas named `name`.
+		 * The python3 in PATH must have fontTools installed.
+		 *
+		 * Nav uses Garara at wght=0 (the "0" prefix in "002") and wght=10
+		 * (the bold "02" + section-letter prefixes + list-item numbers).
+		 * The base Garara atlas (wght=0 default) is kept for backwards compat.
+		 */
+		variantFonts: [
+			{ source: "Garara.ttf", name: "Garara-0",  variations: { wght: 0  } },
+			{ source: "Garara.ttf", name: "Garara-10", variations: { wght: 10 } },
+		] as { source: string; name: string; variations: Record<string, number> }[],
 	},
 	/* svgs → single-channel sdf textures (rasterized first — any svg works) */
 	svgs: {

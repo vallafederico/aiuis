@@ -58,7 +58,8 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["CmsMcpAgent", "LockRoom"]
+      "new_sqlite_classes": ["CmsMcpAgent"],
+      "new_classes": ["LockRoom"]
     }
   ]
 }

@@ -24,6 +24,7 @@ export default function WebGl() {
           text="aiuis"
           font="Garara"
           class="w-[70vw]"
+          fitWidth
         />
         <MsdfText
           text={"msdf text\ntype controls"}
