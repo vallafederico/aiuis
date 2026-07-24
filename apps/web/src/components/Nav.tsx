@@ -1,5 +1,5 @@
 import { A } from "@acme/router";
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import MsdfText from "./webgl/MsdfText";
 import SdfImage from "./webgl/SdfImage";
 
@@ -7,6 +7,8 @@ import SdfImage from "./webgl/SdfImage";
 const NAV_CRUMBS: { to: string; text: string }[] = [
   { to: "/", text: "Index" },
   { to: "/exp/1", text: "Exp 1" },
+  { to: "/exp/1/", text: "Index" },
+  { to: "/exp/1/", text: "FAQs" },
   { to: "/exp/1/", text: "Index" },
 ];
 
@@ -40,7 +42,7 @@ export const Nav = () => {
           class="flex flex-col justify-between h-full
             w-grid-2 py-[3svh]"
         >
-          <div>Breadcrubs</div>
+          <Breadcrumbs items={NAV_CRUMBS} />
           <div class="flex flex-col">
             <div>
               <SdfImage
@@ -120,9 +122,12 @@ export const Nav = () => {
             </div>
           </div>
           <div
-            class="w-full font-garara font-[10] flex-center"
+            class="w-full tracking-wider font-garara
+              flex-center"
           >
-            002
+            <span class="font-[0]">0</span>
+            <span class="font-[10]">0</span>
+            <span class="font-[10]">2</span>
           </div>
         </div>
       </nav>
@@ -143,10 +148,7 @@ const ListBlock = ({
   return (
     <div class="flex flex-col gap-1">
       <div class="flex items-center">
-        <p
-          class="w-10 text-sm font-[10] tracking-wider
-            font-garara"
-        >
+        <p class="w-10 font-[10] tracking-wider font-garara">
           {title.charAt(0).toUpperCase()}.
         </p>
         <h2 class="text-2xl -tracking-widest">{title}</h2>
@@ -177,10 +179,39 @@ const ListItem = ({
 }) => {
   return (
     <li class="flex items-center">
-      <p class="w-15 text-[.8em] font-garara font-[1]">
+      <p class="w-15 text-[.7em] font-garara font-[10]">
         {number}.
       </p>
       <a href={href}>{title}</a>
     </li>
+  );
+};
+
+const Breadcrumbs = ({
+  items,
+}: {
+  items: { to: string; text: string }[];
+}) => {
+  return (
+    <div
+      class="flex overflow-visible flex-nowrap justify-end
+        whitespace-nowrap w-grids-2 pr-grid-1"
+    >
+      <For each={NAV_CRUMBS}>
+        {(crumb, index) => (
+          <>
+            <a
+              href={crumb.to}
+              class="text-sm"
+            >
+              {crumb.text}
+            </a>
+            <Show when={index() < items.length - 1}>
+              <span class="px-2 text-sm">/</span>
+            </Show>
+          </>
+        )}
+      </For>
+    </div>
   );
 };

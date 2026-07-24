@@ -100,7 +100,7 @@ void main() {
   float screenSd = sd * 2.0 * SPREAD * mag;
   float alpha = blurAlpha(screenSd, SPREAD * mag, vUv);
 
-  vec3 key = vec3(0.0, 0.0, 1.0); // --color-key
+  vec3 key = vec3(uUni[0].w, uUni[1].x, uUni[1].y); // value4/5/6: key color RGB
   outColor = vec4(key * alpha, alpha);
 }`;
 }
