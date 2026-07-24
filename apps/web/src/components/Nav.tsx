@@ -24,12 +24,14 @@ function getCrumbAlpha(i: number, total: number): number {
 export const Nav = () => {
   return (
     <>
-      <div class="fixed top-0 right-0 w-grid-1 py-[3svh]">
-        <SdfImage
-          name="logo"
-          class="w-full"
-          //   blur={{ radius: 24, angle: 180, from: 0.2 }}
-        />
+      <div class="fixed top-0 right-0 pr-gx py-[3svh]">
+        <div class="w-grid-1">
+          <SdfImage
+            name="logo"
+            class="w-full"
+            //   blur={{ radius: 24, angle: 180, from: 0.2 }}
+          />
+        </div>
       </div>
       <nav
         class="flex fixed top-0 left-0 flex-col h-lvh pl-gx"
@@ -109,11 +111,19 @@ export const Nav = () => {
                     title: "Look At",
                     href: "/",
                   },
+                  {
+                    title: "Image Generation",
+                    href: "/",
+                  },
                 ]}
               />
             </div>
           </div>
-          <div class="w-full flex-center">002</div>
+          <div
+            class="w-full font-garara font-[10] flex-center"
+          >
+            002
+          </div>
         </div>
       </nav>
     </>
@@ -134,7 +144,7 @@ const ListBlock = ({
     <div class="flex flex-col gap-1">
       <div class="flex items-center">
         <p
-          class="w-10 text-sm font-light text-[10]
+          class="w-10 text-sm font-[10] tracking-wider
             font-garara"
         >
           {title.charAt(0).toUpperCase()}.
