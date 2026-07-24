@@ -12,5 +12,6 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"routes": [{ "pattern": "aiu.is", "custom_domain": true }]
 }

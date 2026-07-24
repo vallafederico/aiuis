@@ -4,36 +4,7 @@ import { RollingText } from "./animation/RollingText";
 import MobileMenu from "./MobileMenu";
 import Icon from "./icons/Icon";
 
-const NAV_LINKS = [
-  {
-    to: "/_/about",
-    text: "About Us",
-  },
-  {
-    to: "/_/animation",
-    text: "Animation",
-  },
-  {
-    to: "/_/pages",
-    text: "Pages",
-  },
-  {
-    to: "/_/components",
-    text: "Components",
-  },
-  {
-    to: "/_/webgl",
-    text: "WebGl",
-  },
-  {
-    to: "/_/data-loading",
-    text: "Data",
-  },
-  {
-    to: "/_/content",
-    text: "Content",
-  },
-];
+const NAV_LINKS: { to: string; text: string }[] = [];
 
 export const Nav = () => {
   return (
