@@ -1,0 +1,64 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aiuis-cms",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aiuis-cms-db",
+      "database_id": "REPLACE_AFTER_PROVISION",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "aiuis-cms"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "REPLACE_AFTER_PROVISION"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "DERIVE_QUEUE",
+        "queue": "aiuis-cms-derive"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "aiuis-cms-derive",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_AGENT",
+        "class_name": "CmsMcpAgent"
+      },
+      {
+        "name": "LOCK_ROOM",
+        "class_name": "LockRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["CmsMcpAgent", "LockRoom"]
+    }
+  ]
+}

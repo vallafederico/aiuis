@@ -12,7 +12,10 @@
     "check": "turbo run typecheck test",
     "optimise": "turbo run optimise",
     "msdf": "turbo run msdf",
-    "deploy:web": "pnpm --filter web run deploy"
+    "deploy:web": "pnpm --filter web run deploy",
+    "cms": "turbo dev --filter=cms",
+    "deploy:cms": "pnpm --filter cms run deploy",
+    "seed:cms": "pnpm --filter cms run seed"
   },
   "devDependencies": {
     "@local/tailwind": "workspace:*",

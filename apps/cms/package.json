@@ -1,0 +1,45 @@
+{
+  "name": "cms",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run --config vitest.node.config.ts && vitest run --config vitest.config.ts --passWithNoTests",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "migrate:local": "wrangler d1 migrations apply aiuis-cms-db --local",
+    "seed": "tsx scripts/seed.ts",
+    "mint-token": "tsx scripts/mint-token.ts"
+  },
+  "dependencies": {
+    "hono": "^4.12.32",
+    "agents": "^0.19.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "unified": "^11.0.5",
+    "remark-parse": "^11.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-directive": "^4.0.0",
+    "remark-stringify": "^11.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-rehype": "^11.1.2",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "mdast-util-to-string": "^4.0.0",
+    "shiki": "^4.3.1",
+    "yaml": "^2.9.0",
+    "ulid": "^3.0.2",
+    "diff": "^9.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "wrangler": "^4.114.0",
+    "vitest": "^4.1.10",
+    "@cloudflare/vitest-pool-workers": "^0.18.8",
+    "@cloudflare/workers-types": "^5.20260724.1",
+    "typescript": "5.7.3",
+    "tsx": "^4.23.1",
+    "@types/node": "^26.1.1"
+  }
+}
