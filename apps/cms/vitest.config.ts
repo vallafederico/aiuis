@@ -1,5 +1,9 @@
 import { defineConfig } from "vitest/config";
-import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
+import path from "node:path";
+
+const migrationsPath = path.join(import.meta.dirname, "migrations");
+const migrations = await readD1Migrations(migrationsPath);
 
 export default defineConfig({
   plugins: [
@@ -9,5 +13,8 @@ export default defineConfig({
   ],
   test: {
     exclude: ["tests/seeds.test.ts", "**/node_modules/**"],
+    provide: {
+      migrations,
+    },
   },
 });

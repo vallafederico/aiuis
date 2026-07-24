@@ -1,7 +1,7 @@
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 import { toString as mdastToString } from "mdast-util-to-string"
-import { parseFrontmatter } from "../parse/frontmatter.js"
+import { parseFrontmatter, dumpFrontmatter } from "../parse/frontmatter.js"
 import type { Env } from "../index.js"
 
 export interface RevisionMeta {
@@ -16,6 +16,25 @@ export interface RevisionMeta {
   status?: string
 }
 
+/** Build the canonical stored content: user content + injected system frontmatter fields */
+function buildStoredContent(content: string, meta: RevisionMeta): string {
+  const { frontmatter, body } = parseFrontmatter(content)
+  const status = meta.status ?? "draft"
+  const systemFields: Record<string, unknown> = {
+    ...frontmatter,
+    _id: meta.docId,
+    _collection: meta.collection,
+    _status: status,
+    _rev: meta.rev,
+    _updated: meta.at,
+  }
+  // Only set _created if not already present (preserve original creation time)
+  if (!("_created" in frontmatter)) {
+    systemFields._created = meta.at
+  }
+  return dumpFrontmatter(systemFields, body)
+}
+
 export async function writeRevision(env: Env, meta: RevisionMeta, content: string): Promise<void> {
   const { frontmatter, body } = parseFrontmatter(content)
   const title = typeof frontmatter.title === "string" ? frontmatter.title : meta.slug
@@ -27,9 +46,12 @@ export async function writeRevision(env: Env, meta: RevisionMeta, content: strin
   const ast = parser.parse(body)
   const plainText = mdastToString(ast)
 
-  // Step 1: R2 PUT revision
+  // Build the stored content (with system fields injected)
+  const storedContent = buildStoredContent(content, meta)
+
+  // Step 1: R2 PUT revision (store with system fields)
   const revKey = `revisions/${meta.collection}/${meta.slug}/${meta.rev}.md`
-  await env.BUCKET.put(revKey, content)
+  await env.BUCKET.put(revKey, storedContent)
 
   // Step 2: D1 batch
   const insertRevision = env.DB.prepare(
@@ -65,9 +87,9 @@ export async function writeRevision(env: Env, meta: RevisionMeta, content: strin
 
   await env.DB.batch([insertRevision, insertDocIgnore, updateDoc, deleteFts, insertFts])
 
-  // Step 3: R2 PUT HEAD content
+  // Step 3: R2 PUT HEAD content (store with system fields)
   const headKey = `content/${meta.collection}/${meta.slug}.md`
-  await env.BUCKET.put(headKey, content)
+  await env.BUCKET.put(headKey, storedContent)
 }
 
 export async function reindexFromR2(env: Env): Promise<{ rebuilt: number; revisions: number; errors: string[] }> {
@@ -98,6 +120,7 @@ export async function reindexFromR2(env: Env): Promise<{ rebuilt: number; revisi
         const slug = parts.slice(1).join("/")
         const title = typeof frontmatter.title === "string" ? frontmatter.title : slug
         const status = typeof frontmatter._status === "string" ? frontmatter._status : "draft"
+        // _id is embedded by writeRevision; fall back to collection/slug if missing (legacy)
         const docId = typeof frontmatter._id === "string" ? frontmatter._id : `${collection}/${slug}`
         const headRev = typeof frontmatter._rev === "string" ? frontmatter._rev : ""
         const created = typeof frontmatter._created === "string" ? frontmatter._created : new Date().toISOString()

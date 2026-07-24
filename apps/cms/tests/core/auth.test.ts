@@ -1,28 +1,23 @@
 /// <reference types="@cloudflare/vitest-pool-workers" />
-import { describe, it, expect, beforeAll } from "vitest"
+import { describe, it, expect, beforeAll, inject } from "vitest"
 import { env } from "cloudflare:workers"
 import { applyD1Migrations } from "cloudflare:test"
-import { readD1Migrations } from "@cloudflare/vitest-pool-workers"
-import path from "node:path"
 import { resolveIdentity, AuthError } from "../../src/core/auth.js"
 import type { Env } from "../../src/index.js"
 
-const migrations = await readD1Migrations(path.join(__dirname, "../../migrations"))
-
-beforeAll(async () => {
-  await applyD1Migrations((env as unknown as Env).DB, migrations)
-})
-
 const testEnv = env as unknown as Env
 
-// Pre-computed: SHA-256 of "test-token-abc123"
-// We'll compute it inside the test using the Web Crypto API
 const TEST_TOKEN = "test-token-abc123-abcdef1234567890"
 
 async function computeHash(token: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token))
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("")
 }
+
+beforeAll(async () => {
+  // @ts-expect-error - inject is provided via vitest.config.ts
+  await applyD1Migrations(testEnv.DB, inject("migrations"))
+})
 
 describe("auth", () => {
   beforeAll(async () => {
