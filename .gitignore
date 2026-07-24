@@ -47,3 +47,6 @@ biome.json
 .dev.vars
 # Claude agent worktrees
 .claude/worktrees/
+
+# Vinxi temp files
+app.config.timestamp_*.js
