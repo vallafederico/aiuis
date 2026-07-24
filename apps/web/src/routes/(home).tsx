@@ -1,16 +1,15 @@
 import Metadata from "~/components/Metadata";
+import ParticleGrid from "~/components/webgl/ParticleGrid";
 
 export default function Home() {
-	return (
-		<div class="min-h-[100vh] pt-20">
-			<Metadata
-				title="aiuis"
-				description="aiuis"
-			/>
+  return (
+    <div class="pt-20 min-h-svh">
+      <Metadata
+        title="aiuis"
+        description="aiuis"
+      />
 
-			<div class="px-gx flex flex-col items-start gap-4">
-				<h1>aiuis</h1>
-			</div>
-		</div>
-	);
+      <ParticleGrid />
+    </div>
+  );
 }

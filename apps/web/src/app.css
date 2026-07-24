@@ -14,11 +14,12 @@
 @theme {
   --font-*: initial;
   --font-sans: alte-haas, sans-serif;
+  --font-garara: garara, sans-serif;
 
   /* palette — everything hangs off --color-key; swap it (red, whatever) to re-skin.
      paper: the key color knocked back to an off-white tint. */
   --color-key: #0000ff;
-  --color-paper: color-mix(in oklab, white 96%, var(--color-key));
+  --color-paper: #E9E9EA;
 
   --text-base-0: var(--text-base);
   --text-base-1: 1;

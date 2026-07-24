@@ -4,14 +4,20 @@
 	"main": ".output/server/index.mjs",
 	"compatibility_date": "2026-07-01",
 	"compatibility_flags": ["nodejs_compat"],
-	// prerendered pages + /public land here; served before the worker,
-	// misses fall through to ssr
+	// prerendered pages + /public land here; run_worker_first ensures the
+	// worker runs before assets so www→apex redirect fires for every request
 	"assets": {
 		"directory": ".output/public",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		"run_worker_first": true
 	},
 	"observability": {
 		"enabled": true
 	},
-	"routes": [{ "pattern": "aiu.is", "custom_domain": true }]
+	// custom_domain:true triggers a 409 when orphaned A records already exist
+	// in the zone; register zone routes instead (DNS already points to CF)
+	"routes": [
+		{ "pattern": "aiu.is/*", "zone_name": "aiu.is" },
+		{ "pattern": "www.aiu.is/*", "zone_name": "aiu.is" }
+	]
 }

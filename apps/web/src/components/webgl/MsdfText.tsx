@@ -22,6 +22,10 @@ type MsdfTextProps = JSX.HTMLAttributes<HTMLDivElement> & {
   fontSize?: number;
   /** figma-style progressive blur ramp across the element */
   blur?: ProgressiveBlur;
+  /** RGB color 0–1 range, defaults to blue */
+  color?: [number, number, number];
+  /** opacity multiplier 0–1, defaults to 1 */
+  alpha?: number;
 };
 
 /**
@@ -40,6 +44,8 @@ export default function MsdfText(props: MsdfTextProps) {
     "lineHeight",
     "fontSize",
     "blur",
+    "color",
+    "alpha",
   ]);
   const [aspect, setAspect] = createSignal<number>();
   const [pxWidth, setPxWidth] = createSignal<number>();
@@ -54,7 +60,7 @@ export default function MsdfText(props: MsdfTextProps) {
   createEffect(() => {
     if (!webgl.loaded) return;
     // tracked — the item rebuilds when any of these change
-    const { text, font, tracking, lineHeight, fontSize, blur } = local;
+    const { text, font, tracking, lineHeight, fontSize, blur, color, alpha } = local;
     const current = ++generation;
 
     loadMsdfFont(font ?? "Garara")
@@ -63,7 +69,7 @@ export default function MsdfText(props: MsdfTextProps) {
         const { fragment, aspect, width } = buildMsdfTextFragment(
           metrics,
           text,
-          { tracking, lineHeight, blur },
+          { tracking, lineHeight, blur, color, alpha },
         );
         setAspect(aspect);
         setPxWidth(
@@ -96,11 +102,18 @@ export default function MsdfText(props: MsdfTextProps) {
       style={{
         "aspect-ratio": aspect() ? String(aspect()) : "4 / 1",
         ...(pxWidth() ? { width: `${pxWidth()}px` } : {}),
+        position: "relative",
       }}
     >
       {/* real text, hidden via opacity — selectable, indexable, read by
-          screen readers; the webgl quad draws the visible version */}
-      <span data-selectable class="whitespace-pre-line opacity-0">
+          screen readers; the webgl quad draws the visible version.
+          position: absolute keeps it out of flow so it can't inflate the
+          div's intrinsic size (the div is sized by aspect-ratio + width). */}
+      <span
+        data-selectable
+        class="whitespace-pre-line opacity-0"
+        style={{ position: "absolute" }}
+      >
         {local.text}
       </span>
     </div>

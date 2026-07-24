@@ -16,16 +16,28 @@ export default function WebGl() {
     <div class="min-h-[100vh]">
       <Title>WebGL</Title>
 
-      <Section class="flex-center px-gx flex h-screen flex-col gap-16">
-        <MsdfText text="aiuis" font="Garara" class="w-[70vw]" />
+      <Section
+        class="flex flex-col gap-16 h-screen flex-center
+          px-gx"
+      >
+        <MsdfText
+          text="aiuis"
+          font="Garara"
+          class="w-[70vw]"
+        />
         <MsdfText
           text={"msdf text\ntype controls"}
           font="AlteHaasGroteskBold"
           fontSize={100}
         />
       </Section>
-      <Section class="flex-center px-gx flex h-screen gap-16">
-        <SdfImage name="logo" class="w-[14vw]" />
+      <Section
+        class="flex gap-16 h-screen flex-center px-gx"
+      >
+        <SdfImage
+          name="logo"
+          class="w-[14vw]"
+        />
         <SdfImage
           name="logotype"
           class="w-[30vw]"

@@ -94,5 +94,5 @@ const GlobalLayout = ({
     },
   });
 
-  return <main use:scroll>{children}</main>;
+  return <main use:scroll style="padding-inline: calc(2/12*100vw)">{children}</main>;
 };

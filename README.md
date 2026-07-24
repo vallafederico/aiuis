@@ -44,7 +44,8 @@ frontmatter, components inside the markdown — astro-style. Demo at
 ## Fonts & palette
 
 - **alte-haas** (AlteHaasGroteskBold) — the site font, everything DOM
-- **garara** (variable, wght 0–20) — webgl-only, rendered from its msdf atlas
+- **garara** (variable, wght 0–20) — rendered from its msdf atlas in webgl,
+  also available in css/tailwind as `font-garara`
 - ttf sources in `apps/web/src/assets/fonts/` → `pnpm optimise` emits woff2,
   `pnpm msdf` emits atlases
 - palette hangs off `--color-key` (full blue) in `apps/web/src/app.css`;

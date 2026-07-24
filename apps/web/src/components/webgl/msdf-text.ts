@@ -47,6 +47,10 @@ export type MsdfTextLayout = {
   /** figma-style progressive blur ramp — radius soft-caps at the font's
    * distanceRange × magnification, keep it subtle on text */
   blur?: ProgressiveBlur;
+  /** RGB color (0–1 range), defaults to blue [0, 0, 1] */
+  color?: [number, number, number];
+  /** opacity multiplier (0–1), defaults to 1 */
+  alpha?: number;
 };
 
 /**
@@ -110,6 +114,8 @@ export function buildMsdfTextFragment(
   const h = y1 - y0;
 
   const fmt = (n: number) => n.toFixed(6);
+  const [r, g, b] = layout.color ?? [0, 0, 1];
+  const a = layout.alpha ?? 1.0;
   const src = glyphs
     .map((g) => `vec4(${g.src.map(fmt).join(", ")})`)
     .join(",\n\t");
@@ -160,8 +166,9 @@ void main() {
   }
 
   // premultiplied alpha — misses stay transparent
-  vec3 key = vec3(0.0, 0.0, 1.0); // --color-key
-  outColor = vec4(key * alpha, alpha);
+  vec3 key = vec3(${fmt(r)}, ${fmt(g)}, ${fmt(b)});
+  float opacity = ${fmt(a)};
+  outColor = vec4(key * alpha * opacity, alpha * opacity);
 }`;
 
   return { fragment, aspect: w / h, width: w, height: h };

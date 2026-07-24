@@ -9,6 +9,10 @@ import { getEntry, getLlms, getPage } from "~/content";
 export default createMiddleware({
 	onRequest: (event) => {
 		const url = new URL(event.request.url);
+
+		if (url.hostname === "www.aiu.is")
+			return redirect(`https://aiu.is${url.pathname}${url.search}`);
+
 		if (!url.pathname.endsWith("/llms.txt") && url.pathname !== "/llms.txt")
 			return;
 
@@ -28,6 +32,9 @@ function resolveEntry(path: string) {
 	if (post) return getEntry("posts", post[1]);
 	return getPage(path);
 }
+
+const redirect = (location: string) =>
+	new Response(null, { status: 301, headers: { Location: location } });
 
 const respond = (text: string | undefined) =>
 	text !== undefined

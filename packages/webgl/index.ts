@@ -83,3 +83,10 @@ export {
   createObjectGeometry,
   type ObjectShape,
 } from "./src/primitives/object.utils";
+export {
+  createParticles,
+  Particles,
+  type CreateParticlesOptions,
+  type ParticlesController,
+} from "./src/primitives/particles-wrapper";
+export type { ParticlesOptions } from "./src/primitives/particles";
