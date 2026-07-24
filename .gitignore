@@ -45,3 +45,5 @@ yarn-error.log*
 biome.json
 .wrangler/
 .dev.vars
+# Claude agent worktrees
+.claude/worktrees/
