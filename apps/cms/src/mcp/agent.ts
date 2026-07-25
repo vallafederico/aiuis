@@ -18,20 +18,6 @@ export type McpProps = {
 export class CmsMcpAgent extends McpAgent<Env, unknown, McpProps> {
   server = new McpServer({ name: "aiuis-cms", version: "0.1.0" })
 
-  async fetch(req: Request): Promise<Response> {
-    // Extract identity from forwarded header (set by Hono auth gate)
-    const identityJson = req.headers.get("X-Cms-Identity")
-    if (identityJson) {
-      try {
-        const identity = JSON.parse(identityJson) as McpProps["identity"]
-        await this.updateProps({ identity })
-      } catch {
-        // ignore parse errors
-      }
-    }
-    return super.fetch(req)
-  }
-
   async init(): Promise<void> {
     // Tools access identity via this.props at call time (closure over `this`)
     const getIdentity = () => this.props?.identity ?? { principal: "unknown", kind: "agent", session: "anon", audience: "", capabilities: {} }

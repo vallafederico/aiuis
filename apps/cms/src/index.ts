@@ -54,16 +54,9 @@ app.on(["GET", "POST", "DELETE"], ["/mcp", "/mcp/*"], async (c) => {
   } catch {
     return c.json({ error: "Unauthorized" }, 401)
   }
-  const doId = c.env.MCP_AGENT.idFromName(identity.principal)
-  const stub = c.env.MCP_AGENT.get(doId)
-  const headers = new Headers(c.req.raw.headers)
-  headers.set("X-Cms-Identity", JSON.stringify(identity))
-  const proxiedReq = new Request(c.req.url, {
-    method: c.req.method,
-    headers,
-    body: c.req.raw.body,
-  })
-  return stub.fetch(proxiedReq)
+  // R1: pass identity via ctx.props so McpAgent.onStart receives it
+  ;(c.executionCtx as unknown as { props: unknown }).props = { identity }
+  return CmsMcpAgent.serve("/mcp", { binding: "MCP_AGENT" }).fetch(c.req.raw, c.env, c.executionCtx as unknown as ExecutionContext)
 })
 
 export default {
