@@ -1,12 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
 import { ulid } from "ulid"
+import { createPatch } from "diff"
 import { parseFrontmatter, dumpFrontmatter, assertNoSystemFields } from "../../parse/frontmatter.js"
 import { loadCollectionSchema, validateFrontmatter, ValidationError } from "../../core/validate.js"
 import { applyEdits, OpsError } from "../../core/ops.js"
 import { canonicalize } from "../../core/canonicalize.js"
 import { writeRevision } from "../../core/revision.js"
 import { logOp } from "../../core/op-log.js"
+import { acquireLock, releaseLock } from "../../core/lock-client.js"
 import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
 
@@ -34,7 +36,23 @@ function errorResult(message: string, code: string, details?: unknown): McpToolR
   return { isError: true, content: [{ type: "text", text: JSON.stringify({ error: message, code, details }) }] }
 }
 
+export function checkNamespaceCapability(identity: IdentityInfo, collection: string): McpToolResult | null {
+  const caps = identity.capabilities as { namespaces?: string[] }
+  const namespaces = caps?.namespaces ?? []
+  const protectedPrefixes = ["schema", "skills"]
+  for (const prefix of protectedPrefixes) {
+    if (collection.startsWith(prefix) && !namespaces.includes(prefix)) {
+      return errorResult(`capability denied: token cannot write to '${prefix}' namespace`, "capability_denied")
+    }
+  }
+  return null
+}
+
 export async function createDocHandler(env: Env, identity: IdentityInfo, args: CreateDocArgs): Promise<McpToolResult> {
+  // T2b: namespace capability check (collection known from args)
+  const capCheck = checkNamespaceCapability(identity, args.collection)
+  if (capCheck) return capCheck
+
   // 1. assertNoSystemFields
   try {
     assertNoSystemFields(args.frontmatter)
@@ -120,13 +138,14 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
   let collection: string
   let slug: string
   let currentStatus: string
+  let headRev: string
 
   const isUlid = args.id.length === 26 && /^[0-9A-Z]+$/.test(args.id)
 
   if (isUlid) {
     const row = await env.DB.prepare(
-      `SELECT id, collection, slug, status FROM documents WHERE id=?`
-    ).bind(args.id).first<{ id: string; collection: string; slug: string; status: string }>()
+      `SELECT id, collection, slug, status, head_rev FROM documents WHERE id=?`
+    ).bind(args.id).first<{ id: string; collection: string; slug: string; status: string; head_rev: string }>()
 
     if (!row) {
       return errorResult("not found", "not_found")
@@ -136,6 +155,7 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
     collection = row.collection
     slug = row.slug
     currentStatus = row.status
+    headRev = row.head_rev
   } else {
     const slashIdx = args.id.indexOf("/")
     if (slashIdx === -1) {
@@ -145,8 +165,8 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
     slug = args.id.slice(slashIdx + 1)
 
     const row = await env.DB.prepare(
-      `SELECT id, collection, slug, status FROM documents WHERE collection=? AND slug=?`
-    ).bind(collection, slug).first<{ id: string; collection: string; slug: string; status: string }>()
+      `SELECT id, collection, slug, status, head_rev FROM documents WHERE collection=? AND slug=?`
+    ).bind(collection, slug).first<{ id: string; collection: string; slug: string; status: string; head_rev: string }>()
 
     if (!row) {
       return errorResult("not found", "not_found")
@@ -154,95 +174,124 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
 
     docId = row.id
     currentStatus = row.status
+    headRev = row.head_rev
   }
 
-  // 2. R2 GET content
-  const obj = await env.BUCKET.get(`content/${collection}/${slug}.md`)
-  if (!obj) {
-    return errorResult("not found", "not_found")
+  // T2b: namespace capability check
+  const capCheck = checkNamespaceCapability(identity, collection)
+  if (capCheck) return capCheck
+
+  // 2. Acquire lock (409-aware)
+  const lockResult = await acquireLock(env, docId, identity.session)
+  if ("error" in lockResult) {
+    return errorResult(`document locked by another session: ${lockResult.holder}`, "locked", { holder: lockResult.holder })
   }
-  const rawContent = await obj.text()
 
-  // 3. Phase 3: enforce base_rev (skip for now)
-
-  // 4. applyEdits
-  let editedFm: Record<string, unknown>
-  let editedBody: string
   try {
-    const editResult = applyEdits(rawContent, args.edits)
-    editedFm = editResult.frontmatter
-    editedBody = editResult.body
-  } catch (e) {
-    if (e instanceof OpsError) {
-      logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "ops_error", errorClass: e.code })
-      return errorResult(e.message, e.code)
-    }
-    throw e
-  }
+    // 3. Enforce base_rev — check for conflict
+    if (headRev !== args.base_rev) {
+      // Fetch caller's base revision content and HEAD content for diff
+      const baseRevKey = `revisions/${collection}/${slug}/${args.base_rev}.md`
+      const [baseObj, headObj] = await Promise.all([
+        env.BUCKET.get(baseRevKey),
+        env.BUCKET.get(`content/${collection}/${slug}.md`),
+      ])
+      const baseContent = baseObj ? await baseObj.text() : ""
+      const headContent = headObj ? await headObj.text() : ""
+      const diff = createPatch(`${collection}/${slug}`, baseContent, headContent, args.base_rev, headRev)
 
-  // 5. Re-validate if any set_field ops
-  const hasSetField = args.edits.some(e => e.op === "set_field")
-  if (hasSetField) {
-    let schema
+      return okResult({ error: "CONFLICT", current_rev: headRev, diff })
+    }
+
+    // 4. R2 GET content
+    const obj = await env.BUCKET.get(`content/${collection}/${slug}.md`)
+    if (!obj) {
+      return errorResult("not found", "not_found")
+    }
+    const rawContent = await obj.text()
+
+    // 5. applyEdits
+    let editedFm: Record<string, unknown>
+    let editedBody: string
     try {
-      schema = await loadCollectionSchema(env, collection)
-    } catch {
-      // if schema can't be loaded, skip validation
+      const editResult = applyEdits(rawContent, args.edits)
+      editedFm = editResult.frontmatter
+      editedBody = editResult.body
+    } catch (e) {
+      if (e instanceof OpsError) {
+        logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "ops_error", errorClass: e.code })
+        return errorResult(e.message, e.code)
+      }
+      throw e
     }
 
-    if (schema) {
-      // Extract user fields only (no system fields)
-      const userFm: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(editedFm)) {
-        if (k !== "_id" && k !== "_collection" && k !== "_status" && k !== "_rev" && k !== "_updated" && k !== "_created" && k !== "_author") {
-          userFm[k] = v
-        }
-      }
-
+    // 6. Re-validate if any set_field ops
+    const hasSetField = args.edits.some(e => e.op === "set_field")
+    if (hasSetField) {
+      let schema
       try {
-        validateFrontmatter(schema, userFm)
-      } catch (e) {
-        if (e instanceof ValidationError) {
-          logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "validation_fail", errorClass: "ValidationError" })
-          return errorResult("validation failed", "validation_fail", e.errors)
+        schema = await loadCollectionSchema(env, collection)
+      } catch {
+        // if schema can't be loaded, skip validation
+      }
+
+      if (schema) {
+        // Extract user fields only (no system fields)
+        const userFm: Record<string, unknown> = {}
+        for (const [k, v] of Object.entries(editedFm)) {
+          if (k !== "_id" && k !== "_collection" && k !== "_status" && k !== "_rev" && k !== "_updated" && k !== "_created" && k !== "_author") {
+            userFm[k] = v
+          }
         }
-        throw e
+
+        try {
+          validateFrontmatter(schema, userFm)
+        } catch (e) {
+          if (e instanceof ValidationError) {
+            logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "validation_fail", errorClass: "ValidationError" })
+            return errorResult("validation failed", "validation_fail", e.errors)
+          }
+          throw e
+        }
       }
     }
+
+    // 7. Update _author
+    const newFm = { ...editedFm, _author: { kind: identity.kind, principal: identity.principal, session: identity.session } }
+    const newRaw = dumpFrontmatter(newFm, editedBody)
+
+    // 8. New rev and timestamp
+    const newRev = ulid()
+    const now = new Date().toISOString()
+
+    // 9. canonicalize
+    const canonicalized = await canonicalize(newRaw)
+
+    // 10. writeRevision
+    await writeRevision(
+      env,
+      {
+        docId,
+        collection,
+        slug,
+        rev: newRev,
+        at: now,
+        author: { kind: identity.kind, principal: identity.principal, session: identity.session },
+        note: args.note,
+        status: currentStatus,
+      },
+      canonicalized
+    )
+
+    // 11. logOp
+    logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "ok" })
+
+    // 12. return
+    return okResult({ id: docId, rev: newRev, content: canonicalized })
+  } finally {
+    // Always release lock
+    await releaseLock(env, docId, identity.session)
   }
-
-  // 6. Update _author
-  const newFm = { ...editedFm, _author: { kind: identity.kind, principal: identity.principal, session: identity.session } }
-  const newRaw = dumpFrontmatter(newFm, editedBody)
-
-  // 7. New rev and timestamp
-  const newRev = ulid()
-  const now = new Date().toISOString()
-
-  // 8. canonicalize
-  const canonicalized = await canonicalize(newRaw)
-
-  // 9. writeRevision
-  await writeRevision(
-    env,
-    {
-      docId,
-      collection,
-      slug,
-      rev: newRev,
-      at: now,
-      author: { kind: identity.kind, principal: identity.principal, session: identity.session },
-      note: args.note,
-      status: currentStatus,
-    },
-    canonicalized
-  )
-
-  // 10. logOp
-  logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "ok" })
-
-  // 11. return
-  return okResult({ id: docId, rev: newRev, content: canonicalized })
 }
 
 export function registerWriteTools(

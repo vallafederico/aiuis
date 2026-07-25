@@ -4,6 +4,7 @@ import type { Env } from "../index.js"
 import { registerDiscoveryTools } from "./tools/discovery.js"
 import { registerReadTools } from "./tools/read.js"
 import { registerWriteTools } from "./tools/write.js"
+import { registerLifecycleTools } from "./tools/lifecycle.js"
 
 export type McpProps = {
   identity: {
@@ -24,5 +25,6 @@ export class CmsMcpAgent extends McpAgent<Env, unknown, McpProps> {
     registerDiscoveryTools(this.server, this.env, getIdentity)
     registerReadTools(this.server, this.env, getIdentity)
     registerWriteTools(this.server, this.env, getIdentity)
+    registerLifecycleTools(this.server, this.env, getIdentity)
   }
 }
