@@ -187,3 +187,13 @@ export async function reindexFromR2(env: Env): Promise<{ rebuilt: number; revisi
 
   return { rebuilt, revisions: revisionsChecked, errors }
 }
+
+export async function updateCardFields(
+  env: Env,
+  docId: string,
+  card: Record<string, unknown>
+): Promise<void> {
+  await env.DB.prepare('UPDATE documents SET card=? WHERE id=?')
+    .bind(JSON.stringify(card), docId)
+    .run()
+}

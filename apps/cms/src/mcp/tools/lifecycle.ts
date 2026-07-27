@@ -10,6 +10,8 @@ import { logOp } from "../../core/op-log.js"
 import { acquireLock, releaseLock } from "../../core/lock-client.js"
 import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
+import { deriveDoc } from "../../derive/pipeline.js"
+import { updateCardFields } from "../../core/revision.js"
 
 type IdentityInfo = McpProps["identity"]
 type McpToolResult = { isError?: boolean; content: Array<{ type: "text"; text: string }> }
@@ -286,6 +288,25 @@ export async function publishHandler(env: Env, identity: IdentityInfo, args: { i
     status: "published",
   }, canonicalized)
 
+  // Derive the published content
+  const deriveResult = await deriveDoc(env, doc.collection, doc.slug, newRev)
+
+  // Set published_rev pointer
+  await env.DB.prepare('UPDATE documents SET published_rev=? WHERE id=?')
+    .bind(newRev, doc.docId)
+    .run()
+
+  // Set KV pointer
+  await env.KV.put(`ptr:${doc.collection}/${doc.slug}`, newRev)
+
+  // Update card fields
+  const { frontmatter: pubFm } = parseFrontmatter(canonicalized)
+  await updateCardFields(env, doc.docId, {
+    title: typeof pubFm.title === 'string' ? pubFm.title : doc.slug,
+    excerpt: deriveResult.excerpt,
+    reading_time: deriveResult.reading_time,
+  })
+
   logOp(env, { session: identity.session, tool: "publish", docId: doc.docId, outcome: "ok" })
   return okResult({ id: doc.docId, rev: newRev, status: "published" })
 }
@@ -320,6 +341,14 @@ export async function unpublishHandler(env: Env, identity: IdentityInfo, args: {
       note: "unpublished",
       status: "draft",
     }, canonicalized)
+    // Clear published_rev pointer
+    await env.DB.prepare('UPDATE documents SET published_rev=NULL WHERE id=?')
+      .bind(doc.docId)
+      .run()
+
+    // Delete KV pointer
+    await env.KV.delete(`ptr:${doc.collection}/${doc.slug}`)
+
     logOp(env, { session: identity.session, tool: "unpublish", docId: doc.docId, outcome: "ok" })
     return okResult({ id: doc.docId, rev: newRev, status: "draft" })
   }
