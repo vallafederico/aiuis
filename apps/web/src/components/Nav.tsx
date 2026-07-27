@@ -124,14 +124,17 @@ export const Nav = () => {
             <MsdfText
               text="0"
               font="Garara-0"
+              weird
             />
             <MsdfText
               text="0"
               font="Garara-10"
+              weird
             />
             <MsdfText
               text="2"
               font="Garara-10"
+              weird
             />
           </div>
         </div>
@@ -157,6 +160,7 @@ const ListBlock = ({
           <MsdfText
             text={title.charAt(0).toUpperCase() + "."}
             font="Garara-10"
+            weird
           />
         </p>
         <h2 class="text-2xl -tracking-widest">
@@ -164,6 +168,7 @@ const ListBlock = ({
             text={title}
             font="AlteHaasGroteskBold"
             tracking={-0.12}
+            weird
           />
         </h2>
       </div>
@@ -197,12 +202,14 @@ const ListItem = ({
         <MsdfText
           text={number + "."}
           font="Garara-10"
+          weird
         />
       </p>
       <a href={href}>
         <MsdfText
           text={title}
           font="AlteHaasGroteskBold"
+          weird
         />
       </a>
     </li>
@@ -229,6 +236,7 @@ const Breadcrumbs = ({
               <MsdfText
                 text={crumb.text}
                 font="AlteHaasGroteskBold"
+                weird
               />
             </a>
             <Show when={index() < items.length - 1}>
@@ -236,6 +244,7 @@ const Breadcrumbs = ({
                 <MsdfText
                   text="/"
                   font="AlteHaasGroteskBold"
+                  weird
                 />
               </span>
             </Show>

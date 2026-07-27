@@ -1,34 +1,24 @@
 import "./app.css";
 import { Link, MetaProvider } from "@solidjs/meta";
-import {
-  Router,
-  useLayoutTransition,
-  type TransitionContextValue,
-} from "@acme/router";
+import { Router } from "@acme/router";
 import { clientOnly } from "@solidjs/start";
-import { FileRoutes } from "@solidjs/start/router";
 import { ContentProvider } from "@local/content/solid";
 import * as content from "~/content";
 import { mdxComponents } from "~/components/content/mdx";
 
-import { Suspense, type JSX } from "solid-js";
 import { useViewport } from "~/lib/hooks/useViewport";
 
-import { Nav } from "~/components/Nav";
-import Grid from "~/components/Grid";
+import Layout from "~/components/Layout";
+import AppRoutes from "~/components/AppRoutes";
 
-import gsap from "~/lib/gsap";
-import { Scroll } from "~/lib/utils/scroll";
-import { scroll } from "~/lib/utils/scroll";
-
-const ClientCanvas = clientOnly(() => import("~/components/webgl/Canvas"));
-
-const FADE_DURATION = 0.4;
-
-const resetScroll = (_ctx: TransitionContextValue) => {
-  Scroll.lenis?.scrollTo(0, { immediate: true });
-  Scroll.refresh();
-};
+// Rendered as siblings of <Layout> (not inside it) so editing Layout.tsx
+// doesn't remount the canvas and restart the whole webgl scene on HMR.
+const ClientCanvas = clientOnly(
+  () => import("~/components/webgl/Canvas"),
+);
+const ClientParticleGrid = clientOnly(
+  () => import("~/components/webgl/ParticleGrid"),
+);
 
 export default function App() {
   useViewport();
@@ -37,62 +27,25 @@ export default function App() {
     <Router
       root={(props) => (
         <MetaProvider>
-          <ContentProvider content={content} components={mdxComponents}>
+          <ContentProvider
+            content={content}
+            components={mdxComponents}
+          >
             <Link
               rel="robots"
               type="text/plain"
               href="/robots.txt"
             />
 
-            <Nav />
-            <Grid />
-
-            <Suspense>
-              <GlobalLayout>{props.children}</GlobalLayout>
-            </Suspense>
+            <Layout>{props.children}</Layout>
 
             <ClientCanvas />
+            <ClientParticleGrid />
           </ContentProvider>
         </MetaProvider>
       )}
     >
-      <Suspense fallback={<div>loading things</div>}>
-        <FileRoutes />
-      </Suspense>
+      <AppRoutes />
     </Router>
   );
 }
-
-const GlobalLayout = ({
-  children,
-}: {
-  children: JSX.Element;
-}) => {
-  useLayoutTransition({
-    onEnter: (ctx) => resetScroll(ctx),
-    leave: (_ctx, el) =>
-      new Promise((resolve) => {
-        gsap.to(el, {
-          opacity: 0,
-          duration: FADE_DURATION,
-          onComplete: resolve,
-        });
-      }),
-    enter: (_ctx, el) => {
-      gsap.set(el, { opacity: 0 });
-      return new Promise((resolve) => {
-        gsap.fromTo(
-          el,
-          { opacity: 0 },
-          {
-            opacity: 1,
-            duration: FADE_DURATION,
-            onComplete: resolve,
-          },
-        );
-      });
-    },
-  });
-
-  return <main use:scroll style="padding-inline: calc(2/12*100vw)">{children}</main>;
-};
