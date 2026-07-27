@@ -51,6 +51,8 @@ export type MsdfTextLayout = {
   color?: [number, number, number];
   /** opacity multiplier (0–1), defaults to 1 */
   alpha?: number;
+  /** stretch the msdf layout to fill the DOM box — distorts glyphs to whatever the hidden text measures; the beloved accident */
+  weird?: boolean;
 };
 
 /**
@@ -125,6 +127,20 @@ export function buildMsdfTextFragment(
     )
     .join(",\n\t");
 
+  const weirdMode = layout.weird ?? false;
+  const mainPrologue = weirdMode
+    ? `void main() {
+  float widthPx = max(uUni[0].y, 1.0); // value2: element width in px
+  vec2 local = vUv; // quad space, y down (matches bmfont cells)`
+    : `const float BOX_ASPECT = ${fmt(w / h)};
+
+void main() {
+  float widthPx = max(uUni[0].y, 1.0); // value2: element width in px
+  float heightPx = max(uUni[0].w, 1.0); // value4: element height in px
+  // uniform scale: msdf box fits the element width; center the ink vertically
+  float fy = max(widthPx / (BOX_ASPECT * heightPx), 0.0001);
+  vec2 local = vec2(vUv.x, (vUv.y - 0.5 * (1.0 - fy)) / fy);`;
+
   const fragment = `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -145,9 +161,7 @@ ${sdfBlurGlsl(layout.blur)}
 
 float median3(vec3 c) { return max(min(c.r, c.g), min(c.b, c.r)); }
 
-void main() {
-  float widthPx = max(uUni[0].y, 1.0); // value2: element width in px
-  vec2 local = vUv; // quad space, y down (matches bmfont cells)
+${mainPrologue}
 
   float alpha = 0.0;
   for (int i = 0; i < GLYPHS; i++) {

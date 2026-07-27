@@ -43,6 +43,8 @@ type MsdfTextProps = JSX.HTMLAttributes<HTMLSpanElement> & {
   color?: [number, number, number];
   /** opacity multiplier 0–1, defaults to 1 */
   alpha?: number;
+  /** stretch the msdf layout to fill the DOM box — distorts glyphs to whatever the hidden text measures; the beloved accident */
+  weird?: boolean;
 };
 
 /**
@@ -69,6 +71,7 @@ export default function MsdfText(props: MsdfTextProps) {
     "blur",
     "color",
     "alpha",
+    "weird",
   ]);
   const [aspect, setAspect] = createSignal<number>();
 
@@ -77,11 +80,15 @@ export default function MsdfText(props: MsdfTextProps) {
   let disposed = false;
   let generation = 0;
 
-  const syncWidth = () => item?.setUni({ value2: el.clientWidth || 1 });
+  // rect, not clientWidth/Height — those are always 0 on inline elements
+  const syncSize = () => {
+    const rect = el.getBoundingClientRect();
+    item?.setUni({ value2: rect.width || 1, value4: rect.height || 1 });
+  };
 
   createEffect(() => {
     if (!webgl.loaded) return;
-    const { text, font, tracking, lineHeight, fontSize, blur, color, alpha } = local;
+    const { text, font, tracking, lineHeight, fontSize, weird, blur, color, alpha } = local;
     const current = ++generation;
 
     loadMsdfFont(font ?? "Garara")
@@ -90,17 +97,18 @@ export default function MsdfText(props: MsdfTextProps) {
         const { fragment, aspect } = buildMsdfTextFragment(
           metrics,
           text,
-          { tracking, lineHeight, blur, color: color ?? readCssColor("--color-key"), alpha },
+          { tracking, lineHeight, weird, blur, color: color ?? readCssColor("--color-key"), alpha },
         );
         setAspect(aspect);
         item?.destroy();
+        const rect = el.getBoundingClientRect();
         item = createItem(el, {
           texture,
           shaders: { fragment },
-          uni: { value2: el.clientWidth || 1, value3: blur?.radius ?? 0 },
+          uni: { value2: rect.width || 1, value3: blur?.radius ?? 0, value4: rect.height || 1 },
         });
-        window.requestAnimationFrame(syncWidth);
-        window.addEventListener("resize", syncWidth);
+        window.requestAnimationFrame(syncSize);
+        window.addEventListener("resize", syncSize);
       })
       .catch((error) => console.error("[MsdfText]", local.text, error));
   });
@@ -108,7 +116,7 @@ export default function MsdfText(props: MsdfTextProps) {
   onCleanup(() => {
     disposed = true;
     if (isServer) return;
-    window.removeEventListener("resize", syncWidth);
+    window.removeEventListener("resize", syncSize);
     item?.destroy();
   });
 
