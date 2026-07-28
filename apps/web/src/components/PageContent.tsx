@@ -6,6 +6,8 @@ export default function PageContent(props: {
   /* natural document flow for scrolling pages (articles);
      default is the viewport-locked splash layout */
   flow?: boolean;
+  /* grid width of the content block; text reads best at the default */
+  width?: string;
 }) {
   return (
     <div
@@ -13,7 +15,7 @@ export default function PageContent(props: {
         props.flow ? "" : "h-svh items-center overflow-hidden"
       } ${props.spacing ?? ""}`}
     >
-      <div class="w-grids-6">{props.children}</div>
+      <div class={props.width ?? "w-grids-6"}>{props.children}</div>
     </div>
   );
 }

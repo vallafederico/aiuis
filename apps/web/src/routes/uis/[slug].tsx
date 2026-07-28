@@ -8,5 +8,8 @@ export const route = {
 
 export default function UisPiece() {
   const params = useParams();
+  // UI pieces stay at the text width for now; widen here (e.g.
+  // width="w-grids-8", eventually per-piece from schema data) as
+  // interactive content lands.
   return <PieceView slug={params.slug} section="uis" />;
 }

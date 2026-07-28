@@ -50,7 +50,12 @@ export const getPiece = query(
   "piece"
 );
 
-export function PieceView(props: { slug: string; section: string }) {
+export function PieceView(props: {
+  slug: string;
+  section: string;
+  /* grid width for the piece body — passed through to PageContent */
+  width?: string;
+}) {
   const data = createAsync(() => getPiece(props.slug, props.section));
   const piece = () => {
     const d = data();
@@ -86,7 +91,7 @@ export function PieceView(props: { slug: string; section: string }) {
           }
         >
           {(p) => (
-            <PageContent flow>
+            <PageContent flow width={props.width}>
               <h1 class="text-3xl -tracking-widest mb-8">{p().title}</h1>
               <article
                 class="prose prose-neutral max-w-none"
