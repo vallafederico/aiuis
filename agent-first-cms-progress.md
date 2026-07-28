@@ -57,6 +57,7 @@ Goal: authors (and agents) embed images, video, and custom components like **Not
 
 Approach — **directives + hast→Solid mapping**, not raw MDX. The CMS is markdown-native by design (spec §13): R2 markdown must stay portable, agent-editable, and derivable to sanitized output. Arbitrary MDX (imports/JSX) would break sanitization, canonicalization, and agent editing. The equivalent capability, kept markdown-native:
 - **Authoring syntax**: remark-directive — `![alt](asset)` stays standard; `::video{src="…" poster="…"}`, `:::notes … :::` for custom blocks. Directives are already in the parse dependency set and are the same mechanism slices (Phase 7) need — this fast-tracks part of Phase 7.
+- ✅ **`:::notes` shipped (2026-07-28)** — first directive end-to-end: round-trips canonicalization, derives to sanitized `aside.cms-notes`, excluded from toc; all 13 pieces migrated through real edit→publish revisions; styled as a quiet endnote block (`PieceView.css`); authoring guidelines updated. Remaining in this workstream: images (LQIP/srcset), `::video`, asset upload pipeline, hast→Solid renderer (Notes is CSS-styled for now; becomes a Solid component when the renderer lands), a proper directive registry (unknown directives currently drop silently).
 - **Derive side**: map directives to stable custom hast nodes (e.g. `<cms-video>`, `<cms-notes>`) allowlisted through sanitization; fill the LQIP/srcset stubs for images.
 - **Assets pipeline**: `upload_asset` MCP tool + R2 `assets/` + `/api/v1/assets/…` serving (planned `mcp/tools/assets.ts`, never built).
 - **Web side**: switch `PieceView` from `innerHTML` to **hast→Solid renderer** (the plan's intended upgrade) with a component map: `img` → figure w/ LQIP, `cms-video` → video player, `cms-notes` → new `Notes` component (doesn't exist yet — to design; wanted first on Credits). Unmapped nodes render as plain HTML.
@@ -78,6 +79,6 @@ Provision D1/KV/R2/queue, fill ids, remote migrations, seed, Cloudflare Access o
 
 ## Decisions needed from Federico
 1. **Rich content**: confirm directives-over-MDX (recommendation above). If you truly want `.mdx` files with imports as the source format, that's an architecture change to the spec worth a dedicated discussion.
-2. **Notes**: what should it look/behave like (footnotes? margin notes? collapsible asides?) — first consumer is Credits.
+2. ~~**Notes**~~ — resolved: the trailing notes section of an article (Credits was the example). Shipped as the `:::notes` directive; visual refinement open as design evolves.
 3. **MCP search over drafts**: intended for agents, or should it be capability-gated?
 4. **Queue**: keep async derivation infrastructure (wire the producer) or simplify to synchronous-only and delete the consumer?
