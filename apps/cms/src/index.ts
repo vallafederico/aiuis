@@ -62,7 +62,7 @@ app.post("/dev/seed-content", async (c) => {
     return c.json({ error: "Unauthorized" }, 401)
   }
 
-  const body = await c.req.json<{ action: string; doc: { collection: string; frontmatter: Record<string, unknown>; body?: string } }>()
+  const body = await c.req.json<{ action: string; doc: { collection: string; frontmatter: Record<string, unknown>; body?: string }; force?: boolean }>()
 
   if (body.action !== "create_and_publish") {
     return c.json({ error: "unknown action" }, 400)
@@ -85,7 +85,39 @@ app.post("/dev/seed-content", async (c) => {
   ).bind(body.doc.collection, slug).first<{ id: string; published_rev: string | null }>()
 
   if (existing?.published_rev) {
-    return c.json({ status: "skipped", reason: "already_published", id: existing.id })
+    if (!body.force) {
+      return c.json({ status: "skipped", reason: "already_published", id: existing.id })
+    }
+
+    const { editDocHandler } = await import("./mcp/tools/write.js")
+    const { publishHandler } = await import("./mcp/tools/lifecycle.js")
+    const { parseFrontmatter } = await import("./parse/frontmatter.js")
+
+    const row = await c.env.DB.prepare("SELECT head_rev FROM documents WHERE id=?").bind(existing.id).first<{ head_rev: string }>()
+    const obj = await c.env.BUCKET.get(`content/${body.doc.collection}/${slug}.md`)
+    if (!obj) return c.json({ status: "error", detail: "content not found" }, 500)
+    const content = await obj.text()
+    const { body: oldBody } = parseFrontmatter(content)
+    const newBody = body.doc.body ?? ""
+
+    if (oldBody.trim() === newBody.trim()) {
+      return c.json({ status: "skipped", reason: "no_change", id: existing.id })
+    }
+
+    const editResult = await editDocHandler(c.env, identity, {
+      id: existing.id,
+      base_rev: row!.head_rev,
+      note: "force seed update",
+      edits: [{ op: "str_replace", old: oldBody, new: newBody }],
+    })
+    const editParsed = JSON.parse(editResult.content[0].text)
+    if (editResult.isError) return c.json({ status: "error", detail: editParsed }, 500)
+
+    const pubResult = await publishHandler(c.env, identity, { id: existing.id, base_rev: editParsed.rev })
+    const pubParsed = JSON.parse(pubResult.content[0].text)
+    if (pubResult.isError) return c.json({ status: "error", detail: pubParsed }, 500)
+
+    return c.json({ status: "force_updated", id: existing.id })
   }
 
   if (existing) {
@@ -228,6 +260,30 @@ app.post("/dev/rederive", async (c) => {
   return c.json({ rederived, errors })
 })
 
+app.post("/dev/upload-asset", async (c) => {
+  try {
+    requireDevSecret(c.req.raw, c.env)
+  } catch {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const body = await c.req.json<{ path: string; content_base64: string; mime: string; overwrite?: boolean }>()
+
+  const identity = {
+    principal: "dev",
+    kind: "agent" as const,
+    session: "dev-upload",
+    audience: "dev",
+    capabilities: { publish: true, collections: "*", namespaces: ["content"] as string[] },
+  }
+
+  const { uploadAssetHandler } = await import("./mcp/tools/assets.js")
+  const result = await uploadAssetHandler(c.env, identity, body)
+  const parsed = JSON.parse(result.content[0].text)
+  if (result.isError) return c.json({ status: "error", detail: parsed }, 400)
+  return c.json({ status: "ok", ...parsed })
+})
+
 app.get("/dev/export", async (c) => {
   try {
     requireDevSecret(c.req.raw, c.env)
@@ -285,6 +341,36 @@ app.get('/api/v1/taxonomy/:name', async (c) => {
     `SELECT slug, title, description, count FROM terms WHERE taxonomy=? AND status='active' ORDER BY count DESC, slug`
   ).bind(name).all()
   return c.json({ taxonomy: name, terms: rows.results })
+})
+
+// GET /api/v1/assets/* — serve R2 assets with immutable caching
+// Note: c.req.param('*') returns undefined in Hono v4 for wildcard routes;
+// extract the path suffix from the URL directly instead.
+app.get('/api/v1/assets/*', async (c) => {
+  const url = new URL(c.req.url)
+  const wildcard = url.pathname.replace(/^\/api\/v1\/assets\//, '')
+  const r2Key = `assets/${wildcard}`
+
+  // Look up metadata from D1
+  const meta = await c.env.DB.prepare(
+    'SELECT mime FROM assets WHERE path=?'
+  ).bind(r2Key).first<{ mime: string }>()
+
+  const obj = await c.env.BUCKET.get(r2Key)
+  if (!obj) {
+    return c.json({ error: 'not found', code: 'not_found' }, 404)
+  }
+
+  const contentType = meta?.mime ?? obj.httpMetadata?.contentType ?? 'application/octet-stream'
+  const etag = obj.httpEtag
+
+  const headers: Record<string, string> = {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  }
+  if (etag) headers['ETag'] = etag
+
+  return new Response(obj.body, { headers })
 })
 
 // GET /api/v1/:collection — published docs only

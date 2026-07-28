@@ -1,10 +1,16 @@
+/* Paragraph spacing for markdown body (prose plugin not installed, preflight zeroes margins) */
+/* .cms-notes below sets its own margin-top: 3rem, which wins over this via source order */
+.cms-body > * + * {
+  margin-top: 1.25em;
+}
+
 /* .cms-notes — rendered inside innerHTML article; styled as quiet endnote */
 .cms-notes {
   margin-top: 3rem;
   padding-top: 1.5rem;
   border-top: 1px solid currentColor;
   opacity: 0.55;
-  font-size: 0.8125rem; /* between xs and sm */
+  font-size: 1.625rem; /* ~2x between xs and sm */
   line-height: 1.6;
 }
 
@@ -13,7 +19,7 @@
   display: block;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  font-size: 0.6875rem;
+  font-size: 1.375rem;
   opacity: 0.7;
   margin-bottom: 0.5rem;
 }
@@ -22,4 +28,18 @@
 .cms-notes > p {
   margin-top: 0;
   margin-bottom: 0;
+}
+
+/* .cms-figure — block image with centered layout */
+.cms-figure {
+  display: block;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.cms-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
 }

@@ -14,6 +14,7 @@ import { checkRefExistence, syncRefEdges } from "../../core/refs.js"
 import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
 import { loadDirectiveRegistry, validateDirectives } from "../../core/directives.js"
+import { validateBodyImages } from "../../core/images.js"
 
 type IdentityInfo = McpProps["identity"]
 type McpToolResult = { isError?: boolean; content: Array<{ type: "text"; text: string }> }
@@ -135,6 +136,13 @@ export async function createDocHandler(env: Env, identity: IdentityInfo, args: C
       code,
       directiveError
     )
+  }
+
+  // 6c. Image URL validation
+  const imageError = await validateBodyImages(env, preCanonBody)
+  if (imageError) {
+    logOp(env, { session: identity.session, tool: "create_doc", outcome: "validation_fail", errorClass: "asset_not_found" })
+    return errorResult("asset not found: " + imageError.path, "asset_not_found", imageError)
   }
 
   // 7. writeRevision (injects _id, _collection, _status, _rev, _updated, _created)
@@ -355,6 +363,13 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
         code2,
         directiveError2
       )
+    }
+
+    // 9c. Image URL validation
+    const imageError2 = await validateBodyImages(env, editedBody)
+    if (imageError2) {
+      logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "validation_fail", errorClass: "asset_not_found" })
+      return errorResult("asset not found: " + imageError2.path, "asset_not_found", imageError2)
     }
 
     // 10. writeRevision

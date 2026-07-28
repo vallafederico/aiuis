@@ -19,6 +19,7 @@ export interface DeriveResult {
   title: string
   section: string
   slug: string
+  assets: Array<{ path: string; width: number | null; height: number | null; lqip: string | null }>
 }
 
 function hastText(node: any): string {
@@ -53,6 +54,50 @@ function remarkNotesDirective() {
   }
 }
 
+type AssetMeta = { width: number | null; height: number | null; lqip: string | null }
+
+function remarkImageTransform(assetMap: Map<string, AssetMeta>) {
+  return (tree: any) => {
+    hastWalk(tree, (node: any) => {
+      if (node.type === "image" && typeof node.url === "string") {
+        const orig = node.url
+        node.data = node.data ?? {}
+        node.data.hProperties = node.data.hProperties ?? {}
+        if (orig.startsWith("assets/")) {
+          node.data.hProperties.src = `/api/v1/${orig}`
+          node.data.hProperties.loading = "lazy"
+          node.data.hProperties.decoding = "async"
+          const meta = assetMap.get(orig)
+          if (meta?.width != null) node.data.hProperties.width = String(meta.width)
+          if (meta?.height != null) node.data.hProperties.height = String(meta.height)
+          if (meta?.lqip != null) node.data.hProperties["data-lqip"] = meta.lqip
+        } else if (orig.startsWith("http://") || orig.startsWith("https://")) {
+          node.data.hProperties.loading = "lazy"
+          node.data.hProperties.decoding = "async"
+        }
+      }
+    })
+  }
+}
+
+function rehypeFigureWrap() {
+  return (tree: any) => {
+    hastWalk(tree, (node: any) => {
+      if (
+        node.type === "element" &&
+        node.tagName === "p" &&
+        node.children &&
+        node.children.length === 1 &&
+        node.children[0].type === "element" &&
+        node.children[0].tagName === "img"
+      ) {
+        node.tagName = "figure"
+        node.properties = { className: ["cms-figure"] }
+      }
+    })
+  }
+}
+
 export async function deriveDoc(
   env: Env,
   collection: string,
@@ -71,22 +116,50 @@ export async function deriveDoc(
   const title = typeof fm.title === 'string' ? fm.title : ''
   const section = typeof fm.section === 'string' ? fm.section : ''
 
-  // 3. Run unified pipeline
+  // 3. Pre-scan mdast for asset references
+  const preScanProcessor = unified().use(remarkParse).use(remarkGfm)
+  const preScanTree = preScanProcessor.parse(body)
+  const imageUrls: string[] = []
+  hastWalk(preScanTree, (node: any) => {
+    if (node.type === 'image' && typeof node.url === 'string' && node.url.startsWith('assets/')) {
+      imageUrls.push(node.url)
+    }
+  })
+
+  // Batch-fetch asset metadata from D1
+  const assetMap = new Map<string, AssetMeta>()
+  const referencedPaths = [...new Set(imageUrls)]
+  for (const url of referencedPaths) {
+    const row = await env.DB.prepare(
+      'SELECT width, height, lqip FROM assets WHERE path=?'
+    ).bind(url).first<{ width: number | null; height: number | null; lqip: string | null }>()
+    if (row) assetMap.set(url, row)
+  }
+
+  // 4. Build sanitize schema with img/figure support
   const notesSchema = {
     ...defaultSchema,
-    tagNames: [...(defaultSchema.tagNames ?? []), 'aside'],
+    tagNames: [...(defaultSchema.tagNames ?? []), 'aside', 'figure', 'img'],
     attributes: {
       ...(defaultSchema.attributes ?? {}),
       aside: [['className', 'cms-notes']] as Array<string | [string, ...string[]]>,
+      figure: [['className', 'cms-figure']] as Array<string | [string, ...string[]]>,
+      img: [
+        ['src', /^https?:\/\//, /^\/api\/v1\/assets\//],
+        'alt', 'width', 'height', 'loading', 'decoding', 'data-lqip',
+      ] as Array<string | [string, ...unknown[]]>,
     },
   }
 
+  // 5. Run unified pipeline
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkDirective)
     .use(remarkNotesDirective)
+    .use(remarkImageTransform, assetMap)
     .use(remarkRehype)
+    .use(rehypeFigureWrap)
     .use(rehypeSanitize, notesSchema as Parameters<typeof rehypeSanitize>[0])
 
   const mdast = processor.parse(body)
@@ -99,10 +172,10 @@ export async function deriveDoc(
     }
   })
 
-  // 4. Get body_hast after sanitize but before stringify
+  // 6. Get body_hast after sanitize but before stringify
   const body_hast = await processor.run(mdast)
 
-  // 5. Extract TOC
+  // 7. Extract TOC
   const toc: Array<{ depth: number; text: string; slug: string }> = []
   hastWalk(body_hast, (node) => {
     if (node.type === 'element' && /^h[1-6]$/.test(node.tagName)) {
@@ -113,7 +186,7 @@ export async function deriveDoc(
     }
   })
 
-  // 6. Extract excerpt
+  // 8. Extract excerpt
   let excerpt = ''
   hastWalk(body_hast, (node) => {
     if (!excerpt && node.type === 'element' && node.tagName === 'p') {
@@ -121,11 +194,11 @@ export async function deriveDoc(
     }
   })
 
-  // 7. Compute reading_time
+  // 9. Compute reading_time
   const wordCount = body.split(/\s+/).filter((w: string) => w.length > 0).length
   const reading_time = Math.max(0.5, Math.ceil(wordCount / 200 * 2) / 2)
 
-  // 8. Shiki syntax highlighting
+  // 10. Shiki syntax highlighting
   try {
     const { createHighlighter } = await import('shiki')
     const highlighter = await createHighlighter({
@@ -172,8 +245,16 @@ export async function deriveDoc(
     // createHighlighter not available in test env — skip
   }
 
-  // 9. Serialize highlighted hast to HTML
+  // 11. Serialize highlighted hast to HTML
   const body_html = unified().use(rehypeStringify).stringify(body_hast as any)
+
+  // 12. Build assets list (only referenced ones that were found in D1)
+  const assets = referencedPaths
+    .filter(p => assetMap.has(p))
+    .map(p => {
+      const meta = assetMap.get(p)!
+      return { path: p, width: meta.width, height: meta.height, lqip: meta.lqip }
+    })
 
   const result: DeriveResult = {
     body_html,
@@ -184,12 +265,13 @@ export async function deriveDoc(
     title,
     section,
     slug,
+    assets,
   }
 
-  // 10. Write artifact to R2
+  // 13. Write artifact to R2
   await env.BUCKET.put(`derived/${collection}/${slug}/${rev}.json`, JSON.stringify(result))
 
-  // 11. Mirror to KV
+  // 14. Mirror to KV
   await env.KV.put(`derived:${collection}/${slug}:${rev}`, JSON.stringify(result))
 
   return result
