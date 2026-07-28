@@ -26,6 +26,8 @@ That said: several subsystems the schema promises are **not actually wired** (de
 
 ## Honest gaps (verified in code)
 
+> **Update 2026-07-28 (later):** everything in this section except the "Not started" phases was **fixed and committed** in the integrity sprint (`9cf470b`) and the directive-registry pass (`7da4623`): full field validation, taxonomy upkeep (published-only counts), ref checks + ref_edges, redirects on read (API 308 / MCP follow / chain compaction), op_log on reads, cards carry indexes fields as objects, queue producer wired, MCP search status param, directive registry with structured unknown-directive errors, PieceView single-fetch, real HTTP 404s. The list below is kept for the record.
+
 **Dead or missing subsystems**
 - **Taxonomy upkeep is missing entirely.** Nothing writes `terms` / `doc_terms`; `GET /api/v1/taxonomy/:name` reads real tables that are never populated. Post tags validate against nothing and count nothing.
 - **`ref_edges` is never written.** Schema-only. No backlink/reference graph exists.
