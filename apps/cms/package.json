@@ -13,7 +13,9 @@
     "seed": "tsx scripts/seed.ts",
     "seed:pieces": "npx tsx scripts/seed-pieces.ts",
     "migrate:notes": "npx tsx scripts/migrate-notes.ts",
-    "mint-token": "tsx scripts/mint-token.ts"
+    "mint-token": "tsx scripts/mint-token.ts",
+    "mirror": "npx tsx scripts/mirror-content.ts",
+    "mirror:watch": "npx tsx scripts/mirror-content.ts --watch"
   },
   "dependencies": {
     "hono": "^4.12.32",

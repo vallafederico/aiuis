@@ -202,6 +202,36 @@ app.post("/dev/migrate-notes", async (c) => {
   return c.json({ migrated, skipped, errors, results })
 })
 
+app.get("/dev/export", async (c) => {
+  try {
+    requireDevSecret(c.req.raw, c.env)
+  } catch {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const files: Array<{ path: string; content: string }> = []
+  const EXCLUDED_PREFIXES = ["revisions/", "derived/"]
+
+  let cursor: string | undefined
+  do {
+    const list = await c.env.BUCKET.list({ cursor })
+    cursor = list.truncated ? list.cursor : undefined
+
+    for (const obj of list.objects) {
+      // Skip revisions/ and derived/ — only include content/, schema/, skills/
+      if (EXCLUDED_PREFIXES.some(p => obj.key.startsWith(p))) continue
+      // Only include .md files
+      if (!obj.key.endsWith(".md")) continue
+
+      const item = await c.env.BUCKET.get(obj.key)
+      if (!item) continue
+      files.push({ path: obj.key, content: await item.text() })
+    }
+  } while (cursor)
+
+  return c.json({ files })
+})
+
 // Mount review page
 app.route("/review", reviewApp)
 
