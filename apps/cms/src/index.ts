@@ -54,6 +54,68 @@ app.post("/dev/reindex", async (c) => {
   return c.json(result)
 })
 
+app.post("/dev/seed-content", async (c) => {
+  try {
+    requireDevSecret(c.req.raw, c.env)
+  } catch {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const body = await c.req.json<{ action: string; doc: { collection: string; frontmatter: Record<string, unknown>; body?: string } }>()
+
+  if (body.action !== "create_and_publish") {
+    return c.json({ error: "unknown action" }, 400)
+  }
+
+  const identity = {
+    principal: "seed",
+    kind: "agent" as const,
+    session: "seed-pieces",
+    audience: "dev",
+    capabilities: { publish: true, collections: "*", namespaces: ["content"] as string[] },
+  }
+
+  // Check if already exists
+  const slug = typeof body.doc.frontmatter.slug === "string" ? body.doc.frontmatter.slug : null
+  if (!slug) return c.json({ error: "slug required" }, 400)
+
+  const existing = await c.env.DB.prepare(
+    "SELECT id, published_rev FROM documents WHERE collection=? AND slug=?"
+  ).bind(body.doc.collection, slug).first<{ id: string; published_rev: string | null }>()
+
+  if (existing?.published_rev) {
+    return c.json({ status: "skipped", reason: "already_published", id: existing.id })
+  }
+
+  if (existing) {
+    // Draft exists — just publish it
+    const { publishHandler } = await import("./mcp/tools/lifecycle.js")
+    const row = await c.env.DB.prepare("SELECT head_rev FROM documents WHERE id=?").bind(existing.id).first<{ head_rev: string }>()
+    const result = await publishHandler(c.env, identity, { id: existing.id, base_rev: row!.head_rev })
+    const parsed = JSON.parse(result.content[0].text)
+    if (result.isError) return c.json({ status: "error", detail: parsed }, 500)
+    return c.json({ status: "published", id: existing.id })
+  }
+
+  // Create then publish
+  const { createDocHandler } = await import("./mcp/tools/write.js")
+  const { publishHandler } = await import("./mcp/tools/lifecycle.js")
+
+  const createResult = await createDocHandler(c.env, identity, {
+    collection: body.doc.collection,
+    frontmatter: body.doc.frontmatter,
+    body: body.doc.body ?? "",
+  })
+  const createParsed = JSON.parse(createResult.content[0].text)
+  if (createResult.isError) return c.json({ status: "error", detail: createParsed }, 500)
+
+  const pubResult = await publishHandler(c.env, identity, { id: createParsed.id, base_rev: createParsed.rev })
+  const pubParsed = JSON.parse(pubResult.content[0].text)
+  if (pubResult.isError) return c.json({ status: "error", detail: pubParsed }, 500)
+
+  return c.json({ status: "created_and_published", id: createParsed.id })
+})
+
 // Mount review page
 app.route("/review", reviewApp)
 

@@ -53,11 +53,11 @@ export const Nav = () => {
                 items={[
                   {
                     title: "Foreword",
-                    href: "/",
+                    href: "/preface/foreword",
                   },
                   {
                     title: "Credits",
-                    href: "/",
+                    href: "/preface/credits",
                   },
                 ]}
               />
@@ -66,19 +66,19 @@ export const Nav = () => {
                 items={[
                   {
                     title: "Representing Thinking",
-                    href: "/",
+                    href: "/foundations/representing-thinking",
                   },
                   {
                     title: "Styleguides",
-                    href: "/",
+                    href: "/foundations/styleguides",
                   },
                   {
                     title: "Principles",
-                    href: "/",
+                    href: "/foundations/principles",
                   },
                   {
                     title: "Interactions",
-                    href: "/",
+                    href: "/foundations/interactions",
                   },
                 ]}
               />
@@ -87,31 +87,31 @@ export const Nav = () => {
                 items={[
                   {
                     title: "FAQs",
-                    href: "/",
+                    href: "/uis/faqs",
                   },
                   {
                     title: "Infinite Article",
-                    href: "/",
+                    href: "/uis/infinite-article",
                   },
                   {
                     title: "Navigation",
-                    href: "/",
+                    href: "/uis/navigation",
                   },
                   {
                     title: "Images",
-                    href: "/",
+                    href: "/uis/images",
                   },
                   {
                     title: "Bot",
-                    href: "/",
+                    href: "/uis/bot",
                   },
                   {
                     title: "Look At",
-                    href: "/",
+                    href: "/uis/look-at",
                   },
                   {
                     title: "Image Generation",
-                    href: "/",
+                    href: "/uis/image-generation",
                   },
                 ]}
               />
