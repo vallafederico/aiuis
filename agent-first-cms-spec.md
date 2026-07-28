@@ -132,9 +132,30 @@ Prose guidance served via get_context: how many topics per post, pairing rules..
 - **Harvest sweep** (the "auto-generate" mode, tamed): scheduled or one-off job clusters values in use for a field, normalizes, and emits *one proposed taxonomy revision* ("37 distinct values → 12 canonical terms + alias map") for inbox approval. Auto-generation as a draft, never as a fact.
 - Read side: D1 `terms` + `doc_terms` join with denormalized counts — tag pages are index-only; `query` filters via the existing grammar (`filter: { tags: { op: "in", value: [...] } }`); `/api/v1/taxonomy/{name}` lists terms + counts.
 
+### Content directives — components without code
+
+In-body components use the CommonMark generic-directive syntax (`remark-directive`) — a de-facto convention (Docusaurus, VitePress), not spec-standard, chosen because it keeps documents **data, not code**: plain text that round-trips canonicalization, degrades gracefully in any markdown viewer, and gives agents nothing executable to inject. MDX stays rejected for the same three reasons it always was (unvalidatable, unsanitizable, doesn't round-trip).
+
+Three forms, by colon count; **attributes are the props channel, the body/label is the content channel**:
+
+```markdown
+A sentence with :term[latent space]{def="the model's internal representation"} inline.
+
+::video{src="assets/demos/look-at.mp4" poster="assets/demos/look-at.jpg" muted ratio="16/9"}
+
+:::notes
+Endnote material — body is real markdown.
+:::
+```
+
+- `:name[label]{attrs}` inline · `::name{attrs}` leaf (no body — embeds) · `:::name{attrs}` container (markdown body). Containers nest by fence depth: outer fences use more colons — which is why slices (below) use four.
+- **Attributes are flat strings.** That's the honest limit and the boundary rule: simple props → directive; structured/typed/repeatable data → slice. Don't encode JSON into attributes.
+- **Registry, not convention**: every directive is declared by a schema doc `schema/directives/{name}.md` (allowed attributes, required ones, allowed contexts), same field system and prose-`intent` trick as slices. The write path validates against the registry — an **unknown directive or bad attribute is a structured error** (with the known-directive list, so agents self-correct), never silently dropped content. The sanitizer allowlists only what registered directives emit.
+- Derivation maps each directive to a stable element (`aside.cms-notes`, …); the site maps those to components (CSS now, hast→Solid renderer later). First shipped directive: `:::notes`.
+
 ### Slices — composable page blocks
 
-Schema-declared whitelist of markdown container directives — not MDX (unvalidatable, arbitrary code), not JSON arrays (loses the markdown edit model). **v0.1 hard limits: flat only — no nesting, no shared/global slices, no presets, no variants.** The treadmill stays off.
+Schema-declared whitelist of markdown container directives (the four-colon form of the syntax above) — not MDX (unvalidatable, arbitrary code), not JSON arrays (loses the markdown edit model). **v0.1 hard limits: flat only — no nesting, no shared/global slices, no presets, no variants.** The treadmill stays off.
 
 ```markdown
 ::::slice{type=hero id=s_9K2M variant=split}
@@ -334,6 +355,7 @@ Design guarantee that makes this track safe to defer: clients would be *just ano
 | Index | D1, fully derived/rebuildable | Files stay truth; queries stay fast; drift is repairable |
 | Primary interface | MCP server (Agents SDK, DO-backed) | Agents are the default editors |
 | Edit model | `str_replace` + slice ops, atomic batches, `base_rev` optimistic concurrency | Matches how LLMs edit; conflicts return diffs so agents self-rebase |
+| In-body components | Generic directives (`:` / `::` / `:::`), registry-validated; attrs = props, body = content; slices for structured data | Document-not-code holds; unknown directives error instead of vanishing; MDX stays out |
 | Concurrency | Per-doc DO locks (TTL 60s) + `base_rev` | Locks for the write moment; base_rev for semantic races |
 | Identity | Derived from token, never payload | Audit trail that can't be spoofed (red team T1) |
 | Publish | Human-gated by default; `skills/`+`schema/` gated forever | Injection defense (T2/T2b) |
