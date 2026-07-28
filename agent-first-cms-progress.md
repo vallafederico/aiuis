@@ -1,12 +1,12 @@
 # Agent-first CMS — progress & plan
 
-_Last updated: 2026-07-28. Companion to `agent-first-cms-spec.md` (authoritative spec) and the phase plan. Status verified against the code, not just session logs._
+_Last updated: 2026-07-28 (end of session). Companion to `agent-first-cms-spec.md` (authoritative spec, incl. the new §5 directives section) and the phase plan. Status verified against the code, not just session logs._
 
 ## Where it stands
 
-The full local loop works end to end: an agent connects over MCP, creates/edits documents with conflict detection and history; a human reviews and publishes at `/review`; publish derives sanitized HTML and flips an immutable pointer; the site renders the content at real routes. The 13 nav items (Preface / Foundations / UIs) are live CMS pieces at `/{section}/{slug}`, editable through the CMS. 111 tests green (32 node + 79 workers pool), typecheck clean.
+The full local loop works end to end: an agent connects over MCP, creates/edits documents with conflict detection and history; a human reviews and publishes at `/review`; publish derives sanitized HTML and flips an immutable pointer; the site renders the content at real routes. The 13 nav items (Preface / Foundations / UIs) are live CMS pieces at `/{section}/{slug}`. Rich content has begun: the `:::notes` directive and full image support (upload → validate → derive → render) are live, both registry/schema-governed. Every integrity gap found by the code audit (below) has been fixed the same day. **177 tests green (35 node + 142 workers pool), typecheck clean.**
 
-That said: several subsystems the schema promises are **not actually wired** (details below). The core write path is solid; the metadata periphery is thinner than it looks.
+Dev ergonomics: `pnpm dev` runs web + cms; only ONE cms instance may run at a time (second workerd on the same `.wrangler/state` dies with SQLITE_BUSY). After changing the derive pipeline, run `POST /dev/rederive` (dev secret) or stale artifacts break piece pages. `pnpm --filter cms run mirror[:watch]` reflects live content into `apps/cms/mirror/` (gitignored) for browsing.
 
 ## Built and verified
 
@@ -22,7 +22,11 @@ That said: several subsystems the schema promises are **not actually wired** (de
 | Read API (P4) | Cards list (published only), doc by slug (`html\|hast\|json\|md`), rev-addressed = immutable cache, pointer = SWR; drafts gated by bearer auth |
 | Review (P6) | Server-rendered inbox / diff / publish–revert actions reusing lifecycle handlers, human `reviewer` principal in op_log; dev-secret auth |
 | Web (P5, redefined) | `pieces` collection (section + order), 13 nav items seeded published through the real write path; `PieceView` → `PageContent` (`w-grids-6`, `width`/`flow` props); graceful 503/404 |
-| Ops instrumentation | op_log rows for every **mutating** tool + review actions |
+| Ops instrumentation | op_log rows for every tool (reads included) + API routes + review actions |
+| Directives (§5 spec) | `:::notes` live; registry = `schema/directives/*` docs; unknown directive/attr = structured error; discoverable via get_schema/get_context |
+| Images | upload_asset/list_assets (capability-gated), assets table + R2, in-worker dimension parsing, /api/v1/assets (immutable cache) + site proxy route, body-ref validation, `figure.cms-figure` derivation |
+| Integrity (audit fixes) | Full field validation, taxonomy upkeep (published-only counts), refs + ref_edges, redirects on read (308/follow/compaction), cards carry indexes fields, queue producer live |
+| Content mirror | `/dev/export` + mirror script (one-shot / watch), local-only by choice |
 
 ## Honest gaps (verified in code)
 
@@ -83,5 +87,13 @@ Provision D1/KV/R2/queue, fill ids, remote migrations, seed, Cloudflare Access o
 ## Decisions needed from Federico
 1. **Rich content**: confirm directives-over-MDX (recommendation above). If you truly want `.mdx` files with imports as the source format, that's an architecture change to the spec worth a dedicated discussion.
 2. ~~**Notes**~~ — resolved: the trailing notes section of an article (Credits was the example). Shipped as the `:::notes` directive; visual refinement open as design evolves.
-3. **MCP search over drafts**: intended for agents, or should it be capability-gated?
-4. **Queue**: keep async derivation infrastructure (wire the producer) or simplify to synchronous-only and delete the consumer?
+3. ~~**MCP search over drafts**~~ — resolved: kept, made explicit via a documented `status` param (default `all`), logged. API search stays published-only.
+4. ~~**Queue**~~ — resolved: producer wired (draft saves pre-warm derivation); publish stays synchronous.
+
+## Picking up next (in rough order)
+1. **hast→Solid renderer** — Federico has started exploring (`apps/web/src/components/cms/hast.ts`, uncommitted); build on that. Unlocks: Notes as a real Solid component, LQIP blur-up figures, component-mapped everything.
+2. **`::video` directive** — same registry pattern as notes + the asset pipeline already handles the files.
+3. **Phase 7 slices** (composed pages; per-piece width/layout from schema data — PieceView already threads `width`).
+4. **Phase 8 skills layer** (lint enforcement, get_context audience filtering — the one audit gap deliberately left for this phase, list_skills, export).
+5. **Phase 9 hardening** (reconciliation sweep; git-mirror of content if wanted — the local mirror is the manual precursor).
+6. **Phase 10 deploy** (provision, fill REPLACE_AFTER_PROVISION ids, Cloudflare Access on /review, CMS service binding in apps/web — the asset proxy route body becomes the binding call, Cloudflare Images for LQIP/srcset).
