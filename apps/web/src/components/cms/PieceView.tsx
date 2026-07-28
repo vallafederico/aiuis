@@ -67,7 +67,7 @@ export function PieceView(props: { slug: string; section: string }) {
         fallback={
           <>
             <HttpStatusCode code={503} />
-            <div class="px-gx py-20">
+            <div class="px-grid-2 py-20">
               <p>Content service is offline — start it with `pnpm cms`.</p>
             </div>
           </>
@@ -78,19 +78,21 @@ export function PieceView(props: { slug: string; section: string }) {
           fallback={
             <>
               <HttpStatusCode code={404} />
-              <div class="px-gx py-20">
+              <div class="px-grid-2 py-20">
                 <p>Not found.</p>
               </div>
             </>
           }
         >
           {(p) => (
-            <div class="px-gx py-20 max-w-[65ch]">
-              <h1 class="text-3xl -tracking-widest mb-8">{p().title}</h1>
-              <article
-                class="prose prose-neutral max-w-none"
-                innerHTML={p().body_html}
-              />
+            <div class="px-grid-2 py-20">
+              <div class="max-w-[65ch] mx-auto">
+                <h1 class="text-3xl -tracking-widest mb-8">{p().title}</h1>
+                <article
+                  class="prose prose-neutral max-w-none"
+                  innerHTML={p().body_html}
+                />
+              </div>
             </div>
           )}
         </Show>
