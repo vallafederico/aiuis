@@ -2,6 +2,8 @@ import { unified } from "unified"
 import remarkParse from "remark-parse"
 import { toString as mdastToString } from "mdast-util-to-string"
 import { parseFrontmatter, dumpFrontmatter } from "../parse/frontmatter.js"
+import { syncRefEdges } from "./refs.js"
+import { rebuildTaxonomyCounts } from "./taxonomy.js"
 import type { Env } from "../index.js"
 
 export interface RevisionMeta {
@@ -184,6 +186,95 @@ export async function reindexFromR2(env: Env): Promise<{ rebuilt: number; revisi
       }
     }
   } while (revCursor)
+
+  // Refresh cards for published docs
+  const publishedDocs = await env.DB.prepare(
+    `SELECT id, collection, slug, title, head_rev FROM documents WHERE published_rev IS NOT NULL`
+  ).all<{ id: string; collection: string; slug: string; title: string; head_rev: string }>()
+
+  for (const pubDoc of publishedDocs.results) {
+    try {
+      // Load HEAD content
+      const headObj = await env.BUCKET.get(`content/${pubDoc.collection}/${pubDoc.slug}.md`)
+      if (!headObj) continue
+      const content = await headObj.text()
+      const { frontmatter: fm } = parseFrontmatter(content)
+
+      // Load schema to get indexes
+      let schemaIndexes: string[] = []
+      try {
+        const schemaObj = await env.BUCKET.get(`schema/${pubDoc.collection}.md`)
+        if (schemaObj) {
+          const schemaRaw = await schemaObj.text()
+          const { frontmatter: schemaFm } = parseFrontmatter(schemaRaw)
+          if (Array.isArray(schemaFm.indexes)) {
+            schemaIndexes = schemaFm.indexes as string[]
+          }
+        }
+      } catch {}
+
+      const card: Record<string, unknown> = {
+        title: typeof fm.title === 'string' ? fm.title : pubDoc.slug,
+      }
+      for (const fieldName of schemaIndexes) {
+        if (fieldName in fm) {
+          card[fieldName] = fm[fieldName]
+        }
+      }
+
+      await env.DB.prepare('UPDATE documents SET card=? WHERE id=?')
+        .bind(JSON.stringify(card), pubDoc.id)
+        .run()
+    } catch (e) {
+      errors.push(`card refresh ${pubDoc.id}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  // Rebuild ref_edges from content
+  try {
+    await env.DB.prepare("DELETE FROM ref_edges").run()
+    let refCursor: string | undefined
+    do {
+      const list = await env.BUCKET.list({ prefix: "content/", cursor: refCursor })
+      refCursor = list.truncated ? list.cursor : undefined
+      for (const obj of list.objects) {
+        try {
+          const item = await env.BUCKET.get(obj.key)
+          if (!item) continue
+          const content = await item.text()
+          const { frontmatter } = parseFrontmatter(content)
+          const docId = typeof frontmatter._id === "string" ? frontmatter._id : null
+          if (!docId) continue
+          const collection = typeof frontmatter._collection === "string" ? frontmatter._collection : null
+          if (!collection) continue
+          // Load schema to find ref fields
+          const schemaObj = await env.BUCKET.get(`schema/${collection}.md`)
+          if (!schemaObj) continue
+          const schemaRaw = await schemaObj.text()
+          const { frontmatter: schemaFm } = parseFrontmatter(schemaRaw)
+          // Build a minimal schema object
+          const fields: Record<string, unknown> = {}
+          if (schemaFm.fields && typeof schemaFm.fields === "object") {
+            Object.assign(fields, schemaFm.fields)
+          }
+          // Build user frontmatter
+          const userFm: Record<string, unknown> = {}
+          const sysKeys = ["_id", "_collection", "_status", "_rev", "_updated", "_created", "_author"]
+          for (const [k, v] of Object.entries(frontmatter)) {
+            if (!sysKeys.includes(k)) userFm[k] = v
+          }
+          // Use a simplified schema object
+          const minimalSchema = { collection, fields: fields as Record<string, { type: string; items?: { type: string } }>, body: "markdown", indexes: [], guidelines: "" }
+          await syncRefEdges(env, docId, minimalSchema as import("./validate.js").CollectionSchema, userFm)
+        } catch {}
+      }
+    } while (refCursor)
+  } catch {}
+
+  // Rebuild taxonomy counts
+  try {
+    await rebuildTaxonomyCounts(env)
+  } catch {}
 
   return { rebuilt, revisions: revisionsChecked, errors }
 }

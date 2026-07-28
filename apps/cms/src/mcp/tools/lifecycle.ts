@@ -12,6 +12,8 @@ import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
 import { deriveDoc } from "../../derive/pipeline.js"
 import { updateCardFields } from "../../core/revision.js"
+import { syncTaxonomyForDoc } from "../../core/taxonomy.js"
+import { syncRefEdges } from "../../core/refs.js"
 
 type IdentityInfo = McpProps["identity"]
 type McpToolResult = { isError?: boolean; content: Array<{ type: "text"; text: string }> }
@@ -162,6 +164,14 @@ export async function renameDocHandler(env: Env, identity: IdentityInfo, args: {
     env.DB.prepare(`INSERT OR REPLACE INTO redirects (from_collection, from_slug, to_collection, to_slug, created) VALUES (?, ?, ?, ?, ?)`).bind(doc.collection, doc.slug, doc.collection, args.new_slug, now),
   ])
 
+  // Chain compaction: any redirect pointing to old slug → point to new slug
+  await env.DB.prepare(
+    `UPDATE redirects SET to_slug=?, to_collection=? WHERE to_collection=? AND to_slug=?`
+  ).bind(args.new_slug, doc.collection, doc.collection, doc.slug).run()
+
+  // Remove old KV pointer so HTTP GET on old slug hits the redirect logic
+  await env.KV.delete(`ptr:${doc.collection}/${doc.slug}`)
+
   // Move R2 content (copy to new path, old path becomes stale — revisions stay at old paths)
   const oldHeadKey = `content/${doc.collection}/${doc.slug}.md`
   const newHeadKey = `content/${doc.collection}/${args.new_slug}.md`
@@ -170,7 +180,7 @@ export async function renameDocHandler(env: Env, identity: IdentityInfo, args: {
     const content = await headObj.text()
     // Update slug in frontmatter
     const { frontmatter, body } = parseFrontmatter(content)
-    const newFm = { ...frontmatter, _updated: now }
+    const newFm = { ...frontmatter, slug: args.new_slug, _updated: now }
     const newContent = dumpFrontmatter(newFm, body)
     await env.BUCKET.put(newHeadKey, newContent)
     await env.BUCKET.delete(oldHeadKey)
@@ -198,6 +208,15 @@ export async function deleteDocHandler(env: Env, identity: IdentityInfo, args: {
     return errorResult("confirm value must equal the document id", "confirm_mismatch")
   }
 
+  // Check for incoming references
+  let referencedBy: Array<{ from_doc: string; field: string }> = []
+  try {
+    const refs = await env.DB.prepare(
+      `SELECT from_doc, field FROM ref_edges WHERE to_doc=?`
+    ).bind(doc.docId).all<{ from_doc: string; field: string }>()
+    referencedBy = refs.results
+  } catch {}
+
   // Archive: status flip only; R2 content stays, revisions stay
   const now = new Date().toISOString()
   await env.DB.prepare(`UPDATE documents SET status='archived', updated=? WHERE id=?`).bind(now, doc.docId).run()
@@ -224,7 +243,7 @@ export async function deleteDocHandler(env: Env, identity: IdentityInfo, args: {
   }
 
   logOp(env, { session: identity.session, tool: "delete_doc", docId: doc.docId, outcome: "ok" })
-  return okResult({ id: doc.docId, status: "archived" })
+  return okResult({ id: doc.docId, status: "archived", referenced_by: referencedBy })
 }
 
 // publish tool — full validation incl. required-at-publish fields
@@ -301,11 +320,48 @@ export async function publishHandler(env: Env, identity: IdentityInfo, args: { i
 
   // Update card fields
   const { frontmatter: pubFm } = parseFrontmatter(canonicalized)
+  // Load schema to get index fields
+  let schema
+  try {
+    schema = await loadCollectionSchema(env, doc.collection)
+  } catch {
+    // schema not found — proceed without index fields
+  }
+  const indexFields: Record<string, unknown> = {}
+  if (schema?.indexes) {
+    for (const fieldName of schema.indexes) {
+      if (fieldName in pubFm) {
+        indexFields[fieldName] = pubFm[fieldName]
+      }
+    }
+  }
   await updateCardFields(env, doc.docId, {
     title: typeof pubFm.title === 'string' ? pubFm.title : doc.slug,
     excerpt: deriveResult.excerpt,
     reading_time: deriveResult.reading_time,
+    ...indexFields,
   })
+
+  // Sync ref_edges after publish
+  try {
+    const refSchema = await loadCollectionSchema(env, doc.collection)
+    const userPubFm: Record<string, unknown> = {}
+    const systemKeys = ["_id", "_collection", "_status", "_rev", "_updated", "_created", "_author"]
+    for (const [k, v] of Object.entries(pubFm)) {
+      if (!systemKeys.includes(k)) userPubFm[k] = v
+    }
+    await syncRefEdges(env, doc.docId, refSchema, userPubFm)
+  } catch {
+    // ref_edges sync is best-effort
+  }
+
+  // Sync taxonomy terms after publish
+  try {
+    const pubSchema = await loadCollectionSchema(env, doc.collection)
+    await syncTaxonomyForDoc(env, pubSchema, doc.docId, pubFm, true)
+  } catch {
+    // taxonomy sync is best-effort
+  }
 
   logOp(env, { session: identity.session, tool: "publish", docId: doc.docId, outcome: "ok" })
   return okResult({ id: doc.docId, rev: newRev, status: "published" })
@@ -348,6 +404,15 @@ export async function unpublishHandler(env: Env, identity: IdentityInfo, args: {
 
     // Delete KV pointer
     await env.KV.delete(`ptr:${doc.collection}/${doc.slug}`)
+
+    // Sync taxonomy terms after unpublish (doc is now draft/not published)
+    try {
+      const unpubSchema = await loadCollectionSchema(env, doc.collection)
+      const { frontmatter: unpubFm } = parseFrontmatter(canonicalized)
+      await syncTaxonomyForDoc(env, unpubSchema, doc.docId, unpubFm, false)
+    } catch {
+      // taxonomy sync is best-effort
+    }
 
     logOp(env, { session: identity.session, tool: "unpublish", docId: doc.docId, outcome: "ok" })
     return okResult({ id: doc.docId, rev: newRev, status: "draft" })

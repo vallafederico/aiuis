@@ -3,8 +3,9 @@ import { requireDevSecret, resolveIdentity } from "./core/auth.js"
 import type { AuthedIdentity } from "./core/auth.js"
 import { reindexFromR2 } from "./core/revision.js"
 import { CmsMcpAgent } from "./mcp/agent.js"
-import { deriveDoc } from "./derive/pipeline.js"
 import { reviewApp } from "./review/handler.js"
+import { logOp } from "./core/op-log.js"
+import { deriveDoc } from "./derive/pipeline.js"
 
 export interface Env {
   DB: D1Database
@@ -232,17 +233,23 @@ app.get("/dev/export", async (c) => {
   return c.json({ files })
 })
 
-// Mount review page
 app.route("/review", reviewApp)
 
 // GET /api/v1/search?q= — FTS5 over published docs
 app.get('/api/v1/search', async (c) => {
+  let session = "http"
+  try {
+    const identity = await resolveIdentity(c.req.raw, c.env)
+    session = identity.session
+  } catch {}
+
   const q = c.req.query('q')
   if (!q) return c.json({ error: 'q required' }, 400)
   const escaped = `"${q.replace(/"/g, '""')}"`
   const rows = await c.env.DB.prepare(
     `SELECT d.id, d.collection, d.slug, d.title, d.updated FROM documents_fts f JOIN documents d ON d.id=f.id WHERE documents_fts MATCH ? AND d.published_rev IS NOT NULL LIMIT 20`
   ).bind(escaped).all()
+  logOp(c.env, { session, tool: "http_search", outcome: "ok" })
   return c.json({ query: q, results: rows.results })
 })
 
@@ -258,10 +265,23 @@ app.get('/api/v1/taxonomy/:name', async (c) => {
 // GET /api/v1/:collection — published docs only
 app.get('/api/v1/:collection', async (c) => {
   const collection = c.req.param('collection')
+  let session = "http"
+  try {
+    const identity = await resolveIdentity(c.req.raw, c.env)
+    session = identity.session
+  } catch {}
+
   const rows = await c.env.DB.prepare(
     `SELECT id, collection, slug, title, card, created, updated FROM documents WHERE collection=? AND published_rev IS NOT NULL ORDER BY updated DESC`
   ).bind(collection).all()
-  return c.json({ items: rows.results })
+
+  const items = rows.results.map((row: Record<string, unknown>) => ({
+    ...row,
+    card: typeof row.card === 'string' ? (() => { try { return JSON.parse(row.card as string) } catch { return {} } })() : row.card
+  }))
+
+  logOp(c.env, { session, tool: "list_collection", outcome: "ok" })
+  return c.json({ items })
 })
 
 // GET /api/v1/:collection/:slug — doc detail with format/rev params
@@ -270,6 +290,11 @@ app.get('/api/v1/:collection/:slug', async (c) => {
   const slug = c.req.param('slug')
   const format = c.req.query('format') ?? 'html'
   const revParam = c.req.query('rev')
+  let session = "http"
+  try {
+    const identity = await resolveIdentity(c.req.raw, c.env)
+    session = identity.session
+  } catch {}
 
   let rev: string | null = null
   let isRevAddressed = false
@@ -296,6 +321,34 @@ app.get('/api/v1/:collection/:slug', async (c) => {
         ).bind(collection, slug).first<{ id: string; head_rev: string; status: string }>()
 
         if (!docRow) {
+          // Follow redirect chain (up to 5 hops, cycle detection)
+          const visited = new Set<string>([`${collection}/${slug}`])
+          let curCollection = collection
+          let curSlug = slug
+
+          for (let hop = 0; hop < 5; hop++) {
+            const redirect = await c.env.DB.prepare(
+              `SELECT to_collection, to_slug FROM redirects WHERE from_collection=? AND from_slug=?`
+            ).bind(curCollection, curSlug).first<{ to_collection: string; to_slug: string }>()
+
+            if (!redirect) break
+
+            const nextKey = `${redirect.to_collection}/${redirect.to_slug}`
+            if (visited.has(nextKey)) break // cycle detected
+            visited.add(nextKey)
+
+            curCollection = redirect.to_collection
+            curSlug = redirect.to_slug
+          }
+
+          if (curCollection !== collection || curSlug !== slug) {
+            const targetUrl = `/api/v1/${curCollection}/${curSlug}`
+            const qs = c.req.url.includes("?") ? "?" + c.req.url.split("?")[1] : ""
+            logOp(c.env, { session, tool: "get_doc_http", outcome: "redirect" })
+            return c.redirect(targetUrl + qs, 308)
+          }
+
+          logOp(c.env, { session, tool: "get_doc_http", outcome: "not_found" })
           return c.json({ error: 'not found', code: 'not_found' }, 404)
         }
 
@@ -304,6 +357,7 @@ app.get('/api/v1/:collection/:slug', async (c) => {
           await resolveIdentity(c.req.raw, c.env)
           rev = docRow.head_rev
         } catch {
+          logOp(c.env, { session, tool: "get_doc_http", outcome: "not_found" })
           return c.json({ error: 'not found', code: 'not_found' }, 404)
         }
       }
@@ -318,6 +372,7 @@ app.get('/api/v1/:collection/:slug', async (c) => {
     const obj = await c.env.BUCKET.get(`revisions/${collection}/${slug}/${rev}.md`)
     if (!obj) return c.json({ error: 'not found', code: 'not_found' }, 404)
     const content = await obj.text()
+    logOp(c.env, { session, tool: "get_doc_http", outcome: "ok" })
     return new Response(content, {
       headers: { 'Content-Type': 'text/markdown; charset=utf-8', 'Cache-Control': cacheControl }
     })
@@ -340,22 +395,23 @@ app.get('/api/v1/:collection/:slug', async (c) => {
       try {
         derived = await deriveDoc(c.env, collection, slug, rev!) as unknown as Record<string, unknown>
       } catch {
+        logOp(c.env, { session, tool: "get_doc_http", outcome: "not_found" })
         return c.json({ error: 'not found', code: 'not_found' }, 404)
       }
     }
   }
 
+  logOp(c.env, { session, tool: "get_doc_http", outcome: "ok" })
+
   if (format === 'hast') {
-    const res = new Response(JSON.stringify(derived!.body_hast), {
+    return new Response(JSON.stringify(derived!.body_hast), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': cacheControl }
     })
-    return res
   }
   if (format === 'json') {
-    const res = new Response(JSON.stringify(derived), {
+    return new Response(JSON.stringify(derived), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': cacheControl }
     })
-    return res
   }
   // default: html
   return new Response(derived!.body_html as string, {

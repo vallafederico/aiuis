@@ -9,6 +9,8 @@ import { canonicalize } from "../../core/canonicalize.js"
 import { writeRevision } from "../../core/revision.js"
 import { logOp } from "../../core/op-log.js"
 import { acquireLock, releaseLock } from "../../core/lock-client.js"
+import { syncTaxonomyForDoc } from "../../core/taxonomy.js"
+import { checkRefExistence, syncRefEdges } from "../../core/refs.js"
 import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
 
@@ -78,6 +80,12 @@ export async function createDocHandler(env: Env, identity: IdentityInfo, args: C
     throw e
   }
 
+  // 2b. Ref existence check
+  const missingRefs = await checkRefExistence(env, schema, args.frontmatter)
+  if (missingRefs.length > 0) {
+    return errorResult("referenced documents not found", "ref_not_found", missingRefs)
+  }
+
   // 3. Slug check
   const slug = typeof args.frontmatter.slug === "string" ? args.frontmatter.slug : null
   if (!slug) {
@@ -124,6 +132,29 @@ export async function createDocHandler(env: Env, identity: IdentityInfo, args: C
     },
     canonicalized
   )
+
+  // Sync taxonomy terms (best-effort)
+  try {
+    const { frontmatter: canonFm } = parseFrontmatter(canonicalized)
+    await syncTaxonomyForDoc(env, schema, _id, canonFm, false)
+  } catch {
+    // taxonomy sync is best-effort, never fail the write
+  }
+
+  // Sync ref_edges
+  try {
+    const { frontmatter: canonFm } = parseFrontmatter(canonicalized)
+    await syncRefEdges(env, _id, schema, canonFm)
+  } catch {
+    // ref_edges sync is best-effort
+  }
+
+  // Fire-and-forget queue enqueue for background derive
+  try {
+    await env.DERIVE_QUEUE.send({ collection: args.collection, slug, rev: _rev })
+  } catch {
+    // queue delivery quirks must never fail a write
+  }
 
   // 8. logOp
   logOp(env, { session: identity.session, tool: "create_doc", docId: _id, outcome: "ok" })
@@ -256,6 +287,27 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
       }
     }
 
+    // 6b. Ref existence check on edited frontmatter
+    try {
+      const editedSchema = await loadCollectionSchema(env, collection)
+      // Extract user fields only
+      const userFmForRefCheck: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(editedFm)) {
+        if (!["_id", "_collection", "_status", "_rev", "_updated", "_created", "_author"].includes(k)) {
+          userFmForRefCheck[k] = v
+        }
+      }
+      const missingRefs = await checkRefExistence(env, editedSchema, userFmForRefCheck)
+      if (missingRefs.length > 0) {
+        return errorResult("referenced documents not found", "ref_not_found", missingRefs)
+      }
+    } catch (e) {
+      // If schema not found, skip ref check
+      if (!(e instanceof Error) || !e.message.includes("Schema not found")) {
+        throw e
+      }
+    }
+
     // 7. Update _author
     const newFm = { ...editedFm, _author: { kind: identity.kind, principal: identity.principal, session: identity.session } }
     const newRaw = dumpFrontmatter(newFm, editedBody)
@@ -282,6 +334,42 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
       },
       canonicalized
     )
+
+    // Sync taxonomy terms (best-effort)
+    try {
+      const { frontmatter: canonFm } = parseFrontmatter(canonicalized)
+      let editSchema
+      try {
+        editSchema = await loadCollectionSchema(env, collection)
+      } catch {}
+      if (editSchema) {
+        await syncTaxonomyForDoc(env, editSchema, docId, canonFm, currentStatus === "published")
+      }
+    } catch {
+      // taxonomy sync is best-effort
+    }
+
+    // Sync ref_edges
+    try {
+      const refSchema = await loadCollectionSchema(env, collection)
+      const { frontmatter: canonFm } = parseFrontmatter(canonicalized)
+      const userFmForRefs: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(canonFm)) {
+        if (!["_id", "_collection", "_status", "_rev", "_updated", "_created", "_author"].includes(k)) {
+          userFmForRefs[k] = v
+        }
+      }
+      await syncRefEdges(env, docId, refSchema, userFmForRefs)
+    } catch {
+      // ref_edges sync is best-effort
+    }
+
+    // Fire-and-forget queue enqueue for background derive
+    try {
+      await env.DERIVE_QUEUE.send({ collection, slug, rev: newRev })
+    } catch {
+      // queue delivery quirks must never fail a write
+    }
 
     // 11. logOp
     logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "ok" })

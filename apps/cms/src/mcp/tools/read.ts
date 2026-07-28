@@ -3,6 +3,7 @@ import { z } from "zod"
 import { parseFrontmatter } from "../../parse/frontmatter.js"
 import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
+import { logOp } from "../../core/op-log.js"
 
 type IdentityInfo = McpProps["identity"]
 type McpToolResult = { isError?: boolean; content: Array<{ type: "text"; text: string }> }
@@ -42,6 +43,7 @@ export async function queryHandler(
 
   const nextCursor = results.length === limit ? String(offset + limit) : null
 
+  logOp(env, { session: _identity.session, tool: "query", outcome: "ok" })
   return okResult({ results, next_cursor: nextCursor })
 }
 
@@ -84,19 +86,54 @@ export async function readDocHandler(
 
   const obj = await env.BUCKET.get(key)
   if (!obj) {
+    // Try redirect chain (only for non-revision fetches)
+    if (!args.rev) {
+      const visited = new Set<string>([`${collection}/${slug}`])
+      let curCollection = collection
+      let curSlug = slug
+
+      for (let hop = 0; hop < 5; hop++) {
+        const redirect = await env.DB.prepare(
+          `SELECT to_collection, to_slug FROM redirects WHERE from_collection=? AND from_slug=?`
+        ).bind(curCollection, curSlug).first<{ to_collection: string; to_slug: string }>()
+
+        if (!redirect) break
+
+        const nextKey = `${redirect.to_collection}/${redirect.to_slug}`
+        if (visited.has(nextKey)) break
+        visited.add(nextKey)
+
+        curCollection = redirect.to_collection
+        curSlug = redirect.to_slug
+      }
+
+      if (curCollection !== collection || curSlug !== slug) {
+        // Found a redirect target, try to fetch it
+        const redirectObj = await env.BUCKET.get(`content/${curCollection}/${curSlug}.md`)
+        if (redirectObj) {
+          const raw = await redirectObj.text()
+          const { frontmatter: redirFm, body: redirBody } = parseFrontmatter(raw)
+          logOp(env, { session: _identity.session, tool: "read_doc", outcome: "ok" })
+          return okResult({ frontmatter: redirFm, body: redirBody, raw, redirected_from: `${collection}/${slug}` })
+        }
+      }
+    }
+
+    logOp(env, { session: _identity.session, tool: "read_doc", outcome: "not_found" })
     return errorResult("not found", "not_found")
   }
 
   const raw = await obj.text()
   const { frontmatter, body } = parseFrontmatter(raw)
 
+  logOp(env, { session: _identity.session, tool: "read_doc", outcome: "ok" })
   return okResult({ frontmatter, body, raw })
 }
 
 export async function searchHandler(
   env: Env,
   _identity: IdentityInfo,
-  args: { q: string; collection?: string; limit?: number }
+  args: { q: string; collection?: string; limit?: number; status?: string }
 ): Promise<McpToolResult> {
   const limit = Math.min(args.limit ?? 20, 50)
   const sanitizedQ = `"${args.q.replace(/"/g, '""')}"`
@@ -111,14 +148,21 @@ export async function searchHandler(
       params.push(args.collection)
     }
 
+    if (args.status && args.status !== "all") {
+      query += ` AND d.status=?`
+      params.push(args.status)
+    }
+
     query += ` LIMIT ?`
     params.push(limit)
 
     const stmt = env.DB.prepare(query)
     const result = await stmt.bind(...params).all()
 
+    logOp(env, { session: _identity.session, tool: "search", outcome: "ok" })
     return okResult({ results: result.results })
   } catch (e) {
+    logOp(env, { session: _identity.session, tool: "search", outcome: "search_error", errorClass: "search_error" })
     return errorResult(e instanceof Error ? e.message : "Search failed", "search_error")
   }
 }
@@ -158,11 +202,12 @@ export function registerReadTools(
 
   server.tool(
     "search",
-    "Full-text search documents",
+    "Full-text search documents. Default status filter is 'all' — agents can see drafts, archived, and published docs.",
     {
       q: z.string(),
       collection: z.string().optional(),
       limit: z.number().int().min(1).max(50).optional().default(20),
+      status: z.enum(["published", "draft", "archived", "all"]).optional().default("all"),
     },
     async (args) => {
       return searchHandler(env, getIdentity(), args)

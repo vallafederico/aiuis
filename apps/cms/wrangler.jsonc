@@ -43,6 +43,9 @@
       }
     ]
   },
+  "vars": {
+    "CMS_DEV_SECRET": "dev-secret-change-me"
+  },
   "durable_objects": {
     "bindings": [
       {
