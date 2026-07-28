@@ -8,7 +8,16 @@ const CMS_BASE =
 
 export async function cmsGet<T = unknown>(path: string): Promise<T> {
   const url = `${CMS_BASE}${path}`;
-  const res = await fetch(url);
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (cause) {
+    // network-level failure (CMS worker not running / unreachable)
+    throw Object.assign(new Error(`CMS unreachable: ${path}`), {
+      status: 503,
+      cause,
+    });
+  }
   if (!res.ok) {
     throw Object.assign(new Error(`CMS ${res.status}: ${path}`), {
       status: res.status,
