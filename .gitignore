@@ -50,3 +50,4 @@ biome.json
 
 # Vinxi temp files
 app.config.timestamp_*.js
+apps/cms/mirror/

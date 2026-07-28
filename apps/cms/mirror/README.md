@@ -1,1 +1,0 @@
-This directory is a generated read-only reflection of the CMS's R2 storage. Edits here do not flow back — edit via MCP tools + /review instead. Regenerate with: pnpm --filter cms run mirror
