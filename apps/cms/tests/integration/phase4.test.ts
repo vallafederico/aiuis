@@ -231,4 +231,111 @@ More content.
     expect(slugs).toContain("fts-published")
     expect(slugs).not.toContain("fts-draft")
   })
+
+  it("deriveDoc: :::notes directive → <aside class=\"cms-notes\"> in html, absent from toc", async () => {
+    const rev = "01TESTREV0000000000000099"
+    const rawContent = `---
+title: Notes Directive Test
+slug: notes-directive-test
+date: 2024-01-01T00:00:00.000Z
+---
+Opening paragraph.
+
+## Section
+
+Some content.
+
+:::notes
+This is a note. <script>alert('xss')</script>
+:::
+`
+    await testEnv.BUCKET.put(`revisions/articles/notes-directive-test/${rev}.md`, rawContent)
+
+    const result = await deriveDoc(testEnv, "articles", "notes-directive-test", rev)
+
+    expect(result.body_html).toContain('<aside class="cms-notes">')
+    expect(result.body_html).not.toContain('<script>')
+    expect(result.body_html).toContain('This is a note.')
+    // Notes aside should NOT appear in TOC (only headings do)
+    const tocTexts = result.toc.map((t: any) => t.text)
+    expect(tocTexts).toContain('Section')
+    expect(tocTexts).not.toContain('Notes') // no h2 Notes heading anymore
+    expect(tocTexts).not.toContain('This is a note.')
+  })
+})
+
+describe("migrate-notes route", () => {
+  const migrateIdentity = {
+    principal: "migration",
+    kind: "agent" as const,
+    session: "migrate-notes",
+    audience: "dev",
+    capabilities: { publish: true, collections: "*", namespaces: ["content"] as string[] },
+  }
+
+  beforeAll(async () => {
+    // Seed pieces schema
+    await testEnv.BUCKET.put("schema/pieces.md", `---
+_kind: schema
+collection: pieces
+body: markdown
+fields:
+  title:
+    type: string
+    required: true
+    max: 120
+  slug:
+    type: slug
+    required: true
+  section:
+    type: string
+    required: true
+  order:
+    type: number
+    required: true
+indexes: []
+---
+Pieces guidelines.
+`)
+  })
+
+  it("migrate-notes: migrates ## Notes → :::notes, idempotent on re-run", async () => {
+    // Create and publish a piece with ## Notes
+    const created = await createDocHandler(testEnv, migrateIdentity, {
+      collection: "pieces",
+      frontmatter: { title: "Migration Test Piece", slug: "migration-test-piece", section: "preface", order: 99 },
+      body: "Main content.\n\n## Notes\n\nThis is the note text.",
+    })
+    const { id, rev: createRev } = JSON.parse(created.content[0].text)
+    await publishHandler(testEnv, migrateIdentity, { id, base_rev: createRev })
+
+    // Call migrate route
+    const res1 = await SELF.fetch(new Request("http://localhost/dev/migrate-notes", {
+      method: "POST",
+      headers: { "X-Dev-Secret": testEnv.CMS_DEV_SECRET },
+    }))
+    expect(res1.status).toBe(200)
+    const data1 = await res1.json() as { migrated: number; skipped: number; errors: number; results: any[] }
+
+    // Find our piece in results
+    const pieceResult = data1.results.find((r: any) => r.slug === "migration-test-piece")
+    expect(pieceResult?.status).toBe("migrated")
+
+    // Check the HTML now contains aside.cms-notes
+    const htmlRes = await SELF.fetch(new Request("http://localhost/api/v1/pieces/migration-test-piece?format=html"))
+    expect(htmlRes.status).toBe(200)
+    const html = await htmlRes.text()
+    expect(html).toContain('<aside class="cms-notes">')
+    expect(html).not.toContain('<h2>Notes</h2>')
+
+    // Re-run should be idempotent (skipped)
+    const res2 = await SELF.fetch(new Request("http://localhost/dev/migrate-notes", {
+      method: "POST",
+      headers: { "X-Dev-Secret": testEnv.CMS_DEV_SECRET },
+    }))
+    expect(res2.status).toBe(200)
+    const data2 = await res2.json() as { migrated: number; skipped: number; errors: number }
+    // Our piece should now be skipped (already has :::notes)
+    expect(data2.migrated).toBe(0)
+  })
 })

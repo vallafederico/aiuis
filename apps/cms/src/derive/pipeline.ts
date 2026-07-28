@@ -1,6 +1,7 @@
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 import remarkGfm from "remark-gfm"
+import remarkDirective from "remark-directive"
 import remarkRehype from "remark-rehype"
 import { defaultSchema } from "rehype-sanitize"
 import rehypeSanitize from "rehype-sanitize"
@@ -33,6 +34,21 @@ function toSlug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')
 }
 
+function remarkNotesDirective() {
+  return (tree: any) => {
+    hastWalk(tree, (node: any) => {
+      if (
+        node.type === 'containerDirective' &&
+        node.name === 'notes'
+      ) {
+        node.data = node.data ?? {}
+        node.data.hName = 'aside'
+        node.data.hProperties = { className: ['cms-notes'] }
+      }
+    })
+  }
+}
+
 export async function deriveDoc(
   env: Env,
   collection: string,
@@ -50,11 +66,22 @@ export async function deriveDoc(
   const { body } = parseFrontmatter(raw)
 
   // 3. Run unified pipeline
+  const notesSchema = {
+    ...defaultSchema,
+    tagNames: [...(defaultSchema.tagNames ?? []), 'aside'],
+    attributes: {
+      ...(defaultSchema.attributes ?? {}),
+      aside: [['className', 'cms-notes']] as Array<string | [string, ...string[]]>,
+    },
+  }
+
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkDirective)
+    .use(remarkNotesDirective)
     .use(remarkRehype)
-    .use(rehypeSanitize, defaultSchema)
+    .use(rehypeSanitize, notesSchema as Parameters<typeof rehypeSanitize>[0])
 
   const mdast = processor.parse(body)
   // 4. Get body_hast after sanitize but before stringify

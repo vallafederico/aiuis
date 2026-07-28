@@ -42,4 +42,12 @@ describe("canonicalize", () => {
     const result = await canonicalize(input)
     expect(result).toContain("_italic_")
   })
+
+  it("idempotency: notes container directive", async () => {
+    const input = "---\ntitle: Directive\n---\n:::notes\nThis is a note paragraph.\n:::\n"
+    const once = await canonicalize(input)
+    const twice = await canonicalize(once)
+    expect(once).toBe(twice)
+    expect(once).not.toContain("\\:::")
+  })
 })

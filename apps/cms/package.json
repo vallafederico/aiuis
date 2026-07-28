@@ -12,6 +12,7 @@
     "migrate:local": "wrangler d1 migrations apply aiuis-cms-db --local",
     "seed": "tsx scripts/seed.ts",
     "seed:pieces": "npx tsx scripts/seed-pieces.ts",
+    "migrate:notes": "npx tsx scripts/migrate-notes.ts",
     "mint-token": "tsx scripts/mint-token.ts"
   },
   "dependencies": {

@@ -3,6 +3,7 @@ import { createAsync, query } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
 import PageContent from "~/components/PageContent";
 import { cmsGet } from "~/lib/cms";
+import "./PieceView.css";
 
 type PieceResult =
   | {

@@ -1,0 +1,25 @@
+/* .cms-notes — rendered inside innerHTML article; styled as quiet endnote */
+.cms-notes {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid currentColor;
+  opacity: 0.55;
+  font-size: 0.8125rem; /* between xs and sm */
+  line-height: 1.6;
+}
+
+.cms-notes::before {
+  content: "Notes";
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.6875rem;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+/* Don't let Tailwind prose style the aside's p tags with extra top margin */
+.cms-notes > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}

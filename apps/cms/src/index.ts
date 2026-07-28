@@ -116,6 +116,92 @@ app.post("/dev/seed-content", async (c) => {
   return c.json({ status: "created_and_published", id: createParsed.id })
 })
 
+app.post("/dev/migrate-notes", async (c) => {
+  try {
+    requireDevSecret(c.req.raw, c.env)
+  } catch {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const identity = {
+    principal: "migration",
+    kind: "agent" as const,
+    session: "migrate-notes",
+    audience: "dev",
+    capabilities: { publish: true, collections: "*", namespaces: ["content"] as string[] },
+  }
+
+  const { editDocHandler } = await import("./mcp/tools/write.js")
+  const { publishHandler } = await import("./mcp/tools/lifecycle.js")
+
+  // Fetch all pieces docs
+  const rows = await c.env.DB.prepare(
+    "SELECT id, slug, head_rev FROM documents WHERE collection='pieces' AND published_rev IS NOT NULL ORDER BY slug"
+  ).all<{ id: string; slug: string; head_rev: string }>()
+
+  const results: Array<{ slug: string; status: string; detail?: string; newRev?: string }> = []
+
+  for (const row of rows.results) {
+    // Fetch current HEAD content
+    const obj = await c.env.BUCKET.get(`content/pieces/${row.slug}.md`)
+    if (!obj) {
+      results.push({ slug: row.slug, status: "error", detail: "content not found" })
+      continue
+    }
+    const content = await obj.text()
+
+    // Check if already migrated (idempotency)
+    if (content.includes(":::notes")) {
+      results.push({ slug: row.slug, status: "skipped", detail: "already migrated" })
+      continue
+    }
+
+    // Check if has ## Notes section to migrate
+    if (!content.includes("## Notes\n\n")) {
+      results.push({ slug: row.slug, status: "skipped", detail: "no ## Notes section found" })
+      continue
+    }
+
+    // Apply str_replace edit: ## Notes\n\n<paragraph> → :::notes\n<paragraph>\n:::
+    const match = content.match(/## Notes\n\n([^\n]+(?:\n(?!\n)[^\n]+)*)\s*$/)
+    if (!match) {
+      results.push({ slug: row.slug, status: "skipped", detail: "## Notes pattern not matched" })
+      continue
+    }
+    const notesParagraph = match[1].trim()
+    const oldText = `## Notes\n\n${notesParagraph}`
+    const newText = `:::notes\n${notesParagraph}\n:::`
+
+    const editResult = await editDocHandler(c.env, identity, {
+      id: row.id,
+      base_rev: row.head_rev,
+      note: "migrate ## Notes → :::notes directive",
+      edits: [{ op: "str_replace", old: oldText, new: newText }],
+    })
+    const editParsed = JSON.parse(editResult.content[0].text)
+    if (editResult.isError) {
+      results.push({ slug: row.slug, status: "error", detail: editParsed.error })
+      continue
+    }
+
+    // Re-publish with new head rev
+    const pubResult = await publishHandler(c.env, identity, { id: row.id, base_rev: editParsed.rev })
+    const pubParsed = JSON.parse(pubResult.content[0].text)
+    if (pubResult.isError) {
+      results.push({ slug: row.slug, status: "error", detail: pubParsed.error })
+      continue
+    }
+
+    results.push({ slug: row.slug, status: "migrated", newRev: pubParsed.rev })
+  }
+
+  const migrated = results.filter(r => r.status === "migrated").length
+  const skipped = results.filter(r => r.status === "skipped").length
+  const errors = results.filter(r => r.status === "error").length
+
+  return c.json({ migrated, skipped, errors, results })
+})
+
 // Mount review page
 app.route("/review", reviewApp)
 

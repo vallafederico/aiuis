@@ -21,67 +21,67 @@ const PIECES = [
   {
     collection: "pieces",
     frontmatter: { title: "Foreword", slug: "foreword", section: "preface", order: 1 },
-    body: `This thesis investigates what it means to design interfaces when the system on the other side thinks. The pieces collected here are neither a style guide nor a manifesto—they are working notes from a practice that is still figuring itself out.\n\n## Notes\n\nRead sequentially or jump to any chapter; each stands on its own.`
+    body: `This thesis investigates what it means to design interfaces when the system on the other side thinks. The pieces collected here are neither a style guide nor a manifesto—they are working notes from a practice that is still figuring itself out.\n\n:::notes\nRead sequentially or jump to any chapter; each stands on its own.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Credits", slug: "credits", section: "preface", order: 2 },
-    body: `The work here grew out of conversations, critiques, and late-night debugging sessions with people generous enough to look at unfinished things. Their names appear throughout the chapters where their influence was most direct.\n\n## Notes\n\nAffiliations are listed as they were at the time of the relevant contribution.`
+    body: `The work here grew out of conversations, critiques, and late-night debugging sessions with people generous enough to look at unfinished things. Their names appear throughout the chapters where their influence was most direct.\n\n:::notes\nAffiliations are listed as they were at the time of the relevant contribution.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Representing Thinking", slug: "representing-thinking", section: "foundations", order: 1 },
-    body: `Before an interface can show that a system is thinking, it has to decide what thinking looks like. This chapter examines the visual and temporal vocabularies designers reach for—spinners, streaming text, typing indicators—and asks which of them model the process accurately and which merely signal busyness.\n\n## Notes\n\nThe distinction between representing process and representing result shapes every design decision in the chapters that follow.`
+    body: `Before an interface can show that a system is thinking, it has to decide what thinking looks like. This chapter examines the visual and temporal vocabularies designers reach for—spinners, streaming text, typing indicators—and asks which of them model the process accurately and which merely signal busyness.\n\n:::notes\nThe distinction between representing process and representing result shapes every design decision in the chapters that follow.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Styleguides", slug: "styleguides", section: "foundations", order: 2 },
-    body: `A styleguide for an AI-augmented product has to account for outputs it did not author. This chapter proposes a framework for extending design tokens and component libraries to cover generated content—text, images, citations—without surrendering visual coherence.\n\n## Notes\n\nExamples draw from production systems where the generated/designed boundary became a live design problem.`
+    body: `A styleguide for an AI-augmented product has to account for outputs it did not author. This chapter proposes a framework for extending design tokens and component libraries to cover generated content—text, images, citations—without surrendering visual coherence.\n\n:::notes\nExamples draw from production systems where the generated/designed boundary became a live design problem.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Principles", slug: "principles", section: "foundations", order: 3 },
-    body: `Six principles for designing AI interfaces, derived inductively from the case studies in this thesis: legibility, interruptibility, recoverability, attribution, calibration, and restraint. Each is defined precisely enough to fail—vague principles are not principles.\n\n## Notes\n\nThe principles are ordered by the phase of an interaction they most affect, from first contact to long-term use.`
+    body: `Six principles for designing AI interfaces, derived inductively from the case studies in this thesis: legibility, interruptibility, recoverability, attribution, calibration, and restraint. Each is defined precisely enough to fail—vague principles are not principles.\n\n:::notes\nThe principles are ordered by the phase of an interaction they most affect, from first contact to long-term use.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Interactions", slug: "interactions", section: "foundations", order: 4 },
-    body: `Interaction patterns for AI interfaces differ from those for deterministic software because the system's response is neither instant nor certain. This chapter catalogs the interaction primitives—prompt submission, streaming, interruption, correction, regeneration—and describes when to use each.\n\n## Notes\n\nPatterns are presented as decision trees, not as prescriptions; the right choice depends on latency budget and error tolerance.`
+    body: `Interaction patterns for AI interfaces differ from those for deterministic software because the system's response is neither instant nor certain. This chapter catalogs the interaction primitives—prompt submission, streaming, interruption, correction, regeneration—and describes when to use each.\n\n:::notes\nPatterns are presented as decision trees, not as prescriptions; the right choice depends on latency budget and error tolerance.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "FAQs", slug: "faqs", section: "uis", order: 1 },
-    body: `A FAQ built on a language model is still a FAQ—the same user goal (get an answer quickly, get out) shapes the design even when the answer-generation mechanism changes. This chapter compares static and generated FAQ surfaces across response quality, trust, and time-to-answer.\n\n## Notes\n\nThe prototype tested in this chapter ran on a 7B parameter model to keep latency comparable to a network round-trip.`
+    body: `A FAQ built on a language model is still a FAQ—the same user goal (get an answer quickly, get out) shapes the design even when the answer-generation mechanism changes. This chapter compares static and generated FAQ surfaces across response quality, trust, and time-to-answer.\n\n:::notes\nThe prototype tested in this chapter ran on a 7B parameter model to keep latency comparable to a network round-trip.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Infinite Article", slug: "infinite-article", section: "uis", order: 2 },
-    body: `The infinite scroll article is a UI experiment in progressive disclosure driven by reader interest rather than editorial pre-planning. As the reader reaches the end of a section, the model extends the piece in the direction the reading trajectory suggests.\n\n## Notes\n\nThis is the most speculative piece in the thesis; the implementation exists but the evaluation is ongoing.`
+    body: `The infinite scroll article is a UI experiment in progressive disclosure driven by reader interest rather than editorial pre-planning. As the reader reaches the end of a section, the model extends the piece in the direction the reading trajectory suggests.\n\n:::notes\nThis is the most speculative piece in the thesis; the implementation exists but the evaluation is ongoing.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Navigation", slug: "navigation", section: "uis", order: 3 },
-    body: `Navigation in an AI-assisted interface is partly about wayfinding and partly about scope management—telling the system what is in play and what is not. This chapter examines how persistent navigation structures, breadcrumbs, and context panels do double duty as both user controls and model context.\n\n## Notes\n\nThe navigation on this site is an instance of the patterns described here; you are looking at the experiment.`
+    body: `Navigation in an AI-assisted interface is partly about wayfinding and partly about scope management—telling the system what is in play and what is not. This chapter examines how persistent navigation structures, breadcrumbs, and context panels do double duty as both user controls and model context.\n\n:::notes\nThe navigation on this site is an instance of the patterns described here; you are looking at the experiment.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Images", slug: "images", section: "uis", order: 4 },
-    body: `Generated images raise questions that stock photography did not: provenance, consistency across a session, and the gap between what was asked and what was produced. This chapter proposes an image component that makes that gap legible rather than hiding it behind a polished result.\n\n## Notes\n\nAll images in this thesis were generated; captions carry the prompt and model identifier.`
+    body: `Generated images raise questions that stock photography did not: provenance, consistency across a session, and the gap between what was asked and what was produced. This chapter proposes an image component that makes that gap legible rather than hiding it behind a polished result.\n\n:::notes\nAll images in this thesis were generated; captions carry the prompt and model identifier.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Bot", slug: "bot", section: "uis", order: 5 },
-    body: `The chatbot is the most direct AI interface and also the one most prone to anthropomorphism. This chapter examines how small typographic and interaction choices—typing indicators, avatar presence, name choice—shift user expectations and calibration, and proposes a more honest baseline.\n\n## Notes\n\nThe analysis draws on transcripts from a semester-long study with design students using a course assistant bot.`
+    body: `The chatbot is the most direct AI interface and also the one most prone to anthropomorphism. This chapter examines how small typographic and interaction choices—typing indicators, avatar presence, name choice—shift user expectations and calibration, and proposes a more honest baseline.\n\n:::notes\nThe analysis draws on transcripts from a semester-long study with design students using a course assistant bot.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Look At", slug: "look-at", section: "uis", order: 6 },
-    body: `Look At is a visual attention interface: it shows the user what the model is attending to in a document or image before producing an output. The chapter documents the design process, the prototype, and what we learned from watching people watch the model watch them.\n\n## Notes\n\nThe name comes from a direction given in figure-drawing classes; it has the same instructive purpose here.`
+    body: `Look At is a visual attention interface: it shows the user what the model is attending to in a document or image before producing an output. The chapter documents the design process, the prototype, and what we learned from watching people watch the model watch them.\n\n:::notes\nThe name comes from a direction given in figure-drawing classes; it has the same instructive purpose here.\n:::`
   },
   {
     collection: "pieces",
     frontmatter: { title: "Image Generation", slug: "image-generation", section: "uis", order: 7 },
-    body: `Designing the interface for image generation is a different problem from designing the image generator. This chapter focuses on the prompt-to-image loop: how to write prompts, how to read results, how to iterate, and how to know when to stop—and what the UI can do to support each step.\n\n## Notes\n\nThe workflow described here converged through iteration on a single project brief over eight weeks.`
+    body: `Designing the interface for image generation is a different problem from designing the image generator. This chapter focuses on the prompt-to-image loop: how to write prompts, how to read results, how to iterate, and how to know when to stop—and what the UI can do to support each step.\n\n:::notes\nThe workflow described here converged through iteration on a single project brief over eight weeks.\n:::`
   },
 ]
 
