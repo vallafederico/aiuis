@@ -1,0 +1,83 @@
+# Agent-first CMS — progress & plan
+
+_Last updated: 2026-07-28. Companion to `agent-first-cms-spec.md` (authoritative spec) and the phase plan. Status verified against the code, not just session logs._
+
+## Where it stands
+
+The full local loop works end to end: an agent connects over MCP, creates/edits documents with conflict detection and history; a human reviews and publishes at `/review`; publish derives sanitized HTML and flips an immutable pointer; the site renders the content at real routes. The 13 nav items (Preface / Foundations / UIs) are live CMS pieces at `/{section}/{slug}`, editable through the CMS. 111 tests green (32 node + 79 workers pool), typecheck clean.
+
+That said: several subsystems the schema promises are **not actually wired** (details below). The core write path is solid; the metadata periphery is thinner than it looks.
+
+## Built and verified
+
+| Area | State |
+|---|---|
+| Storage (P1) | Markdown in R2 (revisions immutable + HEAD), D1 index, crash-safe write order, `reindexFromR2` rebuild proven by test (D1 wipe → identical state) |
+| Canonicalization | Strict YAML 1.2 frontmatter, idempotent canonicalize (test invariant) |
+| MCP server (P2) | `CmsMcpAgent` DO via agents SDK, identity via `ctx.props` + `serve()`; 15 tools registered |
+| Conflicts/locks (P3) | `LockRoom` DO (TTL 60s), required `base_rev`, stale edit → structured CONFLICT + unified diff; verified live |
+| History/lifecycle (P3) | history, diff, revert (through write path), rename, two-step archive delete, publish/unpublish with validation; T2b namespace capability enforcement in code |
+| Derivation (P4) | Sanitized HTML (remark→rehype-sanitize), hast, toc, excerpt, reading time; Shiki via dynamic import; artifacts in R2 + KV mirror |
+| Publish semantics (P4) | `published_rev` (D1, source of truth) + KV `ptr:` mirror; synchronous derive on publish; on-demand derive fallback on read for missing artifacts (drafts) |
+| Read API (P4) | Cards list (published only), doc by slug (`html\|hast\|json\|md`), rev-addressed = immutable cache, pointer = SWR; drafts gated by bearer auth |
+| Review (P6) | Server-rendered inbox / diff / publish–revert actions reusing lifecycle handlers, human `reviewer` principal in op_log; dev-secret auth |
+| Web (P5, redefined) | `pieces` collection (section + order), 13 nav items seeded published through the real write path; `PieceView` → `PageContent` (`w-grids-6`, `width`/`flow` props); graceful 503/404 |
+| Ops instrumentation | op_log rows for every **mutating** tool + review actions |
+
+## Honest gaps (verified in code)
+
+**Dead or missing subsystems**
+- **Taxonomy upkeep is missing entirely.** Nothing writes `terms` / `doc_terms`; `GET /api/v1/taxonomy/:name` reads real tables that are never populated. Post tags validate against nothing and count nothing.
+- **`ref_edges` is never written.** Schema-only. No backlink/reference graph exists.
+- **`redirects` is write-only.** `rename_doc` records redirects, but no read path consults them — renamed docs 404 on their old slug.
+- **Queue producer is dead code.** Consumer is wired; nothing ever calls `DERIVE_QUEUE.send()`. All derivation is synchronous (publish) or on-demand (read fallback). Fine at this scale, but it's an illusion of async infrastructure.
+
+**Validation holes** (`core/validate.ts`)
+- `number`, `ref`, `asset`, `tax` field types: **no validation at all** (the `pieces.order` field is unchecked; refs aren't verified to exist).
+- `max` enforced only for string/text; `string` itself isn't type-guarded (non-string silently skips checks).
+
+**Governance / instrumentation**
+- `get_context` returns all `mode: always` skills to **any** authenticated caller — no audience/scope filtering (Phase 8 work, but worth stating: token audience is currently decorative for skills).
+- Read tools (`query`, `read_doc`, `search`, `list_collections`, `get_schema`) and all HTTP read routes write **no op_log rows** — the "every call visible" thesis instrumentation currently covers mutations only.
+- MCP `search` searches drafts + archived too (API search is published-only). Possibly right for agents; currently undocumented rather than decided.
+
+**Derivation stubs**: LQIP, srcset, embeddings return `null` (relevant now that images/video are wanted — see next steps).
+
+**Web integration debts**
+- Cards don't carry schema `indexes` fields (`section`, `order`, tags) — `PieceView` does a second `?format=md` fetch and regex-parses frontmatter for section/title. Should come from card / derived JSON.
+- Missing piece slugs render "Not found." with HTTP 200 (streaming SSR commits status before data resolves).
+- Nav lists are hardcoded (hrefs point at CMS routes; the list itself isn't CMS-driven yet — needs section/order in cards first).
+
+**Not started**: Phase 7 (slices), Phase 8 (skills/lint enforcement, audience filtering, `list_skills`, skills export), Phase 9 (reconciliation sweep, drift repair), Phase 10 (deploy: `wrangler.jsonc` still has `REPLACE_AFTER_PROVISION` for D1/KV ids; no Cloudflare Access; no service binding in apps/web).
+
+## Next steps (proposed order)
+
+### 1. Rich article content — images, video, Notes _(new, top priority)_
+Goal: authors (and agents) embed images, video, and custom components like **Notes** inside articles, with custom styling per component.
+
+Approach — **directives + hast→Solid mapping**, not raw MDX. The CMS is markdown-native by design (spec §13): R2 markdown must stay portable, agent-editable, and derivable to sanitized output. Arbitrary MDX (imports/JSX) would break sanitization, canonicalization, and agent editing. The equivalent capability, kept markdown-native:
+- **Authoring syntax**: remark-directive — `![alt](asset)` stays standard; `::video{src="…" poster="…"}`, `:::notes … :::` for custom blocks. Directives are already in the parse dependency set and are the same mechanism slices (Phase 7) need — this fast-tracks part of Phase 7.
+- **Derive side**: map directives to stable custom hast nodes (e.g. `<cms-video>`, `<cms-notes>`) allowlisted through sanitization; fill the LQIP/srcset stubs for images.
+- **Assets pipeline**: `upload_asset` MCP tool + R2 `assets/` + `/api/v1/assets/…` serving (planned `mcp/tools/assets.ts`, never built).
+- **Web side**: switch `PieceView` from `innerHTML` to **hast→Solid renderer** (the plan's intended upgrade) with a component map: `img` → figure w/ LQIP, `cms-video` → video player, `cms-notes` → new `Notes` component (doesn't exist yet — to design; wanted first on Credits). Unmapped nodes render as plain HTML.
+
+### 2. Integrity sprint (close the verified gaps)
+Taxonomy upkeep in the write path + reindex; validation for number/ref/asset/tax + max everywhere; redirects consulted on read (API + MCP); ref_edges maintained; op_log for read tools; card denormalization of `indexes` fields (kills the PieceView double-fetch, enables CMS-driven Nav); route-level 404 status. Decide: MCP draft search (keep, but document + capability-gate?), queue (wire producer for re-derives, or delete consumer).
+
+### 3. Phase 7 — slices
+Composed pages (`::::slice` containers, slice ops, per-slice derivation). UIs pieces then declare layout/width per piece from schema data (`PieceView` already threads `width`).
+
+### 4. Phase 8 — skills layer
+Lint enforcement in the write path (banned terms, sentence length → structured errors), full `get_context` assembly with audience filtering, `list_skills`, skills export.
+
+### 5. Phase 9 — hardening
+Hourly reconciliation (R2↔D1 drift report + repair), decide queue fate here at the latest.
+
+### 6. Phase 10 — deploy
+Provision D1/KV/R2/queue, fill ids, remote migrations, seed, Cloudflare Access on `/review*`, `CMS` service binding in apps/web, prod MCP endpoint. Local-first decision stands — deploy when the site's ready to point at it.
+
+## Decisions needed from Federico
+1. **Rich content**: confirm directives-over-MDX (recommendation above). If you truly want `.mdx` files with imports as the source format, that's an architecture change to the spec worth a dedicated discussion.
+2. **Notes**: what should it look/behave like (footnotes? margin notes? collapsible asides?) — first consumer is Credits.
+3. **MCP search over drafts**: intended for agents, or should it be capability-gated?
+4. **Queue**: keep async derivation infrastructure (wire the producer) or simplify to synchronous-only and delete the consumer?
