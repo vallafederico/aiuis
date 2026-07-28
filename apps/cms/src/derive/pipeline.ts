@@ -7,6 +7,7 @@ import { defaultSchema } from "rehype-sanitize"
 import rehypeSanitize from "rehype-sanitize"
 import rehypeStringify from "rehype-stringify"
 import { parseFrontmatter } from "../parse/frontmatter.js"
+import { logOp } from "../core/op-log.js"
 import type { Env } from "../index.js"
 
 export interface DeriveResult {
@@ -15,6 +16,9 @@ export interface DeriveResult {
   toc: Array<{ depth: number; text: string; slug: string }>
   excerpt: string
   reading_time: number
+  title: string
+  section: string
+  slug: string
 }
 
 function hastText(node: any): string {
@@ -63,7 +67,9 @@ export async function deriveDoc(
   const raw = await obj.text()
 
   // 2. Parse frontmatter
-  const { body } = parseFrontmatter(raw)
+  const { body, frontmatter: fm } = parseFrontmatter(raw)
+  const title = typeof fm.title === 'string' ? fm.title : ''
+  const section = typeof fm.section === 'string' ? fm.section : ''
 
   // 3. Run unified pipeline
   const notesSchema = {
@@ -84,6 +90,15 @@ export async function deriveDoc(
     .use(rehypeSanitize, notesSchema as Parameters<typeof rehypeSanitize>[0])
 
   const mdast = processor.parse(body)
+
+  // Defensive: log any unregistered directives that reach derivation
+  const directiveTypes = new Set(['textDirective', 'leafDirective', 'containerDirective'])
+  hastWalk(mdast, (node: any) => {
+    if (directiveTypes.has(node.type) && node.name !== 'notes') {
+      logOp(env, { session: 'derive', tool: 'deriveDoc', outcome: 'dropped_directive', errorClass: `unregistered:${node.name}` })
+    }
+  })
+
   // 4. Get body_hast after sanitize but before stringify
   const body_hast = await processor.run(mdast)
 
@@ -166,6 +181,9 @@ export async function deriveDoc(
     toc,
     excerpt,
     reading_time,
+    title,
+    section,
+    slug,
   }
 
   // 10. Write artifact to R2

@@ -274,6 +274,16 @@ describe("migrate-notes route", () => {
   }
 
   beforeAll(async () => {
+    // Seed directive schema for notes (required by editDocHandler directive validation)
+    await testEnv.BUCKET.put("schema/directives/notes.md", `---
+_kind: directive_schema
+name: notes
+form: container
+attributes: {}
+intent: "Endnote material."
+---
+Notes directive guidelines.
+`)
     // Seed pieces schema
     await testEnv.BUCKET.put("schema/pieces.md", `---
 _kind: schema

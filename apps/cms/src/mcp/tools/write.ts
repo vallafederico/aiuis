@@ -13,6 +13,7 @@ import { syncTaxonomyForDoc } from "../../core/taxonomy.js"
 import { checkRefExistence, syncRefEdges } from "../../core/refs.js"
 import type { Env } from "../../index.js"
 import type { McpProps } from "../agent.js"
+import { loadDirectiveRegistry, validateDirectives } from "../../core/directives.js"
 
 type IdentityInfo = McpProps["identity"]
 type McpToolResult = { isError?: boolean; content: Array<{ type: "text"; text: string }> }
@@ -116,6 +117,25 @@ export async function createDocHandler(env: Env, identity: IdentityInfo, args: C
 
   // 6. canonicalize
   const canonicalized = await canonicalize(rawContent)
+
+  // 6b. Validate directives — slice check on pre-canonicalize body (remark normalizes ::::→:::)
+  // then full registry check on canonicalized body
+  const preCanonBody = args.body ?? ""
+  const directiveRegistry = await loadDirectiveRegistry(env)
+  const directiveError = /^:{4,}/m.test(preCanonBody)
+    ? { error: "slices_not_supported" as const, message: "slices not yet supported" }
+    : validateDirectives(parseFrontmatter(canonicalized).body, directiveRegistry)
+  if (directiveError) {
+    const code = directiveError.error === "slices_not_supported" ? "slices_not_supported"
+      : directiveError.error === "unknown_directive" ? "unknown_directive"
+      : "invalid_directive_attribute"
+    logOp(env, { session: identity.session, tool: "create_doc", outcome: "validation_fail", errorClass: code })
+    return errorResult(
+      directiveError.error === "slices_not_supported" ? directiveError.message : `directive validation failed: ${directiveError.error}`,
+      code,
+      directiveError
+    )
+  }
 
   // 7. writeRevision (injects _id, _collection, _status, _rev, _updated, _created)
   await writeRevision(
@@ -318,6 +338,24 @@ export async function editDocHandler(env: Env, identity: IdentityInfo, args: Edi
 
     // 9. canonicalize
     const canonicalized = await canonicalize(newRaw)
+
+    // 9b. Validate directives — slice check on pre-canonicalize body (remark normalizes ::::→:::)
+    // then full registry check on canonicalized body
+    const directiveRegistry2 = await loadDirectiveRegistry(env)
+    const directiveError2 = /^:{4,}/m.test(editedBody)
+      ? { error: "slices_not_supported" as const, message: "slices not yet supported" }
+      : validateDirectives(parseFrontmatter(canonicalized).body, directiveRegistry2)
+    if (directiveError2) {
+      const code2 = directiveError2.error === "slices_not_supported" ? "slices_not_supported"
+        : directiveError2.error === "unknown_directive" ? "unknown_directive"
+        : "invalid_directive_attribute"
+      logOp(env, { session: identity.session, tool: "edit_doc", docId, outcome: "validation_fail", errorClass: code2 })
+      return errorResult(
+        directiveError2.error === "slices_not_supported" ? directiveError2.message : `directive validation failed: ${directiveError2.error}`,
+        code2,
+        directiveError2
+      )
+    }
 
     // 10. writeRevision
     await writeRevision(

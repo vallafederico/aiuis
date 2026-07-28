@@ -203,6 +203,31 @@ app.post("/dev/migrate-notes", async (c) => {
   return c.json({ migrated, skipped, errors, results })
 })
 
+app.post("/dev/rederive", async (c) => {
+  try {
+    requireDevSecret(c.req.raw, c.env)
+  } catch {
+    return c.json({ error: "Unauthorized" }, 401)
+  }
+
+  const rows = await c.env.DB.prepare(
+    "SELECT collection, slug, published_rev FROM documents WHERE published_rev IS NOT NULL"
+  ).all<{ collection: string; slug: string; published_rev: string }>()
+
+  let rederived = 0
+  let errors = 0
+  for (const row of rows.results) {
+    try {
+      await deriveDoc(c.env, row.collection, row.slug, row.published_rev)
+      rederived++
+    } catch {
+      errors++
+    }
+  }
+
+  return c.json({ rederived, errors })
+})
+
 app.get("/dev/export", async (c) => {
   try {
     requireDevSecret(c.req.raw, c.env)

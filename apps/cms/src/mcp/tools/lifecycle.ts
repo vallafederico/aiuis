@@ -439,9 +439,26 @@ export async function getContextHandler(env: Env, identity: IdentityInfo, args: 
         const { frontmatter, body } = parseFrontmatter(raw)
         context.schemas.push({ collection: args.collection, frontmatter, guidelines: body })
       }
+      // Also include directive schemas for collection-scoped context
+      try {
+        const dirList = await env.BUCKET.list({ prefix: "schema/directives/" })
+        for (const obj of dirList.objects) {
+          try {
+            const item = await env.BUCKET.get(obj.key)
+            if (!item) continue
+            const raw = await item.text()
+            const { frontmatter, body } = parseFrontmatter(raw)
+            if (frontmatter._kind === "directive_schema") {
+              context.schemas.push({ key: obj.key, frontmatter, guidelines: body })
+            }
+          } catch {}
+        }
+      } catch {}
     } else {
       const list = await env.BUCKET.list({ prefix: "schema/" })
       for (const obj of list.objects) {
+        // Skip directive schemas — handled separately below
+        if (obj.key.startsWith("schema/directives/")) continue
         try {
           const item = await env.BUCKET.get(obj.key)
           if (!item) continue
@@ -450,6 +467,21 @@ export async function getContextHandler(env: Env, identity: IdentityInfo, args: 
           context.schemas.push({ key: obj.key, frontmatter, guidelines: body })
         } catch {}
       }
+      // Also include directive schemas
+      try {
+        const dirList = await env.BUCKET.list({ prefix: "schema/directives/" })
+        for (const obj of dirList.objects) {
+          try {
+            const item = await env.BUCKET.get(obj.key)
+            if (!item) continue
+            const raw = await item.text()
+            const { frontmatter, body } = parseFrontmatter(raw)
+            if (frontmatter._kind === "directive_schema") {
+              context.schemas.push({ key: obj.key, frontmatter, guidelines: body })
+            }
+          } catch {}
+        }
+      } catch {}
     }
   } catch {}
 

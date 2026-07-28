@@ -4,7 +4,7 @@ import { join } from "node:path";
 import yaml from "yaml";
 
 const SEEDS_DIR = join(import.meta.dirname, "..", "seeds");
-const VALID_KINDS = new Set(["schema", "slice_schema", "taxonomy", "skill"]);
+const VALID_KINDS = new Set(["schema", "slice_schema", "taxonomy", "skill", "directive_schema"]);
 
 function collectSeedFiles(dir: string): string[] {
   const results: string[] = [];

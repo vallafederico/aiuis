@@ -81,6 +81,8 @@ export async function getSchemaHandler(env: Env, args: { collection?: string }):
     const schemas: unknown[] = []
 
     for (const obj of list.objects) {
+      // Skip directive schemas — handled separately below
+      if (obj.key.startsWith("schema/directives/")) continue
       try {
         const key = obj.key.replace("schema/", "").replace(/\.md$/, "")
         const schema = await loadCollectionSchema(env, key)
@@ -89,6 +91,22 @@ export async function getSchemaHandler(env: Env, args: { collection?: string }):
         // skip malformed schema files
       }
     }
+
+    // Also include directive schemas
+    try {
+      const dirList = await env.BUCKET.list({ prefix: "schema/directives/" })
+      for (const obj of dirList.objects) {
+        try {
+          const item = await env.BUCKET.get(obj.key)
+          if (!item) continue
+          const raw = await item.text()
+          const { frontmatter, body } = parseFrontmatter(raw)
+          if (frontmatter._kind === "directive_schema") {
+            schemas.push({ _kind: "directive_schema", ...frontmatter, guidelines: body })
+          }
+        } catch {}
+      }
+    } catch {}
 
     return okResult(schemas)
   }

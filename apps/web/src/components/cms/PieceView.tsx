@@ -15,29 +15,16 @@ type PieceResult =
   | { unavailable: true }
   | null;
 
-// Parses YAML frontmatter from a markdown string to extract a named field
-function extractFrontmatterField(md: string, field: string): string | null {
-  const match = md.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return null;
-  const fieldMatch = match[1].match(new RegExp(`^${field}:\\s*(.+)$`, "m"));
-  return fieldMatch ? fieldMatch[1].trim() : null;
-}
-
 export const getPiece = query(
   async (slug: string, expectedSection: string): Promise<PieceResult> => {
     "use server";
     try {
-      const [html, md] = await Promise.all([
-        cmsGet<string>(`/api/v1/pieces/${slug}?format=html`),
-        cmsGet<string>(`/api/v1/pieces/${slug}?format=md`),
-      ]);
-
-      const section = extractFrontmatterField(md, "section");
+      const data = await cmsGet<Record<string, unknown>>(`/api/v1/pieces/${slug}?format=json`);
+      const section = typeof data.section === "string" ? data.section : null;
       if (!section || section !== expectedSection) return null;
-
-      const title = extractFrontmatterField(md, "title") ?? slug;
-
-      return { slug, section, body_html: html, title };
+      const title = typeof data.title === "string" && data.title ? data.title : slug;
+      const body_html = typeof data.body_html === "string" ? data.body_html : "";
+      return { slug, section, body_html, title };
     } catch (e: unknown) {
       const status =
         e instanceof Error && "status" in e
@@ -57,7 +44,7 @@ export function PieceView(props: {
   /* grid width for the piece body — passed through to PageContent */
   width?: string;
 }) {
-  const data = createAsync(() => getPiece(props.slug, props.section));
+  const data = createAsync(() => getPiece(props.slug, props.section), { deferStream: true });
   const piece = () => {
     const d = data();
     return d && !("unavailable" in d) ? d : null;
