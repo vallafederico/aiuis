@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import { createAsync, query } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
+import PageContent from "~/components/PageContent";
 import { cmsGet } from "~/lib/cms";
 
 type PieceResult =
@@ -67,11 +68,9 @@ export function PieceView(props: { slug: string; section: string }) {
         fallback={
           <>
             <HttpStatusCode code={503} />
-            <div class="flex justify-center py-20">
-              <p class="w-grids-8">
-                Content service is offline — start it with `pnpm cms`.
-              </p>
-            </div>
+            <PageContent flow>
+              <p>Content service is offline — start it with `pnpm cms`.</p>
+            </PageContent>
           </>
         }
       >
@@ -80,22 +79,20 @@ export function PieceView(props: { slug: string; section: string }) {
           fallback={
             <>
               <HttpStatusCode code={404} />
-              <div class="flex justify-center py-20">
-                <p class="w-grids-8">Not found.</p>
-              </div>
+              <PageContent flow>
+                <p>Not found.</p>
+              </PageContent>
             </>
           }
         >
           {(p) => (
-            <div class="flex justify-center py-20">
-              <div class="w-grids-8">
-                <h1 class="text-3xl -tracking-widest mb-8">{p().title}</h1>
-                <article
-                  class="prose prose-neutral max-w-none"
-                  innerHTML={p().body_html}
-                />
-              </div>
-            </div>
+            <PageContent flow>
+              <h1 class="text-3xl -tracking-widest mb-8">{p().title}</h1>
+              <article
+                class="prose prose-neutral max-w-none"
+                innerHTML={p().body_html}
+              />
+            </PageContent>
           )}
         </Show>
       </Show>
