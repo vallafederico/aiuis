@@ -4,24 +4,15 @@
   margin-top: 1.25em;
 }
 
-/* .cms-notes — rendered inside innerHTML article; styled as quiet endnote */
+/* .cms-notes — quiet endnote; the "Notes" label and dimmed body text are
+   rendered via MsdfText/CmsMsdfBlock (see CmsBody.tsx) since CSS opacity
+   on this element doesn't reach the WebGL-drawn glyphs */
 .cms-notes {
   margin-top: 3rem;
   padding-top: 1.5rem;
   border-top: 1px solid currentColor;
-  opacity: 0.55;
-  font-size: 1.625rem; /* ~2x between xs and sm */
+  font-size: 0.8125rem; /* between xs and sm — quieter than body */
   line-height: 1.6;
-}
-
-.cms-notes::before {
-  content: "Notes";
-  display: block;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-size: 1.375rem;
-  opacity: 0.7;
-  margin-bottom: 0.5rem;
 }
 
 /* Don't let Tailwind prose style the aside's p tags with extra top margin */

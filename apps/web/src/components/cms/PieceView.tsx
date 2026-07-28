@@ -2,6 +2,9 @@ import { Show } from "solid-js";
 import { createAsync, query } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
 import PageContent from "~/components/PageContent";
+import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
+import { CmsBody } from "~/components/cms/CmsBody";
+import type { HastNode } from "~/components/cms/hast";
 import { cmsGet } from "~/lib/cms";
 import "./PieceView.css";
 
@@ -9,7 +12,7 @@ type PieceResult =
   | {
       slug: string;
       section: string;
-      body_html: string;
+      body_hast: HastNode | null;
       title: string;
     }
   | { unavailable: true }
@@ -23,8 +26,8 @@ export const getPiece = query(
       const section = typeof data.section === "string" ? data.section : null;
       if (!section || section !== expectedSection) return null;
       const title = typeof data.title === "string" && data.title ? data.title : slug;
-      const body_html = typeof data.body_html === "string" ? data.body_html : "";
-      return { slug, section, body_html, title };
+      const body_hast = (data.body_hast as HastNode | undefined) ?? null;
+      return { slug, section, body_hast, title };
     } catch (e: unknown) {
       const status =
         e instanceof Error && "status" in e
@@ -80,11 +83,12 @@ export function PieceView(props: {
         >
           {(p) => (
             <PageContent flow width={props.width}>
-              <h1 class="text-3xl -tracking-widest mb-8">{p().title}</h1>
-              <article
-                class="prose prose-neutral max-w-none"
-                innerHTML={p().body_html}
-              />
+              <h1 class="mb-8">
+                <CmsMsdfBlock text={p().title} class="text-6xl -tracking-widest" />
+              </h1>
+              <article class="cms-body max-w-none text-[2rem] leading-snug">
+                <CmsBody hast={p().body_hast} />
+              </article>
             </PageContent>
           )}
         </Show>

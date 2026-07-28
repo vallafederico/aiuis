@@ -29,8 +29,13 @@ export const MSDF = {
 		// slightly at extreme zoom, which these fonts tolerate
 		fieldType: "sdf" as "sdf" | "msdf",
 		distanceRange: 8, // sdf spread in px — feed as uPxRange to the shader
-		textureSize: [2048, 2048] as [number, number], // atlas page size
-		charset: undefined as string | undefined, // string of chars; default ascii
+		textureSize: [4096, 4096] as [number, number], // atlas page size — bumped from 2048 so the expanded charset (below) still fits a single page
+		// printable ASCII (32–126) plus punctuation/diacritics pieces content
+		// actually uses (em/en dash, curly quotes, ellipsis, accented Latin) —
+		// default (undefined) is ASCII-only and drops these as blank glyphs
+		charset:
+			" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~" +
+			"—–‘’“”…·•àáâãäåèéêëìíîïòóôõöùúûüñçÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÑÇ" as string | undefined,
 		/**
 		 * Variable-font weight instances to emit as separate atlases.
 		 * Each entry pre-instances the source TTF at the given axis values

@@ -19,6 +19,9 @@ const ClientCanvas = clientOnly(
 const ClientParticleGrid = clientOnly(
   () => import("~/components/webgl/ParticleGrid"),
 );
+const ClientMouseDistortion = clientOnly(
+  () => import("~/components/webgl/MouseDistortion"),
+);
 
 export default function App() {
   useViewport();
@@ -41,6 +44,7 @@ export default function App() {
 
             <ClientCanvas />
             <ClientParticleGrid />
+            <ClientMouseDistortion />
           </ContentProvider>
         </MetaProvider>
       )}
