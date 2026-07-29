@@ -167,6 +167,7 @@ export class MouseTrail {
     const rate = targetSize > this.smoothedSize ? growRate : shrinkRate;
     const alpha = 1 - Math.exp(-rate * dtSec);
     this.smoothedSize += (targetSize - this.smoothedSize) * alpha;
+    if (Math.abs(targetSize - this.smoothedSize) < 0.0005) this.smoothedSize = targetSize;
     const uSize = gl.getUniformLocation(this.bundle.paintProgram, "uSize");
     if (uSize != null) gl.uniform1f(uSize, this.smoothedSize);
     const uMouse = gl.getUniformLocation(this.bundle.paintProgram, "uMouse");
@@ -235,6 +236,13 @@ export class MouseTrail {
     this.prevPointer.x = this.pointer.x;
     this.prevPointer.y = this.pointer.y;
     this.speed *= 0.9;
+    if (this.speed < 0.0005) this.speed = 0;
+
+    // Trail decay is GPU-side state, invisible to the uni dirty system — keep
+    // requesting frames while there's still motion or a fading trail to paint.
+    if (this.hasPointer || this.speed > 0 || this.smoothedSize > 0) {
+      getDefaultEngine()?.requestFrame();
+    }
   }
 
   private ensureResources(

@@ -58,6 +58,8 @@ export type WebGLEngine = {
   stop: () => void;
   resize: () => void;
   render: () => void;
+  /** Mark the scene dirty, keeping the render loop hot for the settle window. */
+  requestFrame: () => void;
   setClearColor: (nextColor: Partial<ClearColor>) => void;
   getClearColor: () => ClearColor;
   onRender: (
@@ -74,6 +76,9 @@ type RenderSubscriberEntry = {
   order: number;
   callback: RenderCallback;
 };
+
+/** How long the loop keeps rendering after the last dirty mark, so lerp tails and layout settle finish. */
+const SETTLE_MS = 250;
 
 let defaultEngine: WebGLEngine | null = null;
 
@@ -141,9 +146,15 @@ export function createEngine(
   let running = false;
   let rafId = 0;
   let previousFrameAt = 0;
+  let lastDirtyAt = 0;
+  let wasActive = false;
   let sceneTarget: RenderTarget | null = null;
   let renderSubscriberId = 1;
   let renderSubscriberOrder = 0;
+
+  const markDirty = () => {
+    lastDirtyAt = performance.now();
+  };
 
   const renderSubscribers = new Map<number, RenderSubscriberEntry>();
   const postRenderSubscribers = new Set<PostRenderCallback>();
@@ -245,6 +256,7 @@ export function createEngine(
       callback,
     };
     renderSubscribers.set(id, entry);
+    markDirty();
     return () => {
       renderSubscribers.delete(id);
     };
@@ -326,8 +338,16 @@ export function createEngine(
 
   const frame = () => {
     if (!running) return;
-    resize();
-    render();
+
+    const active = performance.now() - lastDirtyAt < SETTLE_MS;
+    if (active) {
+      // Resuming after idle — don't let the gap since the last render spike delta.
+      if (!wasActive) previousFrameAt = 0;
+      resize();
+      render();
+    }
+    wasActive = active;
+
     rafId = window.requestAnimationFrame(frame);
   };
 
@@ -335,6 +355,8 @@ export function createEngine(
     if (running) return;
     running = true;
     previousFrameAt = 0;
+    wasActive = false;
+    markDirty();
     rafId = window.requestAnimationFrame(frame);
   };
 
@@ -353,8 +375,29 @@ export function createEngine(
     };
   };
 
+  // Global dirty sources — anything that could change what's on screen wakes the loop.
+  const onDirtyEvent = () => markDirty();
+  document.addEventListener("scroll", onDirtyEvent, { capture: true, passive: true });
+  window.addEventListener("resize", onDirtyEvent);
+  window.visualViewport?.addEventListener("resize", onDirtyEvent);
+  window.addEventListener("pointermove", onDirtyEvent, { passive: true });
+  window.addEventListener("pointerdown", onDirtyEvent, { passive: true });
+  window.addEventListener("wheel", onDirtyEvent, { passive: true });
+  window.addEventListener("touchmove", onDirtyEvent, { passive: true });
+
+  const removeDirtyListeners = () => {
+    document.removeEventListener("scroll", onDirtyEvent, { capture: true });
+    window.removeEventListener("resize", onDirtyEvent);
+    window.visualViewport?.removeEventListener("resize", onDirtyEvent);
+    window.removeEventListener("pointermove", onDirtyEvent);
+    window.removeEventListener("pointerdown", onDirtyEvent);
+    window.removeEventListener("wheel", onDirtyEvent);
+    window.removeEventListener("touchmove", onDirtyEvent);
+  };
+
   const destroy = () => {
     stop();
+    removeDirtyListeners();
     sceneTarget?.destroy();
     sceneTarget = null;
     renderSubscribers.clear();
@@ -374,11 +417,13 @@ export function createEngine(
     stop,
     resize,
     render,
+    requestFrame: markDirty,
     setClearColor,
     getClearColor: () => clearColor,
     onRender: subscribeRender,
     onPostRender: (callback) => {
       postRenderSubscribers.add(callback);
+      markDirty();
       return () => {
         postRenderSubscribers.delete(callback);
       };

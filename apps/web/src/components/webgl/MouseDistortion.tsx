@@ -62,6 +62,12 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const pp = createPostProcessor({
       onFrame(_post, frame) {
+        // Already settled — skip the lerp and the setUni call so the engine
+        // can go idle instead of chasing a target it will never exactly reach.
+        if (currentX === targetX && currentY === targetY && currentStrength === targetStrength) {
+          return;
+        }
+
         const dt = Math.min(frame.delta * 0.001, 0.1); // seconds, clamped
         const k = 9;
         const t = 1 - Math.exp(-k * dt);
@@ -69,6 +75,11 @@ export default function MouseDistortion(props: MouseDistortionProps) {
         currentX += (targetX - currentX) * t;
         currentY += (targetY - currentY) * t;
         currentStrength += (targetStrength - currentStrength) * t;
+
+        // Snap once close enough — floating-point lerp never exactly converges.
+        if (Math.abs(targetX - currentX) < 0.0005) currentX = targetX;
+        if (Math.abs(targetY - currentY) < 0.0005) currentY = targetY;
+        if (Math.abs(targetStrength - currentStrength) < 0.0005) currentStrength = targetStrength;
 
         pp.setEffectUni(effectId, {
           value1: currentX,

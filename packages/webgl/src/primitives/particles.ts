@@ -81,6 +81,7 @@ export class ParticlesManager {
       gl.bufferData(gl.ARRAY_BUFFER, next, gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
+    getDefaultEngine()?.requestFrame();
   }
 
   destroy() {

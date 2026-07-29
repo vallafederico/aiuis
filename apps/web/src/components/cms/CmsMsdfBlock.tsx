@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import MsdfText from "~/components/webgl/MsdfText";
@@ -55,15 +55,37 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
     return wrapMsdfText(m, normalized, w, fontSizePx, props.tracking);
   });
 
+  // One MsdfText per wrapped line — each fragment shader only loops over its
+  // own line's glyphs instead of the whole paragraph. Vertical rhythm moves
+  // from the shader's lineHeight to plain CSS line-height on the container.
+  const lines = createMemo(() => wrapped().split("\n"));
+
   return (
-    <span ref={container} class={`block w-full ${props.class ?? ""}`}>
-      <MsdfText
-        text={wrapped()}
-        font={props.font ?? "AlteHaasGroteskBold"}
-        lineHeight={props.lineHeight}
-        tracking={props.tracking}
-        alpha={props.alpha}
-      />
+    <span
+      ref={container}
+      class={`block w-full ${props.class ?? ""}`}
+      style={
+        props.lineHeight !== undefined
+          ? { "line-height": String(props.lineHeight) }
+          : undefined
+      }
+    >
+      <For each={lines()}>
+        {(line) =>
+          line === "" ? (
+            <span class="block invisible">{"\u00A0"}</span>
+          ) : (
+            <span class="block">
+              <MsdfText
+                text={line}
+                font={props.font ?? "AlteHaasGroteskBold"}
+                tracking={props.tracking}
+                alpha={props.alpha}
+              />
+            </span>
+          )
+        }
+      </For>
     </span>
   );
 }

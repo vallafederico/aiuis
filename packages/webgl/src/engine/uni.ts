@@ -1,3 +1,5 @@
+import { getDefaultEngine } from "./engine";
+
 const WATCH_META = Symbol("webgl.uni.watch");
 
 type Listener = () => void;
@@ -16,6 +18,13 @@ type WatchMeta = {
   listeners: Set<Listener>;
   controller: UniWatchController;
 };
+
+function notifyListeners(meta: WatchMeta) {
+  getDefaultEngine()?.requestFrame();
+  meta.listeners.forEach((listener) => {
+    listener();
+  });
+}
 
 function getIndexedUniSlot(key: string) {
   const match = /^value(\d+)$/i.exec(key);
@@ -38,7 +47,7 @@ function defineReactiveKey(target: UniValues, meta: WatchMeta, key: string) {
       if (typeof value !== "number" || !Number.isFinite(value)) return;
       if ((meta.values[key] ?? 0) === value) return;
       meta.values[key] = value;
-      meta.listeners.forEach((listener) => listener());
+      notifyListeners(meta);
     },
   });
 }
@@ -81,7 +90,7 @@ export function ensureWatchableUni(target: UniValues = {}): UniWatchController {
         });
 
         if (changed) {
-          listeners.forEach((listener) => listener());
+          notifyListeners(meta);
         }
       },
       toFloat32(maxValues) {
@@ -113,7 +122,9 @@ export function ensureWatchableUni(target: UniValues = {}): UniWatchController {
     },
   };
 
-  Object.keys(values).forEach((key) => defineReactiveKey(target, meta, key));
+  Object.keys(values).forEach((key) => {
+    defineReactiveKey(target, meta, key);
+  });
 
   Object.defineProperty(target, WATCH_META, {
     enumerable: false,

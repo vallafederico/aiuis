@@ -166,8 +166,9 @@ ${mainPrologue}
   float alpha = 0.0;
   for (int i = 0; i < GLYPHS; i++) {
     vec4 d = DST[i];
-    float inside = step(d.x, local.x) * step(local.x, d.z)
-                 * step(d.y, local.y) * step(local.y, d.w);
+    // early-exit: skip the atlas fetch entirely for pixels outside this
+    // glyph's rect — pixels are row-coherent so the GPU truly skips work
+    if (local.x < d.x || local.x > d.z || local.y < d.y || local.y > d.w) continue;
     vec2 g = clamp((local - d.xy) / (d.zw - d.xy), 0.0, 1.0);
     vec3 s = texture(uTexture, mix(SRC[i].xy, SRC[i].zw, g)).rgb;
     float sd = median3(s) - 0.5;
@@ -176,7 +177,7 @@ ${mainPrologue}
     float glyphAtlasPx = abs(SRC[i].z - SRC[i].x) * ATLAS_W;
     float glyphMag = glyphScreenPx / max(glyphAtlasPx, 0.0001);
     float screenSd = sd * PX_RANGE * glyphMag;
-    alpha = max(alpha, inside * blurAlpha(screenSd, PX_RANGE * glyphMag * 0.5, vUv));
+    alpha = max(alpha, blurAlpha(screenSd, PX_RANGE * glyphMag * 0.5, vUv));
   }
 
   // premultiplied alpha — misses stay transparent

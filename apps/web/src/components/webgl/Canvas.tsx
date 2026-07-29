@@ -8,7 +8,7 @@ export default function Canvas(props: { options?: SceneOptions }) {
 
   onMount(async () => {
     scene = createScene(canvas, {
-      dpr: { max: 2 },
+      dpr: { max: 1.5 },
       clearColor: { r: 0.9137, g: 0.9137, b: 0.9176, a: 1 },
       onInitError: (error) => console.error("[webgl]", error),
       ...props.options,
