@@ -22,18 +22,191 @@ function constantTimeEqual(a: string, b: string): boolean {
   return match
 }
 
+// --- HMAC helpers (Web Crypto API, available in Cloudflare Workers) ---
+
+async function hmacSign(secret: string, data: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  )
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data))
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("")
+}
+
+async function sha256hex(data: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data))
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("")
+}
+
+// --- Session cookie ---
+
+const SESSION_COOKIE = "cms_session"
+const SESSION_TTL = 28800 // 8 hours
+
+interface SessionPayload {
+  sub: string // session prefix (8 hex chars of token hash)
+  exp: number // unix timestamp
+}
+
+async function buildSessionCookie(env: Env, sessionPrefix: string): Promise<string> {
+  const payload = btoa(JSON.stringify({ sub: sessionPrefix, exp: Math.floor(Date.now() / 1000) + SESSION_TTL } satisfies SessionPayload))
+  const mac = await hmacSign(env.SESSION_SECRET, payload)
+  const cookieValue = `${payload}.${mac}`
+  const isDevEnv = (env as unknown as { ENVIRONMENT?: string }).ENVIRONMENT === "dev"
+  const secureFlag = isDevEnv ? "" : "; Secure"
+  return `${SESSION_COOKIE}=${cookieValue}; HttpOnly; SameSite=Lax; Path=/review; Max-Age=${SESSION_TTL}${secureFlag}`
+}
+
+async function verifySessionCookie(env: Env, cookieValue: string): Promise<{ csrfToken: string } | null> {
+  const dotIdx = cookieValue.lastIndexOf(".")
+  if (dotIdx === -1) return null
+  const payload = cookieValue.slice(0, dotIdx)
+  const mac = cookieValue.slice(dotIdx + 1)
+
+  const expected = await hmacSign(env.SESSION_SECRET, payload)
+  if (!constantTimeEqual(mac, expected)) return null
+
+  let parsed: SessionPayload
+  try {
+    parsed = JSON.parse(atob(payload)) as SessionPayload
+  } catch {
+    return null
+  }
+
+  if (parsed.exp < Math.floor(Date.now() / 1000)) return null
+
+  const csrfToken = await hmacSign(env.SESSION_SECRET, cookieValue + "|csrf")
+  return { csrfToken }
+}
+
+// --- Token-based login helpers (duplicate hash logic from auth.ts, without Bearer header requirement) ---
+
+async function verifyTokenForReview(env: Env, rawToken: string): Promise<{ sessionPrefix: string } | null> {
+  const tokenHash = await sha256hex(rawToken)
+  const now = new Date().toISOString()
+
+  const row = await env.DB.prepare(
+    `SELECT capabilities FROM tokens WHERE token_hash=? AND (expires IS NULL OR expires > ?) AND revoked=0`
+  ).bind(tokenHash, now).first<{ capabilities: string }>()
+
+  if (!row) return null
+
+  const caps = (() => { try { return JSON.parse(row.capabilities) } catch { return {} } })() as { publish?: boolean }
+  if (!caps.publish) return null
+
+  return { sessionPrefix: tokenHash.slice(0, 8) }
+}
+
+// --- Auth check — used by all protected routes ---
+
+type AuthResult = { csrfToken: string } | null
+
+async function checkReviewSession(req: Request, env: Env): Promise<AuthResult> {
+  const isDevEnv = (env as unknown as { ENVIRONMENT?: string }).ENVIRONMENT === "dev"
+
+  // 1. Dev-only escape hatch: Authorization: Bearer or cookie cms_review_key
+  if (isDevEnv && env.CMS_DEV_SECRET) {
+    const expected = env.CMS_DEV_SECRET
+
+    const authHeader = req.headers.get("Authorization")
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7)
+      if (constantTimeEqual(token, expected)) {
+        return { csrfToken: "dev-bypass" }
+      }
+    }
+
+    const cookieHeader = req.headers.get("Cookie") ?? ""
+    const cookieMatch = cookieHeader.match(/(?:^|;\s*)cms_review_key=([^;]*)/)
+    if (cookieMatch) {
+      const cookieVal = cookieMatch[1] ?? ""
+      if (constantTimeEqual(cookieVal, expected)) {
+        return { csrfToken: "dev-bypass" }
+      }
+    }
+  }
+
+  // 2. Token-based session cookie
+  const cookieHeader = req.headers.get("Cookie") ?? ""
+  const sessionMatch = cookieHeader.match(/(?:^|;\s*)cms_session=([^;]*)/)
+  if (sessionMatch) {
+    const sessionVal = decodeURIComponent(sessionMatch[1] ?? "")
+    const result = await verifySessionCookie(env, sessionVal)
+    if (result) return result
+  }
+
+  return null
+}
+
+function unauthorizedHtml(): string {
+  return `<!DOCTYPE html><html><head><title>Unauthorized</title></head><body style="background:#0d1117;color:#e6edf3;font-family:system-ui,sans-serif;max-width:900px;margin:0 auto;padding:1rem 2rem"><h1>401 Unauthorized</h1><p>Pass <code>?key=YOUR_SECRET</code> or an <code>Authorization: Bearer</code> header.</p></body></html>`
+}
+
 const app = new Hono<{ Bindings: Env }>()
 
-// Auth middleware
-app.use("*", async (c, next) => {
-  const env = c.env
-  const expected = env.CMS_DEV_SECRET ?? ""
+// GET /login — show login form
+app.get("/login", (c) => {
+  const error = c.req.query("error")
+  const errorHtml = error
+    ? `<p style="color:#f44336">${esc(error === "invalid" ? "Invalid or unauthorized token." : error)}</p>`
+    : ""
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>CMS Login</title></head>
+<body style="background:#0d1117;color:#e6edf3;font-family:system-ui,sans-serif;max-width:500px;margin:4rem auto;padding:1rem 2rem">
+<h1>CMS Review Login</h1>
+${errorHtml}
+<form method="POST" action="/review/login">
+  <div style="margin-bottom:1rem">
+    <label style="display:block;margin-bottom:.5rem">Bearer token:</label>
+    <input type="text" name="token" autocomplete="off" style="width:100%;background:#161b22;color:#e6edf3;border:1px solid #30363d;border-radius:4px;padding:.5rem;font-family:monospace;font-size:0.9rem">
+  </div>
+  <button type="submit" style="background:#1a3a1a;color:#4caf50;border:1px solid #4caf50;padding:.5rem 1.5rem;border-radius:4px;cursor:pointer">Login</button>
+</form>
+</body>
+</html>`
+  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } })
+})
 
-  // 1. Check ?key= query param → set cookie + redirect to URL without ?key
+// POST /login — verify token and set session cookie
+app.post("/login", async (c) => {
+  const body = await c.req.parseBody()
+  const rawToken = (body["token"] as string ?? "").trim()
+
+  if (!rawToken) {
+    return c.redirect("/review/login?error=invalid", 302)
+  }
+
+  const result = await verifyTokenForReview(c.env, rawToken)
+  if (!result) {
+    return c.redirect("/review/login?error=invalid", 302)
+  }
+
+  const sessionCookie = await buildSessionCookie(c.env, result.sessionPrefix)
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: "/review",
+      "Set-Cookie": sessionCookie,
+    },
+  })
+})
+
+// Auth middleware for all other /review routes
+app.use("*", async (c, next) => {
+  // Skip login routes (already handled above but middleware runs for all)
+  const path = new URL(c.req.url).pathname
+  if (path === "/review/login") return next()
+
+  const isDevEnv = (c.env as unknown as { ENVIRONMENT?: string }).ENVIRONMENT === "dev"
+
+  // ?key= redirect path (dev only): set cookie then redirect to URL without ?key
   const keyParam = c.req.query("key")
-  if (keyParam !== undefined) {
-    if (constantTimeEqual(keyParam, expected)) {
-      // Build redirect URL without ?key param
+  if (keyParam !== undefined && isDevEnv && c.env.CMS_DEV_SECRET) {
+    if (constantTimeEqual(keyParam, c.env.CMS_DEV_SECRET)) {
       const url = new URL(c.req.url)
       url.searchParams.delete("key")
       const cookieValue = `cms_review_key=${keyParam}; HttpOnly; SameSite=Strict; Path=/review`
@@ -48,33 +221,27 @@ app.use("*", async (c, next) => {
     return new Response(unauthorizedHtml(), { status: 401, headers: { "Content-Type": "text/html; charset=utf-8" } })
   }
 
-  // 2. Check Authorization: Bearer header
-  const authHeader = c.req.header("Authorization")
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.slice(7)
-    if (constantTimeEqual(token, expected)) {
-      return next()
-    }
-    return new Response(unauthorizedHtml(), { status: 401, headers: { "Content-Type": "text/html; charset=utf-8" } })
+  const auth = await checkReviewSession(c.req.raw, c.env)
+
+  if (!auth) {
+    return c.redirect("/review/login", 302)
   }
 
-  // 3. Check Cookie: cms_review_key=
-  const cookieHeader = c.req.header("Cookie") ?? ""
-  const cookieMatch = cookieHeader.match(/(?:^|;\s*)cms_review_key=([^;]*)/)
-  if (cookieMatch) {
-    const cookieVal = cookieMatch[1] ?? ""
-    if (constantTimeEqual(cookieVal, expected)) {
-      return next()
+  // CSRF check on POSTs (not enforced on dev-bypass path)
+  if (c.req.method === "POST" && auth.csrfToken !== "dev-bypass") {
+    const formBody = await c.req.parseBody()
+    const csrfProvided = formBody["_csrf"] as string | undefined
+    if (!csrfProvided || !constantTimeEqual(csrfProvided, auth.csrfToken)) {
+      return new Response("403 Forbidden: CSRF check failed", { status: 403 })
     }
+    // Store parsed body back so action handler can re-use it
+    c.set("parsedBody" as never, formBody)
   }
 
-  // 4. 401
-  return new Response(unauthorizedHtml(), { status: 401, headers: { "Content-Type": "text/html; charset=utf-8" } })
+  // Store auth in context for page handlers
+  c.set("auth" as never, auth)
+  return next()
 })
-
-function unauthorizedHtml(): string {
-  return `<!DOCTYPE html><html><head><title>Unauthorized</title></head><body style="background:#0d1117;color:#e6edf3;font-family:system-ui,sans-serif;max-width:900px;margin:0 auto;padding:1rem 2rem"><h1>401 Unauthorized</h1><p>Pass <code>?key=YOUR_SECRET</code> or an <code>Authorization: Bearer</code> header.</p></body></html>`
-}
 
 type RevisionRow = {
   rev: string
@@ -98,6 +265,8 @@ app.get("/", async (c) => {
   const env = c.env
   const statusParam = c.req.query("status")
   const msgParam = c.req.query("msg")
+  const auth = c.get("auth" as never) as { csrfToken: string } | undefined
+  const csrfToken = auth?.csrfToken ?? ""
 
   let flash = ""
   if (statusParam === "published") {
@@ -118,6 +287,11 @@ app.get("/", async (c) => {
 
   const revisions = rows.results ?? []
 
+  // CSRF field included in forms (omitted on dev-bypass since CSRF isn't enforced there)
+  const csrfField = csrfToken !== "dev-bypass"
+    ? `<input type="hidden" name="_csrf" value="${esc(csrfToken)}">`
+    : ""
+
   let items = ""
   for (const r of revisions) {
     const isHead = r.rev === r.head_rev
@@ -132,6 +306,7 @@ app.get("/", async (c) => {
 
     const publishForm = isHead ? `
       <form method="POST" action="/review/action" style="display:inline">
+        ${csrfField}
         <input type="hidden" name="action" value="publish">
         <input type="hidden" name="docId" value="${esc(r.doc_id)}">
         <input type="hidden" name="rev" value="${esc(r.rev)}">
@@ -140,6 +315,7 @@ app.get("/", async (c) => {
 
     const revertForm = `
       <form method="POST" action="/review/action" style="display:inline;margin-left:8px">
+        ${csrfField}
         <input type="hidden" name="action" value="revert">
         <input type="hidden" name="docId" value="${esc(r.doc_id)}">
         <input type="hidden" name="rev" value="${esc(r.rev)}">
@@ -260,7 +436,8 @@ app.get("/diff/:docId/:rev", async (c) => {
 // POST /action — form post handler
 app.post("/action", async (c) => {
   const env = c.env
-  const body = await c.req.parseBody()
+  // Body may have been pre-parsed by CSRF middleware; fall back to parsing again
+  const body = (c.get("parsedBody" as never) as Record<string, string> | undefined) ?? await c.req.parseBody()
   const action = body["action"] as string
   const docId = body["docId"] as string
   const rev = body["rev"] as string

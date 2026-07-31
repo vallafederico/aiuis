@@ -8,6 +8,7 @@ export interface AuthedIdentity {
     publish: boolean
     collections: string[] | "*"
     namespaces: string[]
+    admin?: boolean
   }
   session: string
 }
@@ -29,9 +30,11 @@ export async function resolveIdentity(req: Request, env: Env): Promise<AuthedIde
   const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token))
   const hex = [...new Uint8Array(hashBuffer)].map(b => b.toString(16).padStart(2, "0")).join("")
 
+  const now = new Date().toISOString()
+
   const row = await env.DB.prepare(
-    `SELECT * FROM tokens WHERE token_hash=? AND (expires IS NULL OR expires > ?)`
-  ).bind(hex, new Date().toISOString()).first<{
+    `SELECT * FROM tokens WHERE token_hash=? AND (expires IS NULL OR expires > ?) AND revoked=0`
+  ).bind(hex, now).first<{
     principal: string
     kind: string
     audience: string
@@ -41,6 +44,12 @@ export async function resolveIdentity(req: Request, env: Env): Promise<AuthedIde
   if (!row) {
     throw new AuthError("Invalid or expired token")
   }
+
+  // Fire-and-forget last_used stamp — do not await
+  env.DB.prepare("UPDATE tokens SET last_used=? WHERE token_hash=?")
+    .bind(now, hex)
+    .run()
+    .catch(() => {})
 
   const capabilities = JSON.parse(row.capabilities)
   const session = hex.slice(0, 8)
@@ -55,6 +64,10 @@ export async function resolveIdentity(req: Request, env: Env): Promise<AuthedIde
 }
 
 export function requireDevSecret(req: Request, env: Env): void {
+  if ((env as unknown as { ENVIRONMENT?: string }).ENVIRONMENT !== "dev") {
+    throw new AuthError("Dev secret not available outside dev environment")
+  }
+
   const fromHeader = req.headers.get("X-Dev-Secret")
   const fromAuth = req.headers.get("Authorization")?.replace("Bearer ", "")
   const provided = fromHeader ?? fromAuth ?? ""
@@ -68,5 +81,11 @@ export function requireDevSecret(req: Request, env: Env): void {
 
   if (!match) {
     throw new AuthError("Invalid dev secret")
+  }
+}
+
+export function requireAdmin(identity: AuthedIdentity): void {
+  if (!identity.capabilities.admin) {
+    throw new AuthError("admin capability required")
   }
 }

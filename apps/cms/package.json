@@ -14,6 +14,7 @@
     "seed:pieces": "npx tsx scripts/seed-pieces.ts",
     "migrate:notes": "npx tsx scripts/migrate-notes.ts",
     "mint-token": "tsx scripts/mint-token.ts",
+    "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "mirror": "npx tsx scripts/mirror-content.ts",
     "mirror:watch": "npx tsx scripts/mirror-content.ts --watch"
   },

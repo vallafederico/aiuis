@@ -6,6 +6,7 @@ import { registerReadTools } from "./tools/read.js"
 import { registerWriteTools } from "./tools/write.js"
 import { registerLifecycleTools } from "./tools/lifecycle.js"
 import { registerAssetTools } from "./tools/assets.js"
+import { registerTokenTools } from "./tools/tokens.js"
 
 export type McpProps = {
   identity: {
@@ -28,5 +29,6 @@ export class CmsMcpAgent extends McpAgent<Env, unknown, McpProps> {
     registerWriteTools(this.server, this.env, getIdentity)
     registerLifecycleTools(this.server, this.env, getIdentity)
     registerAssetTools(this.server, this.env, getIdentity)
+    registerTokenTools(this.server, this.env, getIdentity)
   }
 }

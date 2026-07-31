@@ -6,6 +6,7 @@ import { CmsMcpAgent } from "./mcp/agent.js"
 import { reviewApp } from "./review/handler.js"
 import { logOp } from "./core/op-log.js"
 import { deriveDoc } from "./derive/pipeline.js"
+import { applyCors, handlePreflight } from "./core/cors.js"
 
 export interface Env {
   DB: D1Database
@@ -15,6 +16,9 @@ export interface Env {
   MCP_AGENT: DurableObjectNamespace
   LOCK_ROOM: DurableObjectNamespace
   CMS_DEV_SECRET: string
+  SESSION_SECRET: string
+  ENVIRONMENT?: string
+  CORS_ORIGINS?: string
 }
 
 // Re-export for wrangler DO binding
@@ -315,6 +319,20 @@ app.get("/dev/export", async (c) => {
 })
 
 app.route("/review", reviewApp)
+
+// CORS middleware — applies to /api/v1/* and /mcp only (not /dev or /review)
+async function corsMiddleware(c: { req: { raw: Request }; env: Env; res: Response }, next: () => Promise<void>): Promise<Response | undefined> {
+  const preflight = handlePreflight(c.req.raw, c.env)
+  if (preflight) return preflight
+  await next()
+  return applyCors(c.req.raw, c.res, c.env)
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use("/api/v1/*", corsMiddleware as any)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use("/mcp", corsMiddleware as any)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use("/mcp/*", corsMiddleware as any)
 
 // GET /api/v1/search?q= — FTS5 over published docs
 app.get('/api/v1/search', async (c) => {

@@ -48,9 +48,11 @@ beforeAll(async () => {
 })
 
 describe("Phase 6: Review page", () => {
-  it("401 without secret", async () => {
-    const res = await SELF.fetch("http://localhost/review")
-    expect(res.status).toBe(401)
+  it("redirects to /review/login without secret", async () => {
+    const res = await SELF.fetch("http://localhost/review", { redirect: "manual" })
+    // Auth required — now redirects to /review/login instead of 401
+    expect([302, 301]).toContain(res.status)
+    expect(res.headers.get("location")).toContain("/review/login")
   })
 
   it("200 with secret, lists revision", async () => {
