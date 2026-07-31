@@ -92,19 +92,51 @@ function CmsNotes(props: { node: HastElement }) {
 }
 
 function CmsFigure(props: { node: HastElement }) {
+  const isVideo = () => hastHasClass(props.node, "cms-video")
   const img = () =>
     hastChildren(props.node).find(
       (c): c is HastElement => c.type === "element" && c.tagName === "img",
-    );
+    )
+  const video = () =>
+    hastChildren(props.node).find(
+      (c): c is HastElement => c.type === "element" && c.tagName === "video",
+    )
+  const caption = () =>
+    hastChildren(props.node).find(
+      (c): c is HastElement => c.type === "element" && c.tagName === "figcaption",
+    )
   return (
-    <Show when={img()}>
-      {(img) => (
+    <Show
+      when={isVideo() ? video() : img()}
+      fallback={null}
+    >
+      {(media) => (
         <figure class={hastClassNames(props.node).join(" ") || "cms-figure"}>
-          <CmsImg node={img()} />
+          <Show when={isVideo()} fallback={<CmsImg node={media() as HastElement} />}>
+            <CmsVideoEl node={media() as HastElement} />
+          </Show>
+          <Show when={caption()}>
+            {(cap) => <figcaption>{hastToPlainText(cap())}</figcaption>}
+          </Show>
         </figure>
       )}
     </Show>
-  );
+  )
+}
+
+function CmsVideoEl(props: { node: HastElement }) {
+  const isAmbient = () => attr(props.node, "autoplay") != null
+  return (
+    <video
+      src={attr(props.node, "src")}
+      poster={attr(props.node, "poster")}
+      controls={!isAmbient() || undefined}
+      autoplay={isAmbient() || undefined}
+      muted={isAmbient() || undefined}
+      loop={isAmbient() || undefined}
+      playsinline={isAmbient() || undefined}
+    />
+  )
 }
 
 function CmsImg(props: { node: HastElement }) {

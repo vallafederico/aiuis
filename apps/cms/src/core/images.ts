@@ -1,6 +1,7 @@
 import { unified } from "unified"
 import remarkParse from "remark-parse"
 import remarkGfm from "remark-gfm"
+import remarkDirective from "remark-directive"
 import type { Env } from "../index.js"
 
 function walkMdast(node: any, visitor: (n: any) => void) {
@@ -14,13 +15,18 @@ export async function validateBodyImages(
   env: Env,
   body: string
 ): Promise<{ error: "asset_not_found"; path: string; field: "body" } | null> {
-  const processor = unified().use(remarkParse).use(remarkGfm)
+  const processor = unified().use(remarkParse).use(remarkGfm).use(remarkDirective)
   const tree = processor.parse(body)
 
   const imageUrls: string[] = []
   walkMdast(tree, (node: any) => {
     if (node.type === "image" && typeof node.url === "string") {
       imageUrls.push(node.url)
+    }
+    if (node.type === "leafDirective" && node.name === "video") {
+      const attrs = node.attributes ?? {}
+      if (typeof attrs.src === "string") imageUrls.push(attrs.src)
+      if (typeof attrs.poster === "string") imageUrls.push(attrs.poster)
     }
   })
 

@@ -33,6 +33,8 @@ const MIME_EXT_MAP: Record<string, string[]> = {
   "image/webp": [".webp"],
   "image/avif": [".avif"],
   "image/gif": [".gif"],
+  "video/mp4": [".mp4"],
+  "video/webm": [".webm"],
 }
 
 const SLUG_SAFE = /^[a-z0-9][a-z0-9._-]*$/
@@ -269,7 +271,7 @@ export function registerAssetTools(
 ): void {
   server.tool(
     "upload_asset",
-    "Upload a binary asset (image) to R2 storage and register it in the CMS",
+    "Upload a binary asset (image or video) to R2 storage and register it in the CMS",
     {
       path: z.string(),
       content_base64: z.string(),

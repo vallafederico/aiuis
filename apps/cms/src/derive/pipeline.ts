@@ -54,6 +54,55 @@ function remarkNotesDirective() {
   }
 }
 
+function remarkVideoDirective() {
+  return (tree: any) => {
+    hastWalk(tree, (node: any) => {
+      if (node.type === 'leafDirective' && node.name === 'video') {
+        const attrs = node.attributes ?? {}
+        const src = typeof attrs.src === 'string' ? attrs.src : ''
+        const poster = typeof attrs.poster === 'string' ? attrs.poster : undefined
+        const caption = typeof attrs.caption === 'string' ? attrs.caption : undefined
+        const ambient = attrs.ambient === '' || attrs.ambient === 'true' || attrs.ambient === true
+
+        const resolvedSrc = src.startsWith('assets/') ? `/api/v1/${src}` : src
+        const resolvedPoster = poster?.startsWith('assets/') ? `/api/v1/${poster}` : poster
+
+        const videoProps: Record<string, unknown> = { src: resolvedSrc }
+        if (resolvedPoster) videoProps.poster = resolvedPoster
+        if (ambient) {
+          videoProps.autoplay = true
+          videoProps.muted = true
+          videoProps.loop = true
+          videoProps.playsinline = true
+        } else {
+          videoProps.controls = true
+        }
+
+        const videoEl: any = {
+          type: 'element',
+          tagName: 'video',
+          properties: videoProps,
+          children: [],
+        }
+        const children: any[] = [videoEl]
+        if (caption) {
+          children.push({
+            type: 'element',
+            tagName: 'figcaption',
+            properties: {},
+            children: [{ type: 'text', value: caption }],
+          })
+        }
+
+        node.data = node.data ?? {}
+        node.data.hName = 'figure'
+        node.data.hProperties = { className: ['cms-figure', 'cms-video'] }
+        node.data.hChildren = children
+      }
+    })
+  }
+}
+
 type AssetMeta = { width: number | null; height: number | null; lqip: string | null }
 
 function remarkImageTransform(assetMap: Map<string, AssetMeta>) {
@@ -117,12 +166,17 @@ export async function deriveDoc(
   const section = typeof fm.section === 'string' ? fm.section : ''
 
   // 3. Pre-scan mdast for asset references
-  const preScanProcessor = unified().use(remarkParse).use(remarkGfm)
+  const preScanProcessor = unified().use(remarkParse).use(remarkGfm).use(remarkDirective)
   const preScanTree = preScanProcessor.parse(body)
   const imageUrls: string[] = []
   hastWalk(preScanTree, (node: any) => {
     if (node.type === 'image' && typeof node.url === 'string' && node.url.startsWith('assets/')) {
       imageUrls.push(node.url)
+    }
+    if (node.type === 'leafDirective' && node.name === 'video') {
+      const attrs = node.attributes ?? {}
+      if (typeof attrs.src === 'string' && attrs.src.startsWith('assets/')) imageUrls.push(attrs.src)
+      if (typeof attrs.poster === 'string' && attrs.poster.startsWith('assets/')) imageUrls.push(attrs.poster)
     }
   })
 
@@ -139,14 +193,20 @@ export async function deriveDoc(
   // 4. Build sanitize schema with img/figure support
   const notesSchema = {
     ...defaultSchema,
-    tagNames: [...(defaultSchema.tagNames ?? []), 'aside', 'figure', 'img'],
+    tagNames: [...(defaultSchema.tagNames ?? []), 'aside', 'figure', 'figcaption', 'img', 'video'],
     attributes: {
       ...(defaultSchema.attributes ?? {}),
       aside: [['className', 'cms-notes']] as Array<string | [string, ...string[]]>,
-      figure: [['className', 'cms-figure']] as Array<string | [string, ...string[]]>,
+      figure: [['className', 'cms-figure', 'cms-video']] as Array<string | [string, ...string[]]>,
+      figcaption: [] as Array<string | [string, ...string[]]>,
       img: [
         ['src', /^https?:\/\//, /^\/api\/v1\/assets\//],
         'alt', 'width', 'height', 'loading', 'decoding', 'data-lqip',
+      ] as Array<string | [string, ...unknown[]]>,
+      video: [
+        ['src', /^\/api\/v1\/assets\//],
+        ['poster', /^\/api\/v1\/assets\//],
+        'controls', 'autoplay', 'muted', 'loop', 'playsinline',
       ] as Array<string | [string, ...unknown[]]>,
     },
   }
@@ -157,6 +217,7 @@ export async function deriveDoc(
     .use(remarkGfm)
     .use(remarkDirective)
     .use(remarkNotesDirective)
+    .use(remarkVideoDirective)
     .use(remarkImageTransform, assetMap)
     .use(remarkRehype)
     .use(rehypeFigureWrap)
@@ -167,7 +228,7 @@ export async function deriveDoc(
   // Defensive: log any unregistered directives that reach derivation
   const directiveTypes = new Set(['textDirective', 'leafDirective', 'containerDirective'])
   hastWalk(mdast, (node: any) => {
-    if (directiveTypes.has(node.type) && node.name !== 'notes') {
+    if (directiveTypes.has(node.type) && node.name !== 'notes' && node.name !== 'video') {
       logOp(env, { session: 'derive', tool: 'deriveDoc', outcome: 'dropped_directive', errorClass: `unregistered:${node.name}` })
     }
   })
