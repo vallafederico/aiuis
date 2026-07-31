@@ -1,6 +1,6 @@
 # CMS Studio — outline (post-adversarial-review)
 
-_Companion to `agent-first-cms-spec.md` (authoritative spec) and `agent-first-cms-progress.md` (build state). Drafted 2026-07-29; same-day adversarial review (4 independent lenses: frontend-agnosticism, OSS/product viability, technical soundness, claim verification against code). This revision keeps only what survived. Status: option outline — no decisions locked._
+_Companion to `agent-first-cms-spec.md` (authoritative spec) and `agent-first-cms-progress.md` (build state). Drafted 2026-07-29; same-day adversarial review (4 independent lenses: frontend-agnosticism, OSS/product viability, technical soundness, claim verification against code). This revision keeps only what survived. Status: §9 records the decisions locked 2026-07-31; earlier sections remain the option analysis that produced them._
 
 ## 0. What the review established (read this first)
 
@@ -101,3 +101,16 @@ The old "§8: deploy is independent" was half true. Corrected dependencies:
 5. Annotations: separate preview derivation namespace (review says always-on poisons immutable caches — effectively decided unless contested).
 6. Studio framework + serving location (demoted: decide after §3 layer exists).
 7. Whole-doc human editing: spec §11 already contemplates WYSIWYG-to-markdown as future-track; block-level comes first via visual editing.
+
+## 9. Decisions — 2026-07-31
+
+Locked in session (Federico + review); these supersede the corresponding items in §8.
+
+1. **Management surface (§8.1): MCP core, studio-as-MCP-client.** "Manual management for users" means a studio UI, not a second API. The studio speaks Streamable HTTP MCP with a bearer token, exactly like external agents — every studio bug is an MCP-surface bug, which is the point. REST wrappers get added only on demonstrated integration need, reusing the same handlers. The read side stays REST.
+2. **Fork (§8.2): (b) — OSS self-deploy plus operator-managed instances.** A conscious reversal of Appendix A's retirement; amendment recorded in the spec. Managed instances use **per-tenant provisioning** (own worker + D1 + R2 + KV per customer, Workers-for-Platforms shape), which sidesteps the parked multi-tenant D1 threat entirely — and makes the Phase 10 deploy automation, the OSS install script, and the managed-instance factory the *same artifact*.
+3. **Block identity (§8.3): structural, per-rev — cross-rev stability is a non-goal.** `data-cms-block` = block index + type + content hash, stamped during derive; valid only for its rev. The overlay holds `(rev, block-id)`; edits gate on `base_rev` and stale overlays get the same structured CONFLICT agents get (existing, tested machinery). After a successful write the preview re-derives and IDs refresh. No IDs embedded in markdown source — the canonical document stays for the reader, never the machinery (red line). Granularity check (Federico): outside long articles, content is already directive-block-shaped — `:::type` components with plain markdown between — so whole-block editing matches the natural authoring unit rather than fighting it.
+4. **Preview auth (§8.4): two scopes, no third-party cookies.** The staging origin (`staging.[site]` — the same site app deployed draft-enabled, reading `derived-preview/…` only) authenticates *people* via login session. Studio iframe previews use **short-lived signed `(doc, rev)` tokens in query params** — mintable over the management surface, op_logged, bounded by short TTL + narrow scope + `Referrer-Policy` on preview routes. §8.5 is confirmed as decided: annotated artifacts never touch the immutable public cache.
+5. **Embedded agent:** chatbot mode ships *inside the studio view* next to the preview (the block→chat→edit→preview loop is the product's reason to exist), hard-gated per §5: not before Phase 8 audience filtering, `chat` capability, per-principal spend caps.
+6. **Sequencing:** §7 stands, with the deploy track further promoted — provisioning automation is now product code, not just ops.
+
+Remaining open from §8: framework/serving location for the studio (§8.6, still deferred until the enablement layer exists) and whole-doc WYSIWYG (§8.7, future-track).
