@@ -15,11 +15,13 @@
     "deploy:web": "pnpm --filter web run deploy",
     "cms": "turbo dev --filter=cms",
     "deploy:cms": "pnpm --filter cms run deploy",
-    "seed:cms": "pnpm --filter cms run seed"
+    "seed:cms": "pnpm --filter cms run seed",
+    "lint": "oxlint"
   },
   "devDependencies": {
     "@local/tailwind": "workspace:*",
     "@tailwindcss/postcss": "^4.1.15",
+    "oxlint": "^1.76.0",
     "prettier-plugin-classnames": "^0.9.0",
     "tailwindcss": "^4.1.15",
     "turbo": "^2.9.16",

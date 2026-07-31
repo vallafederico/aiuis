@@ -41,8 +41,6 @@ yarn-error.log*
 
 .npmrc
 
-#linters
-biome.json
 .wrangler/
 .dev.vars
 # Claude agent worktrees

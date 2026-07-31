@@ -1,0 +1,20 @@
+{
+  "plugins": ["typescript", "import"],
+  "rules": {
+    // Solid.js DOM ref pattern: `let el!: HTMLElement` is assigned via JSX `ref={el}`,
+    // not via a JS assignment — oxlint cannot see this. 10 occurrences across webgl components.
+    "no-unassigned-vars": "off",
+    // Solid.js reactive dependency tracking: accessing a signal in an effect body
+    // (e.g. `viewport.size.height;`) is intentional — it registers the dependency.
+    // 4 occurrences in scrolling.ts and processor.ts.
+    "no-unused-expressions": "off",
+    // Switch-case "no-op top" pattern in scrolling.ts: `bounds.top = bounds.top` is a
+    // placeholder branch for symmetry/exhaustiveness. 2 occurrences.
+    "no-self-assign": "off"
+  },
+  "ignorePatterns": [
+    "**/.vinxi/**",
+    "**/.output/**",
+    "**/apps/cms/mirror/**"
+  ]
+}
