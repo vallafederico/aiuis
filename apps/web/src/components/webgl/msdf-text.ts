@@ -26,13 +26,26 @@ export type MsdfFontAssets = {
 
 const fontCache = new Map<string, Promise<MsdfFontAssets>>();
 
+// Module-level charMap cache — avoids re-building Map<char,BmChar> on every call.
+const charMapCache = new WeakMap<BmFont, Map<string, BmChar>>();
+
+/** Returns (and caches) a char→BmChar lookup map for the given BmFont. */
+export function getCharMap(font: BmFont): Map<string, BmChar> {
+  let m = charMapCache.get(font);
+  if (!m) {
+    m = new Map(font.chars.map((c) => [c.char, c]));
+    charMapCache.set(font, m);
+  }
+  return m;
+}
+
 /** Atlas + metrics from `pnpm msdf` (public/msdf). Engine must be ready. */
 export function loadMsdfFont(font: string): Promise<MsdfFontAssets> {
   let cached = fontCache.get(font);
   if (!cached) {
     cached = Promise.all([
       fetch(`/msdf/${font}.json`).then((r) => r.json() as Promise<BmFont>),
-      loadTexture(`/msdf/${font}.png`, { fit: "stretch" }),
+      loadTexture(`/msdf/${font}.png`, { fit: "stretch", format: "rgb" }),
     ]).then(([metrics, texture]) => ({ metrics, texture }));
     fontCache.set(font, cached);
   }
@@ -44,39 +57,30 @@ export type MsdfTextLayout = {
   tracking?: number;
   /** line spacing multiplier over the font's own line height */
   lineHeight?: number;
-  /** figma-style progressive blur ramp — radius soft-caps at the font's
-   * distanceRange × magnification, keep it subtle on text */
+  /** figma-style progressive blur ramp */
   blur?: ProgressiveBlur;
   /** RGB color (0–1 range), defaults to blue [0, 0, 1] */
   color?: [number, number, number];
   /** opacity multiplier (0–1), defaults to 1 */
   alpha?: number;
-  /** stretch the msdf layout to fill the DOM box — distorts glyphs to whatever the hidden text measures; the beloved accident */
+  /** stretch the msdf layout to fill the DOM box — distorts glyphs; the beloved accident */
   weird?: boolean;
 };
 
-/**
- * Fragment for a DOM-tracked item whose quad IS the text box — glyph rects
- * baked in, misses transparent (premultiplied). Multi-line via `\n`.
- * Returns the box's width/height ratio so the element can be sized with
- * `aspect-ratio`, plus the box size in font px (for font-size sizing).
- * uni.value2 must carry the element width in px (for analytic aa).
- */
-export function buildMsdfTextFragment(
+/** Computes glyph layout and returns Float32Array for the instanced renderer. */
+export function buildMsdfGlyphData(
   font: BmFont,
   text: string,
   layout: MsdfTextLayout = {},
-) {
+): { glyphData: Float32Array; glyphCount: number; aspect: number; width: number; height: number } {
   const { scaleW, scaleH } = font.common;
-  const distanceRange = font.distanceField?.distanceRange ?? 4;
-  const chars = new Map(font.chars.map((c) => [c.char, c]));
-  // figma-style defaults: tracking −6%, line height 100% of the font size
+  const chars = getCharMap(font);
   const trackingPx = (layout.tracking ?? -0.06) * font.info.size;
   const lineSpacing = (layout.lineHeight ?? 1) * font.info.size;
 
-  // pen advance in font px, top-down y like bmfont
-  const glyphs: { src: number[]; dst: number[] }[] = [];
+  const rawGlyphs: { src: [number, number, number, number]; dst: [number, number, number, number] }[] = [];
   let w = 0;
+
   text.split("\n").forEach((line, lineIndex) => {
     let pen = 0;
     let last = 0;
@@ -84,12 +88,11 @@ export function buildMsdfTextFragment(
     for (const ch of line) {
       const g = chars.get(ch);
       if (!g) {
-        pen += font.info.size * 0.33 + trackingPx; // unknown char → gap
+        pen += font.info.size * 0.33 + trackingPx;
         continue;
       }
       if (g.width > 0 && g.height > 0) {
-        glyphs.push({
-          // atlas rect, v top-down like the png (this load path uploads unflipped)
+        rawGlyphs.push({
           src: [
             g.x / scaleW,
             g.y / scaleH,
@@ -105,15 +108,103 @@ export function buildMsdfTextFragment(
         });
       }
       pen += g.xadvance + trackingPx;
-      last = pen - trackingPx; // width without the trailing tracking
+      last = pen - trackingPx;
     }
     w = Math.max(w, last);
   });
 
-  const ys = glyphs.flatMap((g) => [g.dst[1], g.dst[3]]);
-  const y0 = Math.min(...ys);
-  const y1 = Math.max(...ys);
-  const h = y1 - y0;
+  // Compute bounding box with tracking loop (avoids spread arg-limit risk)
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const g of rawGlyphs) {
+    if (g.dst[1] < y0) y0 = g.dst[1];
+    if (g.dst[3] > y1) y1 = g.dst[3];
+  }
+  if (!isFinite(y0)) y0 = 0;
+  if (!isFinite(y1)) y1 = 0;
+  const h = y1 - y0 || 1;
+
+  // Normalize DST to 0..1 element space (same as buildMsdfTextFragment)
+  const glyphCount = rawGlyphs.length;
+  const glyphData = new Float32Array(glyphCount * 8);
+  for (let i = 0; i < glyphCount; i++) {
+    const { src, dst } = rawGlyphs[i]!;
+    const base = i * 8;
+    // dst in normalized element space
+    glyphData[base + 0] = dst[0] / w;
+    glyphData[base + 1] = (dst[1] - y0) / h;
+    glyphData[base + 2] = dst[2] / w;
+    glyphData[base + 3] = (dst[3] - y0) / h;
+    // src in atlas UV space
+    glyphData[base + 4] = src[0];
+    glyphData[base + 5] = src[1];
+    glyphData[base + 6] = src[2];
+    glyphData[base + 7] = src[3];
+  }
+
+  return { glyphData, glyphCount, aspect: w / (h || 1), width: w, height: h };
+}
+
+/**
+ * Fragment for a DOM-tracked item whose quad IS the text box — glyph rects
+ * baked in, misses transparent (premultiplied). Multi-line via `\n`.
+ * Used by the weird path and any path that needs blur.
+ */
+export function buildMsdfTextFragment(
+  font: BmFont,
+  text: string,
+  layout: MsdfTextLayout = {},
+) {
+  const { scaleW, scaleH } = font.common;
+  const distanceRange = font.distanceField?.distanceRange ?? 4;
+  const chars = getCharMap(font);
+  const trackingPx = (layout.tracking ?? -0.06) * font.info.size;
+  const lineSpacing = (layout.lineHeight ?? 1) * font.info.size;
+
+  const glyphs: { src: number[]; dst: number[] }[] = [];
+  let w = 0;
+  text.split("\n").forEach((line, lineIndex) => {
+    let pen = 0;
+    let last = 0;
+    const lineY = lineIndex * lineSpacing;
+    for (const ch of line) {
+      const g = chars.get(ch);
+      if (!g) {
+        pen += font.info.size * 0.33 + trackingPx;
+        continue;
+      }
+      if (g.width > 0 && g.height > 0) {
+        glyphs.push({
+          src: [
+            g.x / scaleW,
+            g.y / scaleH,
+            (g.x + g.width) / scaleW,
+            (g.y + g.height) / scaleH,
+          ],
+          dst: [
+            pen + g.xoffset,
+            lineY + g.yoffset,
+            pen + g.xoffset + g.width,
+            lineY + g.yoffset + g.height,
+          ],
+        });
+      }
+      pen += g.xadvance + trackingPx;
+      last = pen - trackingPx;
+    }
+    w = Math.max(w, last);
+  });
+
+  // Bounding box — tracking loop (avoids spread arg-limit on large glyph arrays)
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const g of glyphs) {
+    if (g.dst[1] < y0) y0 = g.dst[1];
+    if (g.dst[3] > y1) y1 = g.dst[3];
+  }
+  if (!isFinite(y0)) y0 = 0;
+  if (!isFinite(y1)) y1 = 0;
+  const h = y1 - y0 || 1;
 
   const fmt = (n: number) => n.toFixed(6);
   const [r, g, b] = layout.color ?? [0, 0, 1];
@@ -150,10 +241,10 @@ out vec4 outColor;
 
 #define GLYPHS ${glyphs.length}
 const vec4 SRC[GLYPHS] = vec4[](
-	${src}
+\t${src}
 );
 const vec4 DST[GLYPHS] = vec4[](
-	${dst}
+\t${dst}
 );
 const float ATLAS_W = ${fmt(scaleW)};
 const float PX_RANGE = ${fmt(distanceRange)};
@@ -166,13 +257,10 @@ ${mainPrologue}
   float alpha = 0.0;
   for (int i = 0; i < GLYPHS; i++) {
     vec4 d = DST[i];
-    // early-exit: skip the atlas fetch entirely for pixels outside this
-    // glyph's rect — pixels are row-coherent so the GPU truly skips work
     if (local.x < d.x || local.x > d.z || local.y < d.y || local.y > d.w) continue;
     vec2 g = clamp((local - d.xy) / (d.zw - d.xy), 0.0, 1.0);
     vec3 s = texture(uTexture, mix(SRC[i].xy, SRC[i].zw, g)).rgb;
     float sd = median3(s) - 0.5;
-    // analytic aa: sdf px scaled by atlas→screen magnification (no derivatives)
     float glyphScreenPx = (d.z - d.x) * widthPx;
     float glyphAtlasPx = abs(SRC[i].z - SRC[i].x) * ATLAS_W;
     float glyphMag = glyphScreenPx / max(glyphAtlasPx, 0.0001);
@@ -180,7 +268,6 @@ ${mainPrologue}
     alpha = max(alpha, blurAlpha(screenSd, PX_RANGE * glyphMag * 0.5, vUv));
   }
 
-  // premultiplied alpha — misses stay transparent
   vec3 key = vec3(${fmt(r)}, ${fmt(g)}, ${fmt(b)});
   float opacity = ${fmt(a)};
   outColor = vec4(key * alpha * opacity, alpha * opacity);

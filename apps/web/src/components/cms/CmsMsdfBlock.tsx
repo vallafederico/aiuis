@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, For, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import MsdfText from "~/components/webgl/MsdfText";
@@ -17,14 +17,37 @@ export type CmsMsdfBlockProps = {
 
 const RESIZE_DEBOUNCE_MS = 100;
 
-/**
- * Width-aware MSDF text block — measures its own box, wraps the text to fit
- * (bmfont metrics, no browser reflow needed) and hands the result to
- * <MsdfText>. Used by CmsBody for every plain-text run in a piece body.
- */
+// Module-level font metrics store — shared across all CmsMsdfBlock instances
+// to avoid loading the same font N times and creating N reactive signal pairs.
+type FontEntry = {
+  metrics: () => BmFont | undefined;
+  charset: () => Set<string> | undefined;
+};
+const fontMetricsStore = new Map<string, FontEntry>();
+
+function ensureFontEntry(fontName: string): FontEntry {
+  const existing = fontMetricsStore.get(fontName);
+  if (existing) return existing;
+
+  let entry!: FontEntry;
+  createRoot(() => {
+    const [metrics, setMetrics] = createSignal<BmFont | undefined>(undefined);
+    const charset = createMemo(() => {
+      const m = metrics();
+      return m ? new Set(m.chars.map((c) => c.char)) : undefined;
+    });
+    entry = { metrics, charset };
+    // loadMsdfFont is deduplicated by its own fontCache; guard against SSR
+    if (!isServer) {
+      loadMsdfFont(fontName).then(({ metrics: m }) => setMetrics(m));
+    }
+  });
+  fontMetricsStore.set(fontName, entry);
+  return entry;
+}
+
 export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
   let container!: HTMLSpanElement;
-  const [metrics, setMetrics] = createSignal<BmFont>();
   const [width, setWidth] = createSignal<number>();
 
   const size = createElementSize(() => container);
@@ -36,28 +59,18 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
     onCleanup(() => clearTimeout(timer));
   });
 
-  onMount(() => {
-    if (isServer) return;
-    loadMsdfFont(props.font ?? "AlteHaasGroteskBold").then(({ metrics }) => setMetrics(metrics));
-  });
-
-  const charset = createMemo(() => {
-    const m = metrics();
-    return m ? new Set(m.chars.map((c) => c.char)) : undefined;
-  });
+  const fontName = () => props.font ?? "AlteHaasGroteskBold";
+  const fontEntry = () => ensureFontEntry(fontName());
 
   const wrapped = createMemo(() => {
-    const normalized = normalizeMsdfText(props.text, charset());
-    const m = metrics();
+    const normalized = normalizeMsdfText(props.text, fontEntry().charset());
+    const m = fontEntry().metrics();
     const w = width();
-    if (!m || !w) return normalized; // pre-measure fallback — single unwrapped run
+    if (!m || !w) return normalized;
     const fontSizePx = parseFloat(getComputedStyle(container).fontSize) || m.info.size;
     return wrapMsdfText(m, normalized, w, fontSizePx, props.tracking);
   });
 
-  // One MsdfText per wrapped line — each fragment shader only loops over its
-  // own line's glyphs instead of the whole paragraph. Vertical rhythm moves
-  // from the shader's lineHeight to plain CSS line-height on the container.
   const lines = createMemo(() => wrapped().split("\n"));
 
   return (
@@ -73,7 +86,7 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
       <For each={lines()}>
         {(line) =>
           line === "" ? (
-            <span class="block invisible">{"\u00A0"}</span>
+            <span class="block invisible">{" "}</span>
           ) : (
             <span class="block">
               <MsdfText

@@ -1,11 +1,6 @@
 import type { BmFont } from "~/components/webgl/msdf-text";
+import { getCharMap } from "~/components/webgl/msdf-text";
 
-/**
- * Word-wraps `text` into `\n`-joined lines that fit `maxWidthPx`, measuring
- * glyph advances from bmfont metrics scaled to `fontSizePx`. Explicit `\n`
- * in the source is preserved as a hard line break. A single word wider than
- * `maxWidthPx` is hard-broken mid-word rather than overflowing.
- */
 export function wrapMsdfText(
   metrics: BmFont,
   text: string,
@@ -17,7 +12,7 @@ export function wrapMsdfText(
 
   const scale = fontSizePx / metrics.info.size;
   const trackingPx = trackingEm * fontSizePx;
-  const chars = new Map(metrics.chars.map((c) => [c.char, c]));
+  const chars = getCharMap(metrics);
   const fallbackAdvance = metrics.info.size * 0.33 * scale;
 
   const advanceOf = (ch: string) => (chars.get(ch)?.xadvance ?? metrics.info.size * 0.33) * scale;
@@ -31,14 +26,14 @@ export function wrapMsdfText(
 
   const spaceWidth = advanceOf(" ") + trackingPx || fallbackAdvance;
 
-  const hardBreak = (word: string): string[] => {
-    const parts: string[] = [];
+  const hardBreak = (word: string): { text: string; width: number }[] => {
+    const parts: { text: string; width: number }[] = [];
     let current = "";
     let currentW = 0;
     for (const ch of word) {
       const adv = advanceOf(ch) + trackingPx;
       if (current && currentW + adv > maxWidthPx) {
-        parts.push(current);
+        parts.push({ text: current, width: currentW - trackingPx });
         current = ch;
         currentW = adv;
       } else {
@@ -46,7 +41,7 @@ export function wrapMsdfText(
         currentW += adv;
       }
     }
-    if (current) parts.push(current);
+    if (current) parts.push({ text: current, width: currentW - trackingPx });
     return parts;
   };
 
@@ -67,10 +62,10 @@ export function wrapMsdfText(
         const pieces = hardBreak(word);
         pieces.forEach((piece, i) => {
           if (i < pieces.length - 1) {
-            outLines.push(piece);
+            outLines.push(piece.text);
           } else {
-            line = piece;
-            lineWidth = measure(piece);
+            line = piece.text;
+            lineWidth = piece.width;
           }
         });
         continue;

@@ -90,3 +90,8 @@ export {
   type ParticlesController,
 } from "./src/primitives/particles-wrapper";
 export type { ParticlesOptions } from "./src/primitives/particles";
+export {
+  createMsdfGlyphs,
+  type MsdfGlyphsOptions,
+  type MsdfGlyphsHandle,
+} from "./src/primitives/msdf-glyphs";
