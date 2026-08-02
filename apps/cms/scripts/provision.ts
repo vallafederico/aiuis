@@ -139,19 +139,21 @@ function stepD1(instance: string, dryRun: boolean): string {
     const combined = create.stdout + create.stderr
     if (/already exists/i.test(combined)) {
       log(`  D1 database '${dbName}' already exists — fetching id...`)
-      const info = run(`wrangler d1 info ${dbName} --json`, { capture: true })
-      let parsed: Record<string, unknown>
+      // NOT `d1 info <name>` — that resolves the id through wrangler.jsonc,
+      // which still holds the placeholder before the first provision completes
+      const listOut = run(`wrangler d1 list --json`, { capture: true })
+      let entries: Array<Record<string, unknown>>
       try {
-        // wrangler may print non-JSON preamble; find the first { block
-        const jsonMatch = info.match(/\{[\s\S]*\}/)
-        if (!jsonMatch) throw new Error("no JSON in output")
-        parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>
+        const jsonMatch = listOut.match(/\[[\s\S]*\]/)
+        if (!jsonMatch) throw new Error("no JSON array in output")
+        entries = JSON.parse(jsonMatch[0]) as Array<Record<string, unknown>>
       } catch {
-        throw new Error(`Failed to parse wrangler d1 info output: ${info}`)
+        throw new Error(`Failed to parse wrangler d1 list output: ${listOut}`)
       }
-      const id = parsed["database_id"] ?? parsed["uuid"] ?? parsed["id"]
+      const entry = entries.find((e) => e["name"] === dbName)
+      const id = entry?.["uuid"] ?? entry?.["database_id"] ?? entry?.["id"]
       if (!id || typeof id !== "string") {
-        throw new Error(`Could not extract database_id from: ${JSON.stringify(parsed)}`)
+        throw new Error(`Could not find database '${dbName}' in wrangler d1 list output`)
       }
       databaseId = id
       log(`  Reused existing D1 id: ${databaseId}`)
@@ -221,7 +223,7 @@ function stepKV(instance: string, dryRun: boolean): string {
   log("\n[step 3/9] KV namespace...")
 
   if (dryRun) {
-    log(`  [dry-run] Would check: wrangler kv namespace list --json`)
+    log(`  [dry-run] Would check: wrangler kv namespace list`)
     log(`  Would create if not found: wrangler kv namespace create ${instance}`)
     log("  Would patch wrangler.jsonc kv_namespaces[0].id")
     return "<dry-run-kv-id>"
@@ -229,8 +231,8 @@ function stepKV(instance: string, dryRun: boolean): string {
 
   let kvId: string | null = null
 
-  // Check if namespace already exists
-  const listResult = runCapture("wrangler kv namespace list --json")
+  // Check if namespace already exists (plain output is a JSON array; there is no --json flag)
+  const listResult = runCapture("wrangler kv namespace list")
   if (listResult.ok) {
     const jsonMatch = listResult.stdout.match(/\[[\s\S]*\]/)
     if (jsonMatch) {
@@ -299,10 +301,11 @@ function stepQueue(instance: string, dryRun: boolean): void {
   }
   const result = runCapture(`wrangler queues create ${queueName}`)
   const combined = result.stdout + result.stderr
-  if (!result.ok && !/already exists/i.test(combined)) {
+  const exists = /already exists|already taken/i.test(combined)
+  if (!result.ok && !exists) {
     throw new Error(`wrangler queues create failed:\n${result.stderr}\n${result.stdout}`)
   }
-  if (/already exists/i.test(combined)) {
+  if (exists) {
     log(`  Queue '${queueName}' already exists — OK`)
   } else {
     log(`  Created queue '${queueName}'`)

@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aiuis-cms",
+  "workers_dev": false,
   "main": "src/index.ts",
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -11,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "aiuis-cms-db",
-      "database_id": "REPLACE_AFTER_PROVISION",
+      "database_id": "f8882adb-7cc5-4cdf-87cd-114a154baee9",
       "migrations_dir": "migrations"
     }
   ],
@@ -24,7 +25,7 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "REPLACE_AFTER_PROVISION"
+      "id": "658027e659b046e68ae70cb464e10cd0"
     }
   ],
   "queues": {
@@ -44,10 +45,9 @@
     ]
   },
   "vars": {
-    "CMS_DEV_SECRET": "dev-secret-change-me",
-    "SESSION_SECRET": "dev-session-secret-change-me",
-    "ENVIRONMENT": "dev"
+    "ENVIRONMENT": "production"
   },
+  "routes": [{ "pattern": "cms.aiu.is", "custom_domain": true }],
   "durable_objects": {
     "bindings": [
       {
@@ -63,8 +63,8 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["CmsMcpAgent"],
-      "new_classes": ["LockRoom"]
+      // Workers Free only allows SQLite-backed DOs; storage API is the same
+      "new_sqlite_classes": ["CmsMcpAgent", "LockRoom"]
     }
   ]
 }

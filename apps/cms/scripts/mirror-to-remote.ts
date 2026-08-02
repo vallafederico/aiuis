@@ -206,7 +206,9 @@ function stepD1(
       .map((row) => `(${table.columns.map((c) => sqlVal(row[c])).join(", ")})`)
       .join(",\n  ")
 
-    const sql = `BEGIN;\nINSERT OR IGNORE INTO ${table.name} (${cols}) VALUES\n  ${valueRows};\nCOMMIT;\n`
+    // No BEGIN/COMMIT — remote D1 rejects explicit SQL transactions.
+    // Safety comes from INSERT OR IGNORE + the script being re-runnable.
+    const sql = `INSERT OR IGNORE INTO ${table.name} (${cols}) VALUES\n  ${valueRows};\n`
 
     const sqlFile = path.join(tmpDir, `${table.name}.sql`)
     writeFileSync(sqlFile, sql, "utf-8")
@@ -331,8 +333,8 @@ function stepFTS(
 
   const sql =
     rows.length === 0
-      ? "BEGIN;\nDELETE FROM documents_fts;\nCOMMIT;\n"
-      : `BEGIN;\nDELETE FROM documents_fts;\nINSERT INTO documents_fts (id, title, body_text) VALUES\n  ${valueRows};\nCOMMIT;\n`
+      ? "DELETE FROM documents_fts;\n"
+      : `DELETE FROM documents_fts;\nINSERT INTO documents_fts (id, title, body_text) VALUES\n  ${valueRows};\n`
 
   const sqlFile = path.join(tmpDir, "fts.sql")
   writeFileSync(sqlFile, sql, "utf-8")
