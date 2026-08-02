@@ -16,7 +16,9 @@
     "mint-token": "tsx scripts/mint-token.ts",
     "bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "mirror": "npx tsx scripts/mirror-content.ts",
-    "mirror:watch": "npx tsx scripts/mirror-content.ts --watch"
+    "mirror:watch": "npx tsx scripts/mirror-content.ts --watch",
+    "provision": "tsx scripts/provision.ts",
+    "mirror:remote": "tsx scripts/mirror-to-remote.ts"
   },
   "dependencies": {
     "hono": "^4.12.32",
