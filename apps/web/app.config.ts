@@ -34,6 +34,12 @@ export default defineConfig({
 		prerender: {
 			crawlLinks: true,
 		},
+		routeRules: {
+			"/preface/**": { prerender: false },
+			"/foundations/**": { prerender: false },
+			"/uis/**": { prerender: false },
+			"/api/**": { prerender: false },
+		},
 	},
 	vite: {
 		plugins,

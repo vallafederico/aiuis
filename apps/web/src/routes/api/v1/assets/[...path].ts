@@ -1,16 +1,21 @@
 import type { APIEvent } from "@solidjs/start/server";
+import { getCmsBinding } from "~/lib/cms";
 
 // Derived CMS content references assets by origin-relative path
 // (/api/v1/assets/...), so the site proxies them to the CMS instance.
-// TODO: in prod, swap the fetch for the CMS service binding.
 const CMS_BASE =
   (typeof process !== "undefined" && process.env.CMS_API_URL) ||
   "http://localhost:8787";
 
 export async function GET({ params }: APIEvent) {
+  const binding = getCmsBinding();
   let upstream: Response;
   try {
-    upstream = await fetch(`${CMS_BASE}/api/v1/assets/${params.path}`);
+    if (binding) {
+      upstream = await binding.fetch(`https://cms/api/v1/assets/${params.path}`);
+    } else {
+      upstream = await fetch(`${CMS_BASE}/api/v1/assets/${params.path}`);
+    }
   } catch {
     return new Response("Content service is offline", { status: 503 });
   }
