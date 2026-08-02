@@ -108,16 +108,17 @@ export function CmsForeword(props: { node: HastElement }) {
 
 function CmsFigure(props: { node: HastElement }) {
   const isVideo = () => hastHasClass(props.node, "cms-video")
+  const kids = () => hastChildren(props.node)
   const img = () =>
-    hastChildren(props.node).find(
+    kids().find(
       (c): c is HastElement => c.type === "element" && c.tagName === "img",
     )
   const video = () =>
-    hastChildren(props.node).find(
+    kids().find(
       (c): c is HastElement => c.type === "element" && c.tagName === "video",
     )
   const caption = () =>
-    hastChildren(props.node).find(
+    kids().find(
       (c): c is HastElement => c.type === "element" && c.tagName === "figcaption",
     )
   return (
@@ -145,6 +146,7 @@ function CmsVideoEl(props: { node: HastElement }) {
     <video
       src={attr(props.node, "src")}
       poster={attr(props.node, "poster")}
+      preload="none"
       controls={!isAmbient() || undefined}
       autoplay={isAmbient() || undefined}
       muted={isAmbient() || undefined}
