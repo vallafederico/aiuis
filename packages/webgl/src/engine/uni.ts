@@ -64,6 +64,10 @@ export function ensureWatchableUni(target: UniValues = {}): UniWatchController {
     values[key] = typeof value === "number" && Number.isFinite(value) ? value : 0;
   });
 
+  // Pre-allocated reusable output buffer — avoids a Float32Array allocation every frame.
+  let float32Cache: Float32Array | null = null;
+  let float32CacheSize = 0;
+
   const meta: WatchMeta = {
     values,
     listeners,
@@ -94,7 +98,12 @@ export function ensureWatchableUni(target: UniValues = {}): UniWatchController {
         }
       },
       toFloat32(maxValues) {
-        const out = new Float32Array(maxValues);
+        if (float32Cache === null || float32CacheSize !== maxValues) {
+          float32Cache = new Float32Array(maxValues);
+          float32CacheSize = maxValues;
+        }
+        const out = float32Cache;
+        out.fill(0);
         const keys = Object.keys(values);
         const consumed = new Set<string>();
 

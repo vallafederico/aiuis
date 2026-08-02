@@ -269,6 +269,15 @@ export class PostProcessor {
   /** Effects whose shader failed to compile — skipped, never retried. */
   private failedEffects = new Set<string>();
 
+  // Per-program cached uniform locations.
+  private uTextureLocs = new Map<WebGLProgram, WebGLUniformLocation | null>();
+  private uUniLocs = new Map<WebGLProgram, WebGLUniformLocation | null>();
+  private uPassLocs = new Map<WebGLProgram, WebGLUniformLocation | null>();
+  private uResLocs = new Map<WebGLProgram, WebGLUniformLocation | null>();
+  private uTimeLocs = new Map<WebGLProgram, WebGLUniformLocation | null>();
+  private uDeltaLocs = new Map<WebGLProgram, WebGLUniformLocation | null>();
+  private uNamedLocs = new Map<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
+
   // Non-blocking shader compilation state.
   // 'idle' → nothing submitted; 'compiling' → submitted, polling each frame;
   // 'ready' → every program settled (linked or failed) and assigned.
@@ -397,6 +406,13 @@ export class PostProcessor {
       const program = this.customPrograms.get(effect.id);
       if (program && this.programGl) {
         this.programGl.deleteProgram(program);
+        this.uTextureLocs.delete(program);
+        this.uUniLocs.delete(program);
+        this.uPassLocs.delete(program);
+        this.uResLocs.delete(program);
+        this.uTimeLocs.delete(program);
+        this.uDeltaLocs.delete(program);
+        this.uNamedLocs.delete(program);
       }
       this.customPrograms.delete(effect.id);
     }
@@ -424,6 +440,13 @@ export class PostProcessor {
     const program = this.customPrograms.get(id);
     if (program && this.programGl) {
       this.programGl.deleteProgram(program);
+      this.uTextureLocs.delete(program);
+      this.uUniLocs.delete(program);
+      this.uPassLocs.delete(program);
+      this.uResLocs.delete(program);
+      this.uTimeLocs.delete(program);
+      this.uDeltaLocs.delete(program);
+      this.uNamedLocs.delete(program);
     }
     this.customPrograms.delete(id);
   }
@@ -471,6 +494,13 @@ export class PostProcessor {
     this.failedEffects.clear();
     this.warnedOnce.clear();
     this.compileState = "idle";
+    this.uTextureLocs.clear();
+    this.uUniLocs.clear();
+    this.uPassLocs.clear();
+    this.uResLocs.clear();
+    this.uTimeLocs.clear();
+    this.uDeltaLocs.clear();
+    this.uNamedLocs.clear();
   }
 
   /**
@@ -617,12 +647,22 @@ export class PostProcessor {
     gl.useProgram(program);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, inputTexture);
-    const texLoc = gl.getUniformLocation(program, "uTexture");
+    if (!this.uTextureLocs.has(program)) {
+      this.uTextureLocs.set(program, gl.getUniformLocation(program, "uTexture"));
+    }
+    const texLoc = this.uTextureLocs.get(program)!;
     if (texLoc != null) {
       gl.uniform1i(texLoc, 0);
     }
+    if (!this.uNamedLocs.has(program)) {
+      this.uNamedLocs.set(program, new Map());
+    }
+    const namedMap = this.uNamedLocs.get(program)!;
     Object.entries(uniforms).forEach(([name, value]) => {
-      const loc = gl.getUniformLocation(program, name);
+      if (!namedMap.has(name)) {
+        namedMap.set(name, gl.getUniformLocation(program, name));
+      }
+      const loc = namedMap.get(name)!;
       if (loc != null) {
         gl.uniform1f(loc, value);
       }
@@ -652,14 +692,24 @@ export class PostProcessor {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, inputTexture);
 
-    const texLoc = gl.getUniformLocation(program, "uTexture");
+    if (!this.uTextureLocs.has(program)) {
+      this.uTextureLocs.set(program, gl.getUniformLocation(program, "uTexture"));
+    }
+    const texLoc = this.uTextureLocs.get(program)!;
     if (texLoc != null) gl.uniform1i(texLoc, 0);
     let unit = 1;
     if (effect.textureUniforms) {
+      if (!this.uNamedLocs.has(program)) {
+        this.uNamedLocs.set(program, new Map());
+      }
+      const namedMap = this.uNamedLocs.get(program)!;
       for (const [uniformName, resolver] of Object.entries(effect.textureUniforms)) {
         const handle = resolver();
         if (!handle || handle.gl !== gl) continue;
-        const uniformLoc = gl.getUniformLocation(program, uniformName);
+        if (!namedMap.has(uniformName)) {
+          namedMap.set(uniformName, gl.getUniformLocation(program, uniformName));
+        }
+        const uniformLoc = namedMap.get(uniformName)!;
         if (uniformLoc == null) continue;
         gl.activeTexture(gl.TEXTURE0 + unit);
         gl.bindTexture(gl.TEXTURE_2D, handle.texture);
@@ -667,15 +717,30 @@ export class PostProcessor {
         unit += 1;
       }
     }
-    const resolutionLoc = gl.getUniformLocation(program, "uResolution");
+    if (!this.uResLocs.has(program)) {
+      this.uResLocs.set(program, gl.getUniformLocation(program, "uResolution"));
+    }
+    const resolutionLoc = this.uResLocs.get(program)!;
     if (resolutionLoc != null) gl.uniform2f(resolutionLoc, width, height);
-    const timeLoc = gl.getUniformLocation(program, "uTime");
+    if (!this.uTimeLocs.has(program)) {
+      this.uTimeLocs.set(program, gl.getUniformLocation(program, "uTime"));
+    }
+    const timeLoc = this.uTimeLocs.get(program)!;
     if (timeLoc != null) gl.uniform1f(timeLoc, frame.now * 0.001);
-    const deltaLoc = gl.getUniformLocation(program, "uDelta");
+    if (!this.uDeltaLocs.has(program)) {
+      this.uDeltaLocs.set(program, gl.getUniformLocation(program, "uDelta"));
+    }
+    const deltaLoc = this.uDeltaLocs.get(program)!;
     if (deltaLoc != null) gl.uniform1f(deltaLoc, frame.delta * 0.001);
-    const passLoc = gl.getUniformLocation(program, "uPassIndex");
+    if (!this.uPassLocs.has(program)) {
+      this.uPassLocs.set(program, gl.getUniformLocation(program, "uPassIndex"));
+    }
+    const passLoc = this.uPassLocs.get(program)!;
     if (passLoc != null) gl.uniform1f(passLoc, passIndex);
-    const uniLoc = gl.getUniformLocation(program, "uUni");
+    if (!this.uUniLocs.has(program)) {
+      this.uUniLocs.set(program, gl.getUniformLocation(program, "uUni"));
+    }
+    const uniLoc = this.uUniLocs.get(program)!;
     if (uniLoc != null) gl.uniform4fv(uniLoc, uniValues);
 
     gl.bindVertexArray(this.quadVao);
@@ -787,6 +852,13 @@ void main() {
       this.customPrograms.clear();
       this.failedEffects.clear();
       this.compileState = "idle";
+      this.uTextureLocs.clear();
+      this.uUniLocs.clear();
+      this.uPassLocs.clear();
+      this.uResLocs.clear();
+      this.uTimeLocs.clear();
+      this.uDeltaLocs.clear();
+      this.uNamedLocs.clear();
     }
     if (this.compileState === "idle") {
       this.beginCompile(gl);

@@ -3,12 +3,26 @@ export type ItemClipData = {
   isVisible: boolean;
 };
 
+// Module-level canvas rect cache — one getBoundingClientRect per canvas per frame.
+// resetCanvasRectCache() must be called once at the start of each render frame.
+let cachedCanvas: HTMLCanvasElement | null = null;
+let cachedCanvasRect: DOMRect | null = null;
+
+export function resetCanvasRectCache() {
+  cachedCanvas = null;
+  cachedCanvasRect = null;
+}
+
 export function getElementClipData(
   element: HTMLElement,
   canvas: HTMLCanvasElement,
 ): ItemClipData {
   const elementRect = element.getBoundingClientRect();
-  const canvasRect = canvas.getBoundingClientRect();
+  if (canvas !== cachedCanvas || cachedCanvasRect === null) {
+    cachedCanvas = canvas;
+    cachedCanvasRect = canvas.getBoundingClientRect();
+  }
+  const canvasRect = cachedCanvasRect;
 
   const left = elementRect.left - canvasRect.left;
   const right = elementRect.right - canvasRect.left;

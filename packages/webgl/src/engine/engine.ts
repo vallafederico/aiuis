@@ -1,4 +1,5 @@
 import { WebGLUnavailableError } from "./errors";
+import { resetCanvasRectCache } from "../primitives/item.utils";
 
 export type ClearColor = {
   r: number;
@@ -159,6 +160,8 @@ export function createEngine(
   const renderSubscribers = new Map<number, RenderSubscriberEntry>();
   const postRenderSubscribers = new Set<PostRenderCallback>();
 
+  let sortedRenderSubscribersCache: RenderSubscriberEntry[] | null = null;
+
   const createRenderTarget = (width: number, height: number): RenderTarget => {
     const texture = gl.createTexture();
     const framebuffer = gl.createFramebuffer();
@@ -235,11 +238,15 @@ export function createEngine(
     return sceneTarget;
   };
 
-  const getSortedRenderSubscribers = () =>
-    Array.from(renderSubscribers.values()).sort((a, b) => {
-      if (a.layer !== b.layer) return a.layer - b.layer;
-      return a.order - b.order;
-    });
+  const getSortedRenderSubscribers = () => {
+    if (!sortedRenderSubscribersCache) {
+      sortedRenderSubscribersCache = Array.from(renderSubscribers.values()).sort((a, b) => {
+        if (a.layer !== b.layer) return a.layer - b.layer;
+        return a.order - b.order;
+      });
+    }
+    return sortedRenderSubscribersCache;
+  };
 
   const subscribeRender = (
     callback: RenderCallback,
@@ -256,9 +263,11 @@ export function createEngine(
       callback,
     };
     renderSubscribers.set(id, entry);
+    sortedRenderSubscribersCache = null;
     markDirty();
     return () => {
       renderSubscribers.delete(id);
+      sortedRenderSubscribersCache = null;
     };
   };
 
@@ -301,6 +310,7 @@ export function createEngine(
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    resetCanvasRectCache();
     getSortedRenderSubscribers().forEach(({ callback }) => {
       try {
         callback({

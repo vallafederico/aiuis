@@ -194,7 +194,12 @@ export class TextureLoader {
     }
     gl.bindTexture(gl.TEXTURE_2D, glTexture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+    // Use RGB8 when the caller explicitly requests it (e.g. MSDF atlas — only .rgb is read).
+    if (options.format === "rgb") {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB8, gl.RGB, gl.UNSIGNED_BYTE, bitmap);
+    } else {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+    }
 
     const mapFilter = (filter: "linear" | "nearest" | undefined) =>
       filter === "nearest" ? gl.NEAREST : gl.LINEAR;

@@ -8,11 +8,36 @@ type TrailTarget = {
   destroy: () => void;
 };
 
+type PaintLocs = {
+  uPrev: WebGLUniformLocation | null;
+  uFade: WebGLUniformLocation | null;
+  uRadius: WebGLUniformLocation | null;
+  uStrength: WebGLUniformLocation | null;
+  uCutoff: WebGLUniformLocation | null;
+  uSpeed: WebGLUniformLocation | null;
+  uTime: WebGLUniformLocation | null;
+  uSize: WebGLUniformLocation | null;
+  uMouse: WebGLUniformLocation | null;
+  uMousePrev: WebGLUniformLocation | null;
+  uResolution: WebGLUniformLocation | null;
+};
+
+type GrowLocs = {
+  uPrev: WebGLUniformLocation | null;
+  uResolution: WebGLUniformLocation | null;
+  uGrow: WebGLUniformLocation | null;
+  uDissipate: WebGLUniformLocation | null;
+  uTime: WebGLUniformLocation | null;
+  uCutoff: WebGLUniformLocation | null;
+};
+
 type TrailProgramBundle = {
   paintProgram: WebGLProgram;
   growProgram: WebGLProgram;
   vao: WebGLVertexArrayObject;
   buffer: WebGLBuffer;
+  paintLocs: PaintLocs;
+  growLocs: GrowLocs;
 };
 
 export type MouseTrailTextureHandle = {
@@ -143,23 +168,14 @@ export class MouseTrail {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, readTarget.texture);
 
-    const uPrev = gl.getUniformLocation(this.bundle.paintProgram, "uPrev");
-    if (uPrev != null) gl.uniform1i(uPrev, 0);
-    const uFade = gl.getUniformLocation(this.bundle.paintProgram, "uFade");
-    if (uFade != null) gl.uniform1f(uFade, this.fade);
-    const uRadius = gl.getUniformLocation(this.bundle.paintProgram, "uRadius");
-    if (uRadius != null) gl.uniform1f(uRadius, this.radius);
-    const uStrength = gl.getUniformLocation(
-      this.bundle.paintProgram,
-      "uStrength",
-    );
-    if (uStrength != null) gl.uniform1f(uStrength, this.strength);
-    const uCutoff = gl.getUniformLocation(this.bundle.paintProgram, "uCutoff");
-    if (uCutoff != null) gl.uniform1f(uCutoff, this.cutoff);
-    const uSpeed = gl.getUniformLocation(this.bundle.paintProgram, "uSpeed");
-    if (uSpeed != null) gl.uniform1f(uSpeed, this.hasPointer ? this.speed : 0);
-    const uTime = gl.getUniformLocation(this.bundle.paintProgram, "uTime");
-    if (uTime != null) gl.uniform1f(uTime, frame.now * 0.001);
+    const pl = this.bundle.paintLocs;
+    if (pl.uPrev != null) gl.uniform1i(pl.uPrev, 0);
+    if (pl.uFade != null) gl.uniform1f(pl.uFade, this.fade);
+    if (pl.uRadius != null) gl.uniform1f(pl.uRadius, this.radius);
+    if (pl.uStrength != null) gl.uniform1f(pl.uStrength, this.strength);
+    if (pl.uCutoff != null) gl.uniform1f(pl.uCutoff, this.cutoff);
+    if (pl.uSpeed != null) gl.uniform1f(pl.uSpeed, this.hasPointer ? this.speed : 0);
+    if (pl.uTime != null) gl.uniform1f(pl.uTime, frame.now * 0.001);
     const dtSec = Math.max(0.001, frame.delta * 0.001);
     const targetSize = clamp((this.hasPointer ? this.speed : 0) * 0.02, 0, 1);
     const growRate = 8;
@@ -168,22 +184,12 @@ export class MouseTrail {
     const alpha = 1 - Math.exp(-rate * dtSec);
     this.smoothedSize += (targetSize - this.smoothedSize) * alpha;
     if (Math.abs(targetSize - this.smoothedSize) < 0.0005) this.smoothedSize = targetSize;
-    const uSize = gl.getUniformLocation(this.bundle.paintProgram, "uSize");
-    if (uSize != null) gl.uniform1f(uSize, this.smoothedSize);
-    const uMouse = gl.getUniformLocation(this.bundle.paintProgram, "uMouse");
-    if (uMouse != null) gl.uniform2f(uMouse, this.pointer.x, this.pointer.y);
-    const uMousePrev = gl.getUniformLocation(
-      this.bundle.paintProgram,
-      "uMousePrev",
-    );
-    if (uMousePrev != null)
-      gl.uniform2f(uMousePrev, this.prevPointer.x, this.prevPointer.y);
-    const uResolution = gl.getUniformLocation(
-      this.bundle.paintProgram,
-      "uResolution",
-    );
-    if (uResolution != null)
-      gl.uniform2f(uResolution, writeTarget.width, writeTarget.height);
+    if (pl.uSize != null) gl.uniform1f(pl.uSize, this.smoothedSize);
+    if (pl.uMouse != null) gl.uniform2f(pl.uMouse, this.pointer.x, this.pointer.y);
+    if (pl.uMousePrev != null)
+      gl.uniform2f(pl.uMousePrev, this.prevPointer.x, this.prevPointer.y);
+    if (pl.uResolution != null)
+      gl.uniform2f(pl.uResolution, writeTarget.width, writeTarget.height);
 
     gl.bindVertexArray(this.bundle.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -196,29 +202,15 @@ export class MouseTrail {
     gl.useProgram(this.bundle.growProgram);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, writeTarget.texture);
-    const uPrevGrow = gl.getUniformLocation(this.bundle.growProgram, "uPrev");
-    if (uPrevGrow != null) gl.uniform1i(uPrevGrow, 0);
-    const uResolutionGrow = gl.getUniformLocation(
-      this.bundle.growProgram,
-      "uResolution",
-    );
-    if (uResolutionGrow != null) {
-      gl.uniform2f(uResolutionGrow, readTarget.width, readTarget.height);
+    const gl2 = this.bundle.growLocs;
+    if (gl2.uPrev != null) gl.uniform1i(gl2.uPrev, 0);
+    if (gl2.uResolution != null) {
+      gl.uniform2f(gl2.uResolution, readTarget.width, readTarget.height);
     }
-    const uGrow = gl.getUniformLocation(this.bundle.growProgram, "uGrow");
-    if (uGrow != null) gl.uniform1f(uGrow, this.growth);
-    const uDissipate = gl.getUniformLocation(
-      this.bundle.growProgram,
-      "uDissipate",
-    );
-    if (uDissipate != null) gl.uniform1f(uDissipate, this.dissipate);
-    const uTimeGrow = gl.getUniformLocation(this.bundle.growProgram, "uTime");
-    if (uTimeGrow != null) gl.uniform1f(uTimeGrow, frame.now * 0.001);
-    const uCutoffGrow = gl.getUniformLocation(
-      this.bundle.growProgram,
-      "uCutoff",
-    );
-    if (uCutoffGrow != null) gl.uniform1f(uCutoffGrow, this.cutoff * 0.6);
+    if (gl2.uGrow != null) gl.uniform1f(gl2.uGrow, this.growth);
+    if (gl2.uDissipate != null) gl.uniform1f(gl2.uDissipate, this.dissipate);
+    if (gl2.uTime != null) gl.uniform1f(gl2.uTime, frame.now * 0.001);
+    if (gl2.uCutoff != null) gl.uniform1f(gl2.uCutoff, this.cutoff * 0.6);
     gl.bindVertexArray(this.bundle.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindVertexArray(null);
@@ -479,7 +471,31 @@ void main() {
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   gl.bindVertexArray(null);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
-  return { paintProgram, growProgram, vao, buffer };
+
+  const paintLocs: PaintLocs = {
+    uPrev: gl.getUniformLocation(paintProgram, "uPrev"),
+    uFade: gl.getUniformLocation(paintProgram, "uFade"),
+    uRadius: gl.getUniformLocation(paintProgram, "uRadius"),
+    uStrength: gl.getUniformLocation(paintProgram, "uStrength"),
+    uCutoff: gl.getUniformLocation(paintProgram, "uCutoff"),
+    uSpeed: gl.getUniformLocation(paintProgram, "uSpeed"),
+    uTime: gl.getUniformLocation(paintProgram, "uTime"),
+    uSize: gl.getUniformLocation(paintProgram, "uSize"),
+    uMouse: gl.getUniformLocation(paintProgram, "uMouse"),
+    uMousePrev: gl.getUniformLocation(paintProgram, "uMousePrev"),
+    uResolution: gl.getUniformLocation(paintProgram, "uResolution"),
+  };
+
+  const growLocs: GrowLocs = {
+    uPrev: gl.getUniformLocation(growProgram, "uPrev"),
+    uResolution: gl.getUniformLocation(growProgram, "uResolution"),
+    uGrow: gl.getUniformLocation(growProgram, "uGrow"),
+    uDissipate: gl.getUniformLocation(growProgram, "uDissipate"),
+    uTime: gl.getUniformLocation(growProgram, "uTime"),
+    uCutoff: gl.getUniformLocation(growProgram, "uCutoff"),
+  };
+
+  return { paintProgram, growProgram, vao, buffer, paintLocs, growLocs };
 }
 
 function createTrailTarget(
