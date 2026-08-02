@@ -77,7 +77,7 @@ export default function AiVizControls(props: {
                 onInput={(e) =>
                   props.onChange(slider.key, e.currentTarget.valueAsNumber)
                 }
-                class="h-1 w-full cursor-pointer accent-black"
+                class="h-1 w-full accent-black"
               />
             </label>
           )}

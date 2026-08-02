@@ -30,7 +30,7 @@
   --height: 1px;
 
   position: relative;
-  cursor: pointer;
+  cursor: crosshair;
 }
 
 [animate-hover="underline"]::before {

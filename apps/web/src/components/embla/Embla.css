@@ -7,11 +7,11 @@
 }
 
 .embla__container:hover {
-  cursor: grab;
+  cursor: crosshair;
 }
 
 .embla__container:active {
-  cursor: grabbing;
+  cursor: crosshair;
 }
 
 .embla__container > * {

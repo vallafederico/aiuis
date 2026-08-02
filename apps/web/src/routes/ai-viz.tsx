@@ -1,5 +1,6 @@
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import { createStore } from "solid-js/store";
+import gsap from "~/lib/gsap";
 import Metadata from "~/components/Metadata";
 import AiViz from "~/components/webgl/AiViz";
 import AiVizControls from "~/components/webgl/AiVizControls";
@@ -14,15 +15,32 @@ export default function AiVizPage() {
   const [params, setParams] = createStore<AiVizParams>({ ...AI_VIZ_DEFAULTS });
   const [activeState, setActiveState] = createSignal<AiVizState>();
 
+  let tween: gsap.core.Tween | undefined;
+
   const handleChange = (key: keyof AiVizParams, value: number) => {
+    tween?.kill();
+    tween = undefined;
     setParams(key, value);
     setActiveState(undefined);
   };
 
   const handleSelectState = (state: AiVizState) => {
-    setParams({ ...AI_VIZ_PRESETS[state] });
+    tween?.kill();
     setActiveState(state);
+    const proxy: AiVizParams = { ...params };
+    tween = gsap.to(proxy, {
+      ...AI_VIZ_PRESETS[state],
+      duration: 0.4,
+      ease: "power2.out",
+      onUpdate: () => {
+        setParams({ ...proxy });
+      },
+    });
   };
+
+  onCleanup(() => {
+    tween?.kill();
+  });
 
   return (
     <>

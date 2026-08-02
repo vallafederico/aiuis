@@ -32,7 +32,7 @@
   background-color: #f8f8f8;
   border-color: #ddd;
   color: #999;
-  cursor: not-allowed;
+  cursor: crosshair;
 }
 
 .input-field:read-only {

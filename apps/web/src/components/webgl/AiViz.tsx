@@ -91,15 +91,13 @@ float blobMask(
   float blurPx,
   float blurAngle,
   vec2 res,
-  float time,
   float seed,
   float phase,
-  float breathHz,
-  float rotateRadPerSec,
+  float rotateAngle,
+  float breathPhase,
   float pulseAmount,
   float deformAmount,
-  float deformHzX,
-  float deformHzY
+  float deformPhase
 ) {
   vec2 p = uv - center;
 
@@ -108,10 +106,10 @@ float blobMask(
   float aspect = res.x / max(res.y, 1.0);
   p.x *= aspect;
 
-  // Rotate: shared spin tempo (now in aspect-corrected space, so the blob
-  // stays round while its internal pattern turns). Phase offset keeps layers
-  // out of sync with each other.
-  float angle = time * rotateRadPerSec + phase;
+  // Rotate: shared spin angle, accumulated on the CPU (now in aspect-corrected
+  // space, so the blob stays round while its internal pattern turns). Phase
+  // offset keeps layers out of sync with each other.
+  float angle = rotateAngle + phase;
   float ca = cos(angle);
   float sa = sin(angle);
   p = vec2(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
@@ -119,17 +117,18 @@ float blobMask(
 
   float dist = length(p);
 
-  // Deform: radial radius modulation from fbm scrolling at a rate tied to the
-  // breath tempo. Sampled by angle (not by displacing p), so the outline
-  // wobbles without ever stretching into an ellipse.
+  // Deform: radial radius modulation from fbm scrolling, driven by an
+  // accumulated phase tied to the breath tempo. Sampled by angle (not by
+  // displacing p), so the outline wobbles without ever stretching into an
+  // ellipse.
   float theta = atan(p.y, p.x);
   vec2 angleP = vec2(cos(theta), sin(theta));
-  float warpA = fbm(angleP * 2.8 + vec2(time * deformHzX + seed, seed * 1.7));
-  float warpB = fbm(angleP * 2.8 + vec2(seed * 2.3, time * deformHzY + seed));
+  float warpA = fbm(angleP * 2.8 + vec2(deformPhase + seed, seed * 1.7));
+  float warpB = fbm(angleP * 2.8 + vec2(seed * 2.3, deformPhase * ${f(DEFORM_DETUNE)} + seed));
   float deformTerm = ((warpA + warpB) * 0.5 - 0.5) * 2.0 * deformAmount;
 
   // Pulsate: radius breathes in/out once per breath cycle.
-  float pulse = 1.0 + pulseAmount * sin(time * breathHz * ${f(TAU)} + phase);
+  float pulse = 1.0 + pulseAmount * sin(breathPhase + phase);
   float pulsedRadius = radius * pulse * (1.0 + deformTerm);
 
   // progressive soft edge: sharp opposite blurAngle, soft along it
@@ -150,31 +149,32 @@ vec3 blendDifference(vec3 base, vec3 blend) {
 
 void main() {
   vec2 uv = vUv;
-  float time = uUni[0].x;
   vec2 res = vec2(max(uUni[0].y, 1.0), max(uUni[0].z, 1.0));
-  float breathHz = uUni[0].w;
+  // Accumulated (absolute) phases from the CPU — never derived from wall-clock
+  // time multiplied by a tweenable rate, so state tweens stay continuous
+  // instead of jumping when a speed/period param changes mid-animation.
+  float breathPhase = uUni[0].w;
   float pulseAmount = uUni[1].x;
-  float rotateRadPerSec = uUni[1].y;
+  float rotateAngle = uUni[1].y;
   float deformAmount = uUni[1].z;
-  float deformHzX = uUni[1].w;
-  float deformHzY = deformHzX * ${f(DEFORM_DETUNE)};
+  float deformPhase = uUni[1].w;
   float layerOpacity = uUni[2].x;
   float driftAmount = uUni[2].y;
   vec3 fill = gradientFill(uv);
 
-  // Z stack with a light vertical stagger so layers read apart; drift wanders on
-  // breath harmonics so it stays "on tempo" instead of arbitrary speeds.
+  // Z stack centered on the same origin; drift wanders on breath harmonics
+  // so it stays "on tempo" instead of arbitrary speeds.
   vec2 origin = vec2(0.5, 0.5);
-  float driftAngleX = time * breathHz * ${f(TAU)} * ${f(DRIFT_FREQ_X)};
-  float driftAngleY = time * breathHz * ${f(TAU)} * ${f(DRIFT_FREQ_Y)};
-  vec2 bgCenter = origin + vec2(0.0, 0.0225) + vec2(sin(driftAngleX + ${f(PHASE_BG)}), cos(driftAngleY + ${f(PHASE_BG)})) * ${f(DRIFT_AMOUNT_BG)} * driftAmount;
+  float driftAngleX = breathPhase * ${f(DRIFT_FREQ_X)};
+  float driftAngleY = breathPhase * ${f(DRIFT_FREQ_Y)};
+  vec2 bgCenter = origin + vec2(sin(driftAngleX + ${f(PHASE_BG)}), cos(driftAngleY + ${f(PHASE_BG)})) * ${f(DRIFT_AMOUNT_BG)} * driftAmount;
   vec2 midCenter = origin + vec2(cos(driftAngleX + ${f(PHASE_MID)}), sin(driftAngleY + ${f(PHASE_MID)})) * ${f(DRIFT_AMOUNT_MID)} * driftAmount;
-  vec2 fgCenter = origin + vec2(0.0, -0.0225) + vec2(sin(driftAngleX + ${f(PHASE_FG)}), cos(driftAngleY + ${f(PHASE_FG)})) * ${f(DRIFT_AMOUNT_FG)} * driftAmount;
+  vec2 fgCenter = origin + vec2(sin(driftAngleX + ${f(PHASE_FG)}), cos(driftAngleY + ${f(PHASE_FG)})) * ${f(DRIFT_AMOUNT_FG)} * driftAmount;
 
   float deg = 0.017453292519943295;
-  float bgMask = blobMask(uv, bgCenter, ${f(RADIUS_BG)}, ${BLUR_BG}.0, ${BLUR_DIR_BG}.0 * deg, res, time, ${f(SEED_BG)}, ${f(PHASE_BG)}, breathHz, rotateRadPerSec, pulseAmount, deformAmount, deformHzX, deformHzY) * layerOpacity;
-  float midMask = blobMask(uv, midCenter, ${f(RADIUS_MID)}, ${BLUR_BG}.0, ${BLUR_DIR_MID}.0 * deg, res, time, ${f(SEED_MID)}, ${f(PHASE_MID)}, breathHz, rotateRadPerSec, pulseAmount, deformAmount, deformHzX, deformHzY) * layerOpacity;
-  float fgMask = blobMask(uv, fgCenter, ${f(RADIUS_FG)}, float(${BLUR_FG}), ${BLUR_DIR_FG}.0 * deg, res, time, ${f(SEED_FG)}, ${f(PHASE_FG)}, breathHz, rotateRadPerSec, pulseAmount, deformAmount, deformHzX, deformHzY) * layerOpacity;
+  float bgMask = blobMask(uv, bgCenter, ${f(RADIUS_BG)}, ${BLUR_BG}.0, ${BLUR_DIR_BG}.0 * deg, res, ${f(SEED_BG)}, ${f(PHASE_BG)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
+  float midMask = blobMask(uv, midCenter, ${f(RADIUS_MID)}, ${BLUR_BG}.0, ${BLUR_DIR_MID}.0 * deg, res, ${f(SEED_MID)}, ${f(PHASE_MID)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
+  float fgMask = blobMask(uv, fgCenter, ${f(RADIUS_FG)}, float(${BLUR_FG}), ${BLUR_DIR_FG}.0 * deg, res, ${f(SEED_FG)}, ${f(PHASE_FG)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
 
   // Z stack on paper: each blend uses the already-composited layer below.
   vec3 paper = vec3(${PAPER[0]}, ${PAPER[1]}, ${PAPER[2]});
@@ -193,34 +193,53 @@ export default function AiViz(props: { params: Accessor<AiVizParams> }) {
   onMount(() => {
     const start = performance.now();
     const p0 = props.params();
-    const breathHz0 = 1 / p0.breathPeriod;
+
+    // Rotation, breath, and deform are all driven by phases accumulated on
+    // the CPU frame-to-frame (rather than wall-clock time multiplied by a
+    // tweenable rate). This keeps motion continuous when a param like
+    // rotateSpeed or breathPeriod tweens mid-animation — the angle/phase
+    // only ever advances by rate * dt, it never jumps.
+    let rotAngle = 0;
+    let breathPhase = 0;
+    let deformPhase = 0;
+    let lastT = 0;
+
     item = createItem(el, {
       shaders: { fragment },
       uni: {
         value1: 0,
         value2: 1,
         value3: 1,
-        value4: breathHz0,
+        value4: breathPhase,
         value5: p0.pulseAmount,
-        value6: p0.rotateSpeed * breathHz0 * TAU,
+        value6: rotAngle,
         value7: p0.deformAmount,
-        value8: p0.deformSpeed * breathHz0,
+        value8: deformPhase,
         value9: p0.layerOpacity,
         value10: p0.driftAmount,
       },
       onFrame: (controller, frame) => {
         const t = (frame.now - start) * 0.001;
+        const dt = Math.max(0, t - lastT);
+        lastT = t;
+
         const p = props.params();
         const breathHz = 1 / p.breathPeriod;
+        const rotateRadPerSec = p.rotateSpeed * breathHz * TAU;
+
+        rotAngle += rotateRadPerSec * dt;
+        breathPhase += breathHz * TAU * dt;
+        deformPhase += p.deformSpeed * breathHz * dt;
+
         controller.setUni({
           value1: t,
           value2: frame.canvas.clientWidth,
           value3: frame.canvas.clientHeight,
-          value4: breathHz,
+          value4: breathPhase,
           value5: p.pulseAmount,
-          value6: p.rotateSpeed * breathHz * TAU,
+          value6: rotAngle,
           value7: p.deformAmount,
-          value8: p.deformSpeed * breathHz,
+          value8: deformPhase,
           value9: p.layerOpacity,
           value10: p.driftAmount,
         });
