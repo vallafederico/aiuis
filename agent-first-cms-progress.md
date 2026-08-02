@@ -84,6 +84,33 @@ Hourly reconciliation (R2↔D1 drift report + repair), decide queue fate here at
 ### 6. Phase 10 — deploy
 Provision D1/KV/R2/queue, fill ids, remote migrations, seed, Cloudflare Access on `/review*`, `CMS` service binding in apps/web, prod MCP endpoint. Local-first decision stands — deploy when the site's ready to point at it.
 
+## Phase 10 — EXECUTED (2026-08-02)
+
+CMS live at `cms.aiu.is`. Runbook: `apps/cms/DEPLOY.md`.
+
+**Provisioned resources:**
+
+| Resource | Id / name |
+|---|---|
+| Worker | `aiuis-cms` |
+| D1 | `aiuis-cms-db` — `f8882adb-7cc5-4cdf-87cd-114a154baee9` |
+| KV | `658027e659b046e68ae70cb464e10cd0` |
+| R2 | `aiuis-cms` |
+| Queue | `aiuis-cms-derive` |
+| Durable Objects | `CmsMcpAgent`, `LockRoom` — both SQLite-backed (`new_sqlite_classes`) |
+
+All 5 migrations applied remotely (0001–0005). `wrangler.jsonc` vars flipped: `ENVIRONMENT=production`, secrets (`SESSION_SECRET`, `CMS_DEV_SECRET`) uploaded via stdin, `workers_dev: false`, custom domain route `cms.aiu.is`.
+
+**Content mirrored** (`pnpm mirror:remote`): 16 docs / 68 revisions / 1 asset / 16 FTS rows / 135 R2 objects / 14 KV `ptr:` keys — zero failures.
+
+**Admin token** minted via `pnpm bootstrap-admin --remote` (held by Federico, not stored anywhere in the repo).
+
+**Site (`aiu.is`)** deployed with `CMS` service binding + prerender exclusions. 13/13 routes browser-verified.
+
+**Remaining manual step:** Cloudflare Access app for `cms.aiu.is/review*` (dashboard only — wrangler OAuth has no Access scope). See runbook §7.
+
+---
+
 ## Decisions needed from Federico
 1. **Rich content**: confirm directives-over-MDX (recommendation above). If you truly want `.mdx` files with imports as the source format, that's an architecture change to the spec worth a dedicated discussion.
 2. ~~**Notes**~~ — resolved: the trailing notes section of an article (Credits was the example). Shipped as the `:::notes` directive; visual refinement open as design evolves.
