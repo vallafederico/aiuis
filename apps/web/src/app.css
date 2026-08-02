@@ -94,6 +94,11 @@ body {
   cursor: inherit;
 }
 
+a,
+[animate-hover="underline"] {
+  cursor: pointer;
+}
+
 html,
 body,
 p,

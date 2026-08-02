@@ -24,11 +24,13 @@ export const Nav = () => {
     <>
       <div class="fixed top-0 right-0 pr-gx py-[3svh]">
         <div class="w-grid-1">
-          <SdfImage
-            name="logo"
-            class="w-full"
-            //   blur={{ radius: 24, angle: 180, from: 0.2 }}
-          />
+          <a href="/">
+            <SdfImage
+              name="logo"
+              class="w-full"
+              //   blur={{ radius: 24, angle: 180, from: 0.2 }}
+            />
+          </a>
         </div>
       </div>
       <nav
@@ -41,7 +43,9 @@ export const Nav = () => {
           <Breadcrumbs items={NAV_CRUMBS} />
           <div class="flex flex-col">
             <div>
-              <SdfImage name="logotype" class="w-full" />
+              <a href="/">
+                <SdfImage name="logotype" class="w-full" />
+              </a>
             </div>
             <div class="flex flex-col gap-4">
               <ListBlock
