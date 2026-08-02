@@ -93,9 +93,10 @@ void main() {
   float glyphScreenPx = vDstWidth * widthPx;
   float glyphAtlasPx  = abs(vSrcWidth) * uAtlasW;
   float glyphMag      = glyphScreenPx / max(glyphAtlasPx, 0.0001);
-  float screenSd      = sd * uDistanceRange * glyphMag;
-  float r             = max(0.5, uDistanceRange * glyphMag * 0.5);
-  float alpha         = smoothstep(-r, r, screenSd);
+  // Canonical msdfgen coverage: saturates to exactly 0 outside the glyph even
+  // when minified (a widened smoothstep window leaks alpha across the quad).
+  float screenPxRange = max(uDistanceRange * glyphMag, 1.0);
+  float alpha         = clamp(sd * screenPxRange + 0.5, 0.0, 1.0);
 
   outColor = vec4(uColor * alpha * uAlpha, alpha * uAlpha);
 }`;
