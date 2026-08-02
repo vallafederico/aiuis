@@ -6,6 +6,7 @@ import {
 } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createParticles, type ParticlesController } from "@ssscript/webgl";
+import { readCssColor } from "./css-color";
 import { webgl } from "~/lib/stores/webglStore";
 import { Scroll } from "~/lib/utils/scroll";
 
@@ -39,23 +40,7 @@ export default function GlDot(props: GlDotProps) {
 
   const getColor = (): [number, number, number, number] => {
     if (local.color) return local.color;
-    // --color-key is #0000ff in app.css
-    if (typeof document !== "undefined") {
-      const raw = getComputedStyle(document.documentElement)
-        .getPropertyValue("--color-key")
-        .trim();
-      const hex = raw.startsWith("#") ? raw.slice(1) : raw;
-      if (hex.length === 6) {
-        return [
-          parseInt(hex.slice(0, 2), 16) / 255,
-          parseInt(hex.slice(2, 4), 16) / 255,
-          parseInt(hex.slice(4, 6), 16) / 255,
-          1,
-        ];
-      }
-    }
-    // fallback: #3b82f6
-    return [0.231, 0.51, 0.965, 1];
+    return [...readCssColor("--color-key"), 1];
   };
 
   /** Compute clip-space position of the dot from the current wrapper rect. */
