@@ -262,6 +262,27 @@ This is a note. <script>alert('xss')</script>
     expect(tocTexts).not.toContain('Notes') // no h2 Notes heading anymore
     expect(tocTexts).not.toContain('This is a note.')
   })
+
+  it("deriveDoc: :::foreword directive → <aside class=\"cms-foreword\"> in html", async () => {
+    const rev = "01TESTREV0000000000000100"
+    const rawContent = `---
+title: Foreword Directive Test
+slug: foreword-directive-test
+date: 2024-01-01T00:00:00.000Z
+---
+:::foreword
+A short lead-in before the body.
+:::
+
+Opening paragraph.
+`
+    await testEnv.BUCKET.put(`revisions/articles/foreword-directive-test/${rev}.md`, rawContent)
+
+    const result = await deriveDoc(testEnv, "articles", "foreword-directive-test", rev)
+
+    expect(result.body_html).toContain('<aside class="cms-foreword">')
+    expect(result.body_html).toContain('A short lead-in before the body.')
+  })
 })
 
 describe("migrate-notes route", () => {

@@ -52,6 +52,16 @@ intent: "Endnote material — affiliations, caveats, methodology asides."
 ---
 Notes directive guidelines.
 `)
+  // Seed directive schema for foreword
+  await testEnv.BUCKET.put("schema/directives/foreword.md", `---
+_kind: directive_schema
+name: foreword
+form: container
+attributes: {}
+intent: "A short lead-in paragraph rendered between the title and the main body."
+---
+Foreword directive guidelines.
+`)
 })
 
 describe("directive registry validation", () => {
@@ -60,6 +70,15 @@ describe("directive registry validation", () => {
       collection: "pieces",
       frontmatter: { title: "Notes Test", slug: "notes-test", section: "foundations", order: 1 },
       body: "Main content.\n\n:::notes\nThis is a note.\n:::\n",
+    })
+    expect(result.isError).toBeFalsy()
+  })
+
+  it("create_doc with :::foreword passes validation", async () => {
+    const result = await createDocHandler(testEnv, identity, {
+      collection: "pieces",
+      frontmatter: { title: "Foreword Test", slug: "foreword-test", section: "foundations", order: 5 },
+      body: ":::foreword\nA short lead-in.\n:::\n\nMain content.",
     })
     expect(result.isError).toBeFalsy()
   })

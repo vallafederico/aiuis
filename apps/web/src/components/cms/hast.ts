@@ -42,3 +42,25 @@ export function isMeaningfulNode(node: HastNode): boolean {
   if (node.type === "text") return node.value.trim().length > 0;
   return true;
 }
+
+/**
+ * Pull the first `<aside class={className}>` out of a root's direct children,
+ * returning it plus a root with that node removed (other children untouched).
+ * Used to lift `:::foreword` out of body_hast so it can render above the
+ * article rather than inline within CmsBody.
+ */
+export function extractAside(
+  root: HastNode | null | undefined,
+  className: string,
+): { node: HastElement | null; rest: HastNode | null | undefined } {
+  if (root?.type !== "root") return { node: null, rest: root };
+  const children = hastChildren(root);
+  const idx = children.findIndex(
+    (c): c is HastElement =>
+      c.type === "element" && c.tagName === "aside" && hastHasClass(c, className),
+  );
+  if (idx === -1) return { node: null, rest: root };
+  const node = children[idx] as HastElement;
+  const rest: HastRoot = { type: "root", children: children.filter((_, i) => i !== idx) };
+  return { node, rest };
+}

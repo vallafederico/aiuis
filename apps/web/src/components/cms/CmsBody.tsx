@@ -91,6 +91,21 @@ function CmsNotes(props: { node: HastElement }) {
   );
 }
 
+export function CmsForeword(props: { node: HastElement }) {
+  const paragraphs = () => elementChildren(props.node, "p");
+  return (
+    <aside class={hastClassNames(props.node).join(" ") || "cms-foreword"}>
+      <For each={paragraphs()}>
+        {(child) => (
+          <p>
+            <CmsMsdfBlock text={hastToPlainText(child)} />
+          </p>
+        )}
+      </For>
+    </aside>
+  );
+}
+
 function CmsFigure(props: { node: HastElement }) {
   const isVideo = () => hastHasClass(props.node, "cms-video")
   const img = () =>
@@ -203,6 +218,7 @@ function HastNodeView(props: { node: HastNode }) {
   if (node.tagName === "p") return <CmsParagraph node={node} />;
   if (/^h[1-6]$/.test(node.tagName)) return <CmsHeading node={node} />;
   if (node.tagName === "aside" && hastHasClass(node, "cms-notes")) return <CmsNotes node={node} />;
+  if (node.tagName === "aside" && hastHasClass(node, "cms-foreword")) return <CmsForeword node={node} />;
   if (node.tagName === "figure") return <CmsFigure node={node} />;
   if (node.tagName === "img") return <CmsImg node={node} />;
   if (node.tagName === "ul" || node.tagName === "ol") return <CmsList node={node} />;

@@ -30,3 +30,11 @@ Endnote material (affiliations, caveats, methodology asides) goes in a `:::notes
 Affiliations are listed as they were at the time of the relevant contribution.
 :::
 ```
+
+An optional short lead-in can go in a `:::foreword` container directive at the very start of the body — one or two sentences that orient the reader before the piece begins. It is a teaser, not a restatement of the opening paragraph, and there can be at most one per document:
+
+```
+:::foreword
+A short note on what this chapter argues before it argues it.
+:::
+```

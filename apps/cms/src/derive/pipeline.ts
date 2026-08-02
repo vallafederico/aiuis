@@ -39,16 +39,21 @@ function toSlug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')
 }
 
-function remarkNotesDirective() {
+const ASIDE_DIRECTIVES: Record<string, string> = {
+  notes: 'cms-notes',
+  foreword: 'cms-foreword',
+}
+
+function remarkAsideDirectives() {
   return (tree: any) => {
     hastWalk(tree, (node: any) => {
       if (
         node.type === 'containerDirective' &&
-        node.name === 'notes'
+        Object.hasOwn(ASIDE_DIRECTIVES, node.name)
       ) {
         node.data = node.data ?? {}
         node.data.hName = 'aside'
-        node.data.hProperties = { className: ['cms-notes'] }
+        node.data.hProperties = { className: [ASIDE_DIRECTIVES[node.name]] }
       }
     })
   }
@@ -196,7 +201,7 @@ export async function deriveDoc(
     tagNames: [...(defaultSchema.tagNames ?? []), 'aside', 'figure', 'figcaption', 'img', 'video'],
     attributes: {
       ...(defaultSchema.attributes ?? {}),
-      aside: [['className', 'cms-notes']] as Array<string | [string, ...string[]]>,
+      aside: [['className', 'cms-notes', 'cms-foreword']] as Array<string | [string, ...string[]]>,
       figure: [['className', 'cms-figure', 'cms-video']] as Array<string | [string, ...string[]]>,
       figcaption: [] as Array<string | [string, ...string[]]>,
       img: [
@@ -216,7 +221,7 @@ export async function deriveDoc(
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkDirective)
-    .use(remarkNotesDirective)
+    .use(remarkAsideDirectives)
     .use(remarkVideoDirective)
     .use(remarkImageTransform, assetMap)
     .use(remarkRehype)
@@ -228,7 +233,7 @@ export async function deriveDoc(
   // Defensive: log any unregistered directives that reach derivation
   const directiveTypes = new Set(['textDirective', 'leafDirective', 'containerDirective'])
   hastWalk(mdast, (node: any) => {
-    if (directiveTypes.has(node.type) && node.name !== 'notes' && node.name !== 'video') {
+    if (directiveTypes.has(node.type) && node.name !== 'notes' && node.name !== 'foreword' && node.name !== 'video') {
       logOp(env, { session: 'derive', tool: 'deriveDoc', outcome: 'dropped_directive', errorClass: `unregistered:${node.name}` })
     }
   })

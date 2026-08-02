@@ -3,8 +3,8 @@ import { createAsync, query } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
 import PageContent from "~/components/PageContent";
 import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
-import { CmsBody } from "~/components/cms/CmsBody";
-import type { HastNode } from "~/components/cms/hast";
+import { CmsBody, CmsForeword } from "~/components/cms/CmsBody";
+import { extractAside, type HastNode } from "~/components/cms/hast";
 import { cmsGet } from "~/lib/cms";
 import "./PieceView.css";
 
@@ -81,16 +81,28 @@ export function PieceView(props: {
             </>
           }
         >
-          {(p) => (
-            <PageContent flow width={props.width}>
-              <h1 class="mb-8">
-                <CmsMsdfBlock text={p().title} class="text-6xl -tracking-widest" />
-              </h1>
-              <article class="cms-body max-w-none text-[2rem] leading-snug">
-                <CmsBody hast={p().body_hast} />
-              </article>
-            </PageContent>
-          )}
+          {(p) => {
+            const extracted = () => extractAside(p().body_hast, "cms-foreword");
+            const foreword = () => extracted().node;
+            const bodyWithoutForeword = () => extracted().rest;
+            return (
+              <PageContent flow width={props.width}>
+                <h1 class="mb-8">
+                  <CmsMsdfBlock text={p().title} class="text-6xl -tracking-widest" />
+                </h1>
+                <Show when={foreword()}>
+                  {(node) => (
+                    <div class="cms-foreword-wrap mb-8 w-grids-5">
+                      <CmsForeword node={node()} />
+                    </div>
+                  )}
+                </Show>
+                <article class="cms-body max-w-none text-[2rem] leading-snug">
+                  <CmsBody hast={bodyWithoutForeword()} />
+                </article>
+              </PageContent>
+            );
+          }}
         </Show>
       </Show>
     </Show>

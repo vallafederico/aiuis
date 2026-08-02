@@ -11,8 +11,10 @@ export default function PageContent(props: {
 }) {
   return (
     <div
-      class={`flex py-20 justify-center ${
-        props.flow ? "" : "h-svh items-center overflow-hidden"
+      class={`flex justify-center ${
+        props.flow
+          ? "pt-[40svh] pb-20"
+          : "h-svh items-center overflow-hidden py-20"
       } ${props.spacing ?? ""}`}
     >
       <div class={props.width ?? "w-grids-6"}>{props.children}</div>

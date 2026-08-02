@@ -21,7 +21,11 @@ const PIECES = [
   {
     collection: "pieces",
     frontmatter: { title: "Foreword", slug: "foreword", section: "preface", order: 1 },
-    body: `This thesis investigates what it means to design interfaces when the system on the other side thinks—or performs enough of the appearance of thinking that the distinction stops mattering to the person using it. That shift changes more than the visual language of a product; it changes the contract between interface and user, the pacing of interaction, and the kind of trust a screen is asking for. Buttons and forms assumed a system that was fast, deterministic, and silent about its own uncertainty. A model-backed interface can be none of those things, and pretending otherwise is where most of the current generation of AI products goes wrong.
+    body: `:::foreword
+Why design for a system that thinks back — and what that changes about the interface between you and it.
+:::
+
+This thesis investigates what it means to design interfaces when the system on the other side thinks—or performs enough of the appearance of thinking that the distinction stops mattering to the person using it. That shift changes more than the visual language of a product; it changes the contract between interface and user, the pacing of interaction, and the kind of trust a screen is asking for. Buttons and forms assumed a system that was fast, deterministic, and silent about its own uncertainty. A model-backed interface can be none of those things, and pretending otherwise is where most of the current generation of AI products goes wrong.
 
 The pieces collected here are neither a style guide nor a manifesto—they are working notes from a practice that is still figuring itself out. Each chapter began as a specific design problem encountered in a specific prototype: a chatbot that felt dishonest about what it knew, a navigation system that had to double as model context, an image generator whose interface hid the very iteration it was meant to support. The thesis does not resolve these problems into a single unified theory of AI interface design, because no such theory yet deserves to exist. What it offers instead is a set of vocabularies, principles, and case studies precise enough to be argued with.
 

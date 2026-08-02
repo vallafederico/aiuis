@@ -41,11 +41,7 @@ export const Nav = () => {
           <Breadcrumbs items={NAV_CRUMBS} />
           <div class="flex flex-col">
             <div>
-              <SdfImage
-                name="logotype"
-                class="w-full"
-                blur={{ radius: 24, angle: 180, from: 0.2 }}
-              />
+              <SdfImage name="logotype" class="w-full" />
             </div>
             <div class="flex flex-col gap-4">
               <ListBlock

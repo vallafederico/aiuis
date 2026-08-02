@@ -4,9 +4,9 @@ import { createPostProcessor } from "@ssscript/webgl";
 import { webgl } from "~/lib/stores/webglStore";
 
 type MouseDistortionProps = {
-  /** Circle radius in pixels (default 24). */
+  /** Circle radius in pixels (default 48). */
   radius?: number;
-  /** UV displacement magnitude (default 0.012). */
+  /** Magnification magnitude, 0-1 (default 0.3). */
   strength?: number;
   /** Pixel offset [x, y] applied to the lerped position (default [0, 0]). */
   offset?: [number, number];
@@ -26,14 +26,13 @@ vec4 applyEffect(vec4 color, vec2 uv, vec2 resolution, vec4 uni[4]) {
   float dist = length(delta);
 
   // Soft circular mask
-  float mask = smoothstep(radiusUv, radiusUv * 0.6, dist);
+  float mask = smoothstep(radiusUv, radiusUv * 0.55, dist);
 
-  // Displacement: push uv toward/away from mouse center
-  // Divide by aspect when mapping back to UV space to avoid squash
-  vec2 dir = delta / (length(delta) + 1e-6);
-  vec2 displaced = uv + (dir / aspect) * mask * strength;
+  // Zoom: pull uv toward the mouse center to magnify the area under the cursor
+  float zoom = 1.0 - mask * strength;
+  vec2 zoomed = mouse + (uv - mouse) * zoom;
 
-  return texture(uTexture, displaced);
+  return texture(uTexture, zoomed);
 }
 `;
 
@@ -43,8 +42,8 @@ export default function MouseDistortion(props: MouseDistortionProps) {
   createEffect(() => {
     if (!webgl.loaded) return;
 
-    const radiusPx = props.radius ?? 24;
-    const strengthMax = props.strength ?? 0.012;
+    const radiusPx = props.radius ?? 48;
+    const strengthMax = props.strength ?? 0.3;
     const offset = props.offset ?? [0, 0];
 
     // Lerp targets
@@ -116,7 +115,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
       radiusUv = radiusPx / window.innerHeight;
     };
 
-    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
     document.addEventListener("pointerleave", onPointerLeave);
     window.addEventListener("resize", onResize);
 

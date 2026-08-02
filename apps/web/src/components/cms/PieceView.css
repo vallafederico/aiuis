@@ -21,6 +21,18 @@
   margin-bottom: 0;
 }
 
+/* .cms-foreword — lead-in between title and body; half size, no chrome */
+.cms-foreword {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Don't let Tailwind prose style the aside's p tags with extra top margin */
+.cms-foreword > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 /* .cms-figure — block image with centered layout */
 .cms-figure {
   display: block;
