@@ -1,5 +1,6 @@
 import { loadTexture, type TextureLoaderResult } from "@ssscript/webgl";
 import { sdfBlurGlsl, type ProgressiveBlur } from "./sdf-texture";
+import AlteHaasGroteskBoldJson from "../../../public/msdf/AlteHaasGroteskBold.json";
 
 type BmChar = {
   char: string;
@@ -25,6 +26,15 @@ export type MsdfFontAssets = {
 };
 
 const fontCache = new Map<string, Promise<MsdfFontAssets>>();
+
+/** Metrics available synchronously (statically imported at module load). */
+const syncMetricsCache = new Map<string, BmFont>();
+syncMetricsCache.set("AlteHaasGroteskBold", AlteHaasGroteskBoldJson as unknown as BmFont);
+
+/** Returns font metrics synchronously if they were statically imported; undefined otherwise. */
+export function getMsdfFontMetricsSync(font: string): BmFont | undefined {
+  return syncMetricsCache.get(font);
+}
 
 // Module-level charMap cache — avoids re-building Map<char,BmChar> on every call.
 const charMapCache = new WeakMap<BmFont, Map<string, BmChar>>();

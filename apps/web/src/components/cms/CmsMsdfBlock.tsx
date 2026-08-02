@@ -1,8 +1,8 @@
-import { createEffect, createMemo, createRoot, createSignal, For, onCleanup } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, For, onCleanup, onMount } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import MsdfText from "~/components/webgl/MsdfText";
-import { loadMsdfFont, type BmFont } from "~/components/webgl/msdf-text";
+import { loadMsdfFont, getMsdfFontMetricsSync, type BmFont } from "~/components/webgl/msdf-text";
 import { normalizeMsdfText } from "./normalizeMsdfText";
 import { wrapMsdfText } from "./wrapMsdfText";
 
@@ -37,7 +37,10 @@ function ensureFontEntry(fontName: string): FontEntry {
       return m ? new Set(m.chars.map((c) => c.char)) : undefined;
     });
     entry = { metrics, charset };
-    // loadMsdfFont is deduplicated by its own fontCache; guard against SSR
+    // Seed synchronously if metrics were statically imported — no async tick needed.
+    const syncM = getMsdfFontMetricsSync(fontName);
+    if (syncM) setMetrics(syncM);
+    // Always kick off the full load (needed for texture); metrics signal stays stable.
     if (!isServer) {
       loadMsdfFont(fontName).then(({ metrics: m }) => setMetrics(m));
     }
@@ -49,8 +52,16 @@ function ensureFontEntry(fontName: string): FontEntry {
 export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
   let container!: HTMLSpanElement;
   const [width, setWidth] = createSignal<number>();
+  // Hidden until wrap is computed — prevents the wide-text flash on first paint.
+  // SSR must also ship hidden: the server can't know container width, so its
+  // fallback is the unwrapped single line — exactly the flash. No-JS readers
+  // get the noscript span instead.
+  const [visible, setVisible] = createSignal(false);
 
   const size = createElementSize(() => container);
+
+  const fontName = () => props.font ?? "AlteHaasGroteskBold";
+  const fontEntry = () => ensureFontEntry(fontName());
 
   createEffect(() => {
     const w = size.width;
@@ -59,8 +70,15 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
     onCleanup(() => clearTimeout(timer));
   });
 
-  const fontName = () => props.font ?? "AlteHaasGroteskBold";
-  const fontEntry = () => ensureFontEntry(fontName());
+  // Reveal the block once wrap is ready (metrics sync + width measured).
+  createEffect(() => {
+    if (fontEntry().metrics() && width()) setVisible(true);
+  });
+
+  onMount(() => {
+    const w = container.getBoundingClientRect().width;
+    if (w) setWidth(w);
+  });
 
   const wrapped = createMemo(() => {
     const normalized = normalizeMsdfText(props.text, fontEntry().charset());
@@ -77,12 +95,14 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
     <span
       ref={container}
       class={`block w-full ${props.class ?? ""}`}
-      style={
-        props.lineHeight !== undefined
-          ? { "line-height": String(props.lineHeight) }
-          : undefined
-      }
+      style={{
+        ...(props.lineHeight !== undefined ? { "line-height": String(props.lineHeight) } : {}),
+        visibility: visible() ? "visible" : "hidden",
+      }}
     >
+      {/* No-JS fallback: visibility:visible on the inner span explicitly overrides the
+          parent's visibility:hidden (visibility is inherited but child can override). */}
+      <noscript><span style="visibility:visible">{props.text}</span></noscript>
       <For each={lines()}>
         {(line) =>
           line === "" ? (
