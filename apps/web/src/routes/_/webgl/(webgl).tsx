@@ -4,12 +4,13 @@ import Section from "../../../components/Section";
 import GlItem from "~/components/webgl/GlItem";
 import MsdfText from "~/components/webgl/MsdfText";
 import SdfImage from "~/components/webgl/SdfImage";
+import { wgslShaders } from "~/components/webgl/shaders";
 
-// wgsl-flavoured fragment, converted to glsl by @ssscript/webgl
-const uvFragment = `@fragment
-fn fsMain(in: VertexOut) -> @location(0) vec4f {
-  return vec4f(in.uv, 0.0, 1.0);
-}`;
+const uvShaders = wgslShaders(`
+fn fsMain() -> vec4f {
+  return vec4f(vUv, 0.0, 1.0);
+}
+`);
 
 export default function WebGl() {
   return (
@@ -46,7 +47,7 @@ export default function WebGl() {
         />
         <GlItem
           class="size-[40vmin]"
-          options={{ shaders: { fragment: uvFragment } }}
+          options={{ shaders: uvShaders }}
         />
       </Section>
     </div>

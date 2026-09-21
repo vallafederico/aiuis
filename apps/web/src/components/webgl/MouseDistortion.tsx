@@ -1,6 +1,6 @@
 import { createEffect, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
-import { createPostProcessor } from "@ssscript/webgl";
+import { createPostProcessor } from "shooosh";
 import { webgl } from "~/lib/stores/webglStore";
 
 type MouseDistortionProps = {
@@ -12,9 +12,14 @@ type MouseDistortionProps = {
   offset?: [number, number];
 };
 
+/** CSS top-origin Y → post `uv`. WebGL2's single-pass chain is bottom-origin. */
+function postPointerY(cssY: number, backend: string) {
+  return backend === "webgl2" ? 1 - cssY : cssY;
+}
+
 const FRAGMENT_SHADER = `
 vec4 applyEffect(vec4 color, vec2 uv, vec2 resolution, vec4 uni[4]) {
-  // uni[0].x = mouseX (UV), uni[0].y = mouseY (UV)
+  // uni[0].x = mouseX (UV), uni[0].y = mouseY (post uv)
   // uni[0].z = radiusUv, uni[0].w = currentStrength
   vec2 mouse = vec2(uni[0].x, uni[0].y);
   float radiusUv = uni[0].z;
@@ -33,6 +38,21 @@ vec4 applyEffect(vec4 color, vec2 uv, vec2 resolution, vec4 uni[4]) {
   vec2 zoomed = mouse + (uv - mouse) * zoom;
 
   return texture(uTexture, zoomed);
+}
+`;
+
+const FRAGMENT_SHADER_WGSL = `
+fn applyEffect(color: vec4f, uv: vec2f, resolution: vec2f, uni: Uni) -> vec4f {
+  let mouse = vec2f(uni.values0.x, uni.values0.y);
+  let radiusUv = uni.values0.z;
+  let strength = uni.values0.w;
+  let aspect = vec2f(resolution.x / resolution.y, 1.0);
+  let delta = (uv - mouse) * aspect;
+  let dist = length(delta);
+  let mask = smoothstep(radiusUv, radiusUv * 0.55, dist);
+  let zoom = 1.0 - mask * strength;
+  let zoomed = mouse + (uv - mouse) * zoom;
+  return textureSample(uTexture, uSampler, zoomed);
 }
 `;
 
@@ -82,7 +102,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
         pp.setEffectUni(effectId, {
           value1: currentX,
-          value2: currentY,
+          value2: postPointerY(currentY, frame.backend),
           value3: radiusUv,
           value4: currentStrength,
         });
@@ -91,6 +111,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const effectId = pp.addFragmentEffect({
       fragmentShader: FRAGMENT_SHADER,
+      fragmentShaderWgsl: FRAGMENT_SHADER_WGSL,
       uni: {
         value1: currentX,
         value2: currentY,

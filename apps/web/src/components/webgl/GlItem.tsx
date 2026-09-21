@@ -3,7 +3,7 @@ import {
   createItem,
   type CreateItemOptions,
   type ItemController,
-} from "@ssscript/webgl";
+} from "shooosh";
 
 type GlItemProps = JSX.HTMLAttributes<HTMLDivElement> & {
   options?: CreateItemOptions;

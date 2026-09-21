@@ -6,8 +6,8 @@ import {
   type JSX,
 } from "solid-js";
 import { isServer } from "solid-js/web";
-import { createItem, type ItemController } from "@ssscript/webgl";
-import { webgl } from "~/lib/stores/webglStore";
+import { createItem, type ItemController } from "shooosh";
+import { getCanvasDensity, webgl } from "~/lib/stores/webglStore";
 import {
   buildSdfFragment,
   loadSdf,
@@ -37,7 +37,8 @@ export default function SdfImage(props: SdfImageProps) {
   let disposed = false;
   let generation = 0;
 
-  const syncWidth = () => item?.setUni({ value2: el.clientWidth || 1 });
+  const syncWidth = () =>
+    item?.setUni({ value2: (el.clientWidth || 1) * getCanvasDensity() });
 
   createEffect(() => {
     if (!webgl.loaded) return;
@@ -50,11 +51,16 @@ export default function SdfImage(props: SdfImageProps) {
         if (disposed || current !== generation) return;
         setAspect(meta.width / meta.height);
         item?.destroy();
-        const [r, g, b] = readCssColor("--color-key");
+        const color = readCssColor("--color-key");
+        const fragment = buildSdfFragment(meta, blur, color);
         item = createItem(el, {
           texture,
-          shaders: { fragment: buildSdfFragment(meta, blur) },
-          uni: { value2: el.clientWidth || 1, value3: blur?.radius ?? 0, value4: r, value5: g, value6: b },
+          textureFit: "stretch",
+          shaders: { fragment, fragmentGlsl: fragment },
+          uni: {
+            value2: (el.clientWidth || 1) * getCanvasDensity(),
+            value3: (blur?.radius ?? 0) * getCanvasDensity(),
+          },
         });
         window.requestAnimationFrame(syncWidth);
         window.addEventListener("resize", syncWidth);

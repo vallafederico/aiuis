@@ -1,4 +1,4 @@
-import { loadTexture, type TextureLoaderResult } from "@ssscript/webgl";
+import { loadTexture, type TextureLoaderResult } from "shooosh";
 
 export type SdfMeta = {
   type: string;
@@ -20,7 +20,7 @@ export function loadSdf(name: string): Promise<SdfAssets> {
   if (!cached) {
     cached = Promise.all([
       fetch(`/msdf/${name}.json`).then((r) => r.json() as Promise<SdfMeta>),
-      loadTexture(`/msdf/${name}.png`, { fit: "stretch" }),
+      loadTexture(`/msdf/${name}.png`, { fit: "stretch", data: true }),
     ]).then(([meta, texture]) => ({ meta, texture }));
     sdfCache.set(name, cached);
   }
@@ -79,8 +79,14 @@ float blurAlpha(float screenSd, float maxSd, vec2 uv) {
  * Fragment for a DOM-tracked item drawing a whole sdf texture — same decode
  * and analytic aa as the text shader, misses transparent (premultiplied).
  * uni.value2 must carry the element width in px, value3 the blur radius.
+ * Key color is baked (shooosh writes texture-fit into value5–8 every frame).
  */
-export function buildSdfFragment(meta: SdfMeta, blur?: ProgressiveBlur) {
+export function buildSdfFragment(
+  meta: SdfMeta,
+  blur?: ProgressiveBlur,
+  color: [number, number, number] = [0, 0, 1],
+) {
+  const [r, g, b] = color;
   return `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -100,7 +106,7 @@ void main() {
   float screenSd = sd * 2.0 * SPREAD * mag;
   float alpha = blurAlpha(screenSd, SPREAD * mag, vUv);
 
-  vec3 key = vec3(uUni[0].w, uUni[1].x, uUni[1].y); // value4/5/6: key color RGB
+  vec3 key = vec3(${fmt(r)}, ${fmt(g)}, ${fmt(b)});
   outColor = vec4(key * alpha, alpha);
 }`;
 }

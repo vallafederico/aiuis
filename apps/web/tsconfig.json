@@ -22,7 +22,9 @@
 			"@components/*": ["./src/components/*"],
 			"@lib/*": ["./src/lib/*"],
 			"@hooks/*": ["./src/lib/hooks/*"],
-			"~/*": ["./src/*"]
+			"~/*": ["./src/*"],
+			"shooosh": ["../../../shooosh/package/index.ts"],
+			"shooosh/compiler": ["../../../shooosh/package/compiler/index.ts"]
 		}
 	}
 }

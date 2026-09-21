@@ -1,12 +1,17 @@
 import { defineConfig } from "@solidjs/start/config";
 import { contentPlugin } from "@local/content/vite";
+import { fileURLToPath } from "node:url";
 import glsl from "vite-plugin-glsl";
 import solidSvg from "vite-plugin-solid-svg";
+import { shoooshShaders } from "../../../shooosh/package/build/index.ts";
 import glReloadPlugin from "./vite/vite-plugin-gl-reload";
 import componentDataAttr from "./vite/vite-pulugin-component-attrs";
 
+const shoooshRoot = new URL("../../../shooosh/package/", import.meta.url);
+
 const plugins = [
 	contentPlugin(),
+	shoooshShaders(),
 	glsl({
 		include: ["**/*.glsl", "**/*.vert", "**/*.frag"],
 		exclude: undefined,
@@ -43,12 +48,21 @@ export default defineConfig({
 	},
 	vite: {
 		plugins,
+		define: {
+			__SHOOOSH_GPU__: true,
+			__SHOOOSH_GL__: true,
+		},
 		resolve: {
 			dedupe: ["@solidjs/router", "solid-js"],
+			alias: {
+				"shooosh/compiler": fileURLToPath(new URL("./compiler/index.ts", shoooshRoot)),
+				"shooosh/build": fileURLToPath(new URL("./build/index.ts", shoooshRoot)),
+				shooosh: fileURLToPath(new URL("./index.ts", shoooshRoot)),
+			},
 		},
 		server: {
 			fs: {
-				allow: [".", "../.."],
+				allow: [".", "../..", fileURLToPath(shoooshRoot)],
 			},
 		},
 	},

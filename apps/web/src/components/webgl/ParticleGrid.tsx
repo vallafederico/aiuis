@@ -1,6 +1,6 @@
 import { createEffect, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
-import { createParticles, type ParticlesController } from "@ssscript/webgl";
+import { createParticles, type ParticlesController } from "shooosh";
 import { webgl } from "~/lib/stores/webglStore";
 
 // Generate a grid of clip-space positions

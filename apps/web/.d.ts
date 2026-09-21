@@ -6,3 +6,10 @@ declare module "solid-js" {
     }
   }
 }
+
+declare module "*.wgsl" {
+  const shader: Readonly<{ fragment: string; fragmentGlsl: string }>;
+  export const fragment: string;
+  export const fragmentGlsl: string;
+  export default shader;
+}

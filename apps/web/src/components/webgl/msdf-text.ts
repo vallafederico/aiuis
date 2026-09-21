@@ -1,4 +1,4 @@
-import { loadTexture, type TextureLoaderResult } from "@ssscript/webgl";
+import { loadTexture, type TextureLoaderResult } from "shooosh";
 import { sdfBlurGlsl, type ProgressiveBlur } from "./sdf-texture";
 import AlteHaasGroteskBoldJson from "../../../public/msdf/AlteHaasGroteskBold.json";
 
@@ -55,7 +55,7 @@ export function loadMsdfFont(font: string): Promise<MsdfFontAssets> {
   if (!cached) {
     cached = Promise.all([
       fetch(`/msdf/${font}.json`).then((r) => r.json() as Promise<BmFont>),
-      loadTexture(`/msdf/${font}.png`, { fit: "stretch", format: "rgb" }),
+      loadTexture(`/msdf/${font}.png`, { fit: "stretch", format: "rgb", data: true }),
     ]).then(([metrics, texture]) => ({ metrics, texture }));
     fontCache.set(font, cached);
   }

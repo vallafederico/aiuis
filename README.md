@@ -1,9 +1,8 @@
 # aiuis
 
 Solid Start monorepo (from the turbo-solid template, sanity/shopify/next/astro
-stripped out). Content is file-based mdx, webgl is the native
-[`ssscript-webgl`](../LIBS/ssscript-webgl) engine, pnpm-linked from
-`workspace/LIBS`.
+stripped out). Content is file-based mdx, GPU is
+[`shooosh`](../shooosh) — pnpm-linked from the sibling checkout.
 
 ```bash
 pnpm install
@@ -31,15 +30,15 @@ pnpm optimise   # images → webp/avif, fonts → woff2
 frontmatter, components inside the markdown — astro-style. Demo at
 `/_/content`. See `packages/content/docs.md`.
 
-## WebGL (`@ssscript/webgl`)
+## GPU (`shooosh`)
 
 - `<Canvas />` (app.tsx) owns the engine — one fullscreen fixed canvas
-- `<GlItem />` — DOM-tracked quads with custom shaders (wgsl-ish or raw
-  `#version 300 es` glsl)
+- `<GlItem />` — DOM-tracked quads with custom shaders (WGSL `fn fsMain`, or
+  `#version 300 es` GLSL with a generated WGSL pair)
 - `msdf-text.ts` — draws text on the background plane from an msdf atlas;
   demo at `/_/webgl`
-- editing the lib in `workspace/LIBS/ssscript-webgl` (`pnpm dev` there)
-  hard-reloads this app via `vite-plugin-gl-reload`
+- editing the lib in `workspace/shooosh` hard-reloads this app via
+  `vite-plugin-gl-reload` when engine/scene core changes
 
 ## Fonts & palette
 

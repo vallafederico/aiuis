@@ -5,7 +5,7 @@ import {
   type JSX,
 } from "solid-js";
 import { isServer } from "solid-js/web";
-import { createParticles, type ParticlesController } from "@ssscript/webgl";
+import { createParticles, type ParticlesController } from "shooosh";
 import { readCssColor } from "./css-color";
 import { webgl } from "~/lib/stores/webglStore";
 import { Scroll } from "~/lib/utils/scroll";

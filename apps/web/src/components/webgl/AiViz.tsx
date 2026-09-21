@@ -1,5 +1,5 @@
 import { onCleanup, onMount, type Accessor } from "solid-js";
-import { createItem, type ItemController } from "@ssscript/webgl";
+import { createItem, type ItemController } from "shooosh";
 import type { AiVizParams } from "./ai-viz-params";
 
 const PAPER = [1.0, 1.0, 1.0] as const;
@@ -133,7 +133,7 @@ float blobMask(
 
   // progressive soft edge: sharp opposite blurAngle, soft along it
   vec2 blurDir = vec2(sin(rotatedBlurAngle), cos(rotatedBlurAngle));
-  float t = clamp(dot(normalize(p + 1e-5), blurDir) * 0.5 + 0.5, 0.0, 1.0);
+  float t = clamp(dot(normalize(p + vec2(1e-5)), blurDir) * 0.5 + 0.5, 0.0, 1.0);
   float edgePx = mix(blurPx * 0.12, blurPx, t);
   float edge = edgePx / max(min(res.x, res.y), 1.0);
   return 1.0 - smoothstep(pulsedRadius - edge, pulsedRadius + edge, dist);
@@ -205,7 +205,7 @@ export default function AiViz(props: { params: Accessor<AiVizParams> }) {
     let lastT = 0;
 
     item = createItem(el, {
-      shaders: { fragment },
+      shaders: { fragment, fragmentGlsl: fragment },
       uni: {
         value1: 0,
         value2: 1,
