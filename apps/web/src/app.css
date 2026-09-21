@@ -114,41 +114,21 @@ h4 {
   -ms-user-select: none; /* Internet Explorer/Edge */
 }
 
-[data-selectable],
-[data-msdf] {
+[data-selectable] {
   user-select: text;
   -webkit-user-select: text;
   -khtml-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
-  cursor: text;
 }
 
-/* Parent `none` can swallow mouse selection in some engines; opt the
-   wrapping block back in when it contains selectable MSDF copy. */
-:is(p, h1, h2, h3, h4):has([data-selectable]) {
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-}
-
-/* WebGL paints the glyphs. HTML stays in the document for layout, hit
-   targets, selection, assistive tech, and crawlers — fill is transparent
-   so it doesn't double the MSDF. Selected range is a super light blue.
-   Noscript in entry-server restores full key color without JS. */
+/* WebGL paints the glyphs. HTML stays in the document for layout,
+   hit-testing, assistive tech, and crawlers. Hidden while WebGL paints;
+   noscript in entry-server reveals it without JS. */
 [data-msdf] {
-  opacity: 1;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  caret-color: rgb(0 0 255 / 0.35);
-}
-
-[data-msdf]::selection,
-[data-selectable]::selection {
-  color: rgb(0 0 255 / 0.22);
-  -webkit-text-fill-color: rgb(0 0 255 / 0.22);
-  background: rgb(0 0 255 / 0.08);
+  opacity: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 a:focus-visible {

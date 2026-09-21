@@ -84,7 +84,6 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
   return (
     <span
       ref={container}
-      data-selectable
       class={`block w-full ${props.class ?? ""}`}
       style={
         props.lineHeight !== undefined

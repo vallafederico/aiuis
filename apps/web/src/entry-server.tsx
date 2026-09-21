@@ -12,7 +12,7 @@ export default createHandler(() => (
           {/* (*) FIGURE OUT HOW IT WORKS */}
           {/* <link rel="robots" href="/robots" /> */}
           <noscript>
-            <style>{`[data-msdf]{color:var(--color-key)!important}`}</style>
+            <style>{`[data-msdf]{opacity:1!important}`}</style>
           </noscript>
           {assets}
         </head>
