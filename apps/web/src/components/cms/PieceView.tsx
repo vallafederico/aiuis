@@ -5,7 +5,7 @@ import PageContent from "~/components/PageContent";
 import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
 import { CmsBody, CmsForeword } from "~/components/cms/CmsBody";
 import { extractAside, type HastNode } from "~/components/cms/hast";
-import { cmsGet } from "~/lib/cms";
+import { cms, cmsStatus, siteSection } from "~/lib/cms";
 import "./PieceView.css";
 
 type PieceResult =
@@ -22,17 +22,15 @@ export const getPiece = query(
   async (slug: string, expectedSection: string): Promise<PieceResult> => {
     "use server";
     try {
-      const data = await cmsGet<Record<string, unknown>>(`/api/v1/pieces/${slug}?format=json`);
-      const section = typeof data.section === "string" ? data.section : null;
+      const data = await cms().getDoc("pieces", slug, { format: "json" });
+      const section =
+        typeof data.section === "string" ? siteSection(data.section) : null;
       if (!section || section !== expectedSection) return null;
       const title = typeof data.title === "string" && data.title ? data.title : slug;
       const body_hast = (data.body_hast as HastNode | undefined) ?? null;
       return { slug, section, body_hast, title };
     } catch (e: unknown) {
-      const status =
-        e instanceof Error && "status" in e
-          ? (e as { status: number }).status
-          : undefined;
+      const status = cmsStatus(e);
       if (status === 404) return null;
       if (status === 503) return { unavailable: true };
       throw e;
@@ -65,7 +63,7 @@ export function PieceView(props: {
           <>
             <HttpStatusCode code={503} />
             <PageContent flow>
-              <p>Content service is offline — start it with `pnpm cms`.</p>
+              <p>Content service is offline.</p>
             </PageContent>
           </>
         }

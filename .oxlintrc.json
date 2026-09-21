@@ -14,7 +14,6 @@
   },
   "ignorePatterns": [
     "**/.vinxi/**",
-    "**/.output/**",
-    "**/apps/cms/mirror/**"
+    "**/.output/**"
   ]
 }

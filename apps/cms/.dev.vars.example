@@ -1,3 +1,0 @@
-CMS_DEV_SECRET=your-dev-secret-here
-SESSION_SECRET=your-session-secret-here
-ENVIRONMENT=dev

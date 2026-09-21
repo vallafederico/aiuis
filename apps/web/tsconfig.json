@@ -23,6 +23,8 @@
 			"@lib/*": ["./src/lib/*"],
 			"@hooks/*": ["./src/lib/hooks/*"],
 			"~/*": ["./src/*"],
+			"@content-software/client": ["../../../content.software/packages/client/src/index.ts"],
+			"@content-software/json": ["../../../content.software/packages/json/src/index.ts"],
 			"shooosh": ["../../../shooosh/package/index.ts"],
 			"shooosh/compiler": ["../../../shooosh/package/compiler/index.ts"]
 		}

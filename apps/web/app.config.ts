@@ -8,6 +8,7 @@ import glReloadPlugin from "./vite/vite-plugin-gl-reload";
 import componentDataAttr from "./vite/vite-pulugin-component-attrs";
 
 const shoooshRoot = new URL("../../../shooosh/package/", import.meta.url);
+const contentSoftwareRoot = new URL("../../../content.software/", import.meta.url);
 
 const plugins = [
 	contentPlugin(),
@@ -52,9 +53,18 @@ export default defineConfig({
 			__SHOOOSH_GPU__: true,
 			__SHOOOSH_GL__: true,
 		},
+		ssr: {
+			noExternal: ["@content-software/client", "@content-software/json"],
+		},
 		resolve: {
 			dedupe: ["@solidjs/router", "solid-js"],
 			alias: {
+				"@content-software/client": fileURLToPath(
+					new URL("./packages/client/src/index.ts", contentSoftwareRoot),
+				),
+				"@content-software/json": fileURLToPath(
+					new URL("./packages/json/src/index.ts", contentSoftwareRoot),
+				),
 				"shooosh/compiler": fileURLToPath(new URL("./compiler/index.ts", shoooshRoot)),
 				"shooosh/build": fileURLToPath(new URL("./build/index.ts", shoooshRoot)),
 				shooosh: fileURLToPath(new URL("./index.ts", shoooshRoot)),
@@ -62,7 +72,7 @@ export default defineConfig({
 		},
 		server: {
 			fs: {
-				allow: [".", "../..", fileURLToPath(shoooshRoot)],
+				allow: [".", "../..", fileURLToPath(shoooshRoot), fileURLToPath(contentSoftwareRoot)],
 			},
 		},
 	},

@@ -1,0 +1,8 @@
+{
+  "projectId": "project_aiuis",
+  "slug": "aiuis",
+  "apiUrl": "https://aiuis.content.software",
+  "cdnUrl": "https://cdn.content.software/aiuis",
+  "mcpUrl": "https://aiuis.content.software/mcp",
+  "studioUrl": "https://aiuis.content.software/studio"
+}

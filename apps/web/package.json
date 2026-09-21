@@ -22,6 +22,8 @@
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^0.15.3",
     "@solidjs/start": "^1.2.0",
+    "@content-software/client": "file:../../../content.software/packages/client",
+    "@content-software/json": "file:../../../content.software/packages/json",
     "shooosh": "file:../../../shooosh/package",
     "classix": "^2.2.4",
     "gsap": "^3.13.0",

@@ -13,9 +13,8 @@
     "optimise": "turbo run optimise",
     "msdf": "turbo run msdf",
     "deploy:web": "pnpm --filter web run deploy",
-    "cms": "turbo dev --filter=cms",
-    "deploy:cms": "pnpm --filter cms run deploy",
-    "seed:cms": "pnpm --filter cms run seed",
+    "seed:content": "node scripts/seed-content-software.mjs",
+    "content": "pnpm --dir ../content.software exec -- node packages/cli/bin/content.mjs",
     "lint": "oxlint"
   },
   "devDependencies": {
@@ -30,11 +29,5 @@
   "packageManager": "pnpm@10.29.3",
   "engines": {
     "node": ">=22"
-  },
-  "pnpm": {
-    "overrides": {
-      "@solidjs/router": "0.15.3",
-      "solid-js": "1.9.9"
-    }
   }
 }

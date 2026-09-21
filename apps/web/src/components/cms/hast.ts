@@ -1,5 +1,5 @@
 // Minimal hast node types for the subset the CMS derive pipeline emits
-// (see apps/cms/src/derive/pipeline.ts) — root/element/text/comment only.
+// (root/element/text/comment only).
 
 export type HastProperties = Record<string, string | number | boolean | string[] | undefined>;
 

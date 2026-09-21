@@ -1,61 +1,45 @@
-// CMS server-side fetch helper.
-// In dev, uses CMS_API_URL env var (defaults to http://localhost:8787).
-// In prod, uses the CMS Cloudflare service binding when available.
+import { createCmsClient, CmsClientError, type CmsClient } from "@content-software/client";
 
-import { getRequestEvent } from "solid-js/web";
+export { CmsClientError };
 
-interface Fetcher {
-  fetch(input: string | Request, init?: RequestInit): Promise<Response>;
+/** Hosted default pieces schema uses notes/product; the site nav is preface/uis. */
+const HOSTED_SECTION_TO_SITE: Record<string, string> = {
+  notes: "preface",
+  product: "uis",
+  foundations: "foundations",
+  preface: "preface",
+  uis: "uis",
+};
+
+export function siteSection(section: string): string {
+  return HOSTED_SECTION_TO_SITE[section] ?? section;
 }
 
-const CMS_BASE =
-  (typeof process !== "undefined" && process.env.CMS_API_URL) ||
-  "http://localhost:8787";
-
-let _warnedHttpFallback = false;
-
-export function getCmsBinding(): Fetcher | undefined {
-  return getRequestEvent()?.nativeEvent?.context?._platform?.cloudflare?.env
-    ?.CMS as Fetcher | undefined;
+function env(name: string): string | undefined {
+  const value = typeof process !== "undefined" ? process.env[name] : undefined;
+  return value?.trim() || undefined;
 }
 
-export async function cmsGet<T = unknown>(path: string): Promise<T> {
-  const binding = getCmsBinding();
-  let res: Response;
-  if (binding) {
-    try {
-      res = await binding.fetch("https://cms" + path);
-    } catch (cause) {
-      throw Object.assign(new Error(`CMS unreachable: ${path}`), {
-        status: 503,
-        cause,
-      });
-    }
-  } else {
-    if (!_warnedHttpFallback && typeof process !== "undefined" && process.env.NODE_ENV === "production") {
-      _warnedHttpFallback = true;
-      console.warn("[cms] CMS service binding not found — falling back to HTTP fetch in production");
-    }
-    const url = `${CMS_BASE}${path}`;
-    try {
-      res = await fetch(url);
-    } catch (cause) {
-      // network-level failure (CMS worker not running / unreachable)
-      throw Object.assign(new Error(`CMS unreachable: ${path}`), {
-        status: 503,
-        cause,
-      });
-    }
+let cached: CmsClient | null = null;
+
+export function cms(): CmsClient {
+  if (cached) return cached;
+  cached = createCmsClient({
+    projectId: env("CONTENT_PROJECT_ID"),
+    baseUrl: env("CONTENT_API_URL"),
+    cdnUrl: env("CONTENT_CDN_URL"),
+    token: env("CONTENT_TOKEN"),
+  });
+  return cached;
+}
+
+export function cmsStatus(error: unknown): number | undefined {
+  if (error instanceof CmsClientError) return error.status;
+  if (
+    error instanceof Error &&
+    "status" in error &&
+    typeof (error as { status: unknown }).status === "number"
+  ) {
+    return (error as { status: number }).status;
   }
-  if (!res.ok) {
-    throw Object.assign(new Error(`CMS ${res.status}: ${path}`), {
-      status: res.status,
-    });
-  }
-  const ct = res.headers.get("content-type") ?? "";
-  if (ct.includes("application/json")) {
-    return res.json() as Promise<T>;
-  }
-  // html, markdown, and other text responses
-  return res.text() as Promise<T>;
 }
