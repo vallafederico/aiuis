@@ -8,7 +8,9 @@ fields:
   section: { type: enum, values: [preface, foundations, uis], required: true }
   order: { type: number, required: true }
   description: { type: text, max: 200 }
-indexes: [section, order]
+  component: { type: slug }
+  tags: { type: array, items: { type: string, max: 32 }, max_items: 12 }
+indexes: [section, order, tags]
 ---
 
 # Writing guidelines for `pieces`
@@ -22,6 +24,10 @@ Body is the full chapter text in CommonMark + GFM. No raw HTML. Code blocks requ
 Order is an integer starting from 1 within each section. The first piece in a section is `order: 1`, the second is `order: 2`, and so on. Do not use decimals or gaps — if you insert a piece between two existing ones, renumber the others.
 
 Section must match the nav section exactly: `preface`, `foundations`, or `uis`. A piece in the wrong section will appear under the wrong heading in the navigation.
+
+`component` is an optional slug naming a frontend UI in `apps/web/src/uis`. The CMS only stores the name; the site constructs the live component. Use it on `uis` pieces (usually the same as `slug`). Omit it on prose-only chapters. An unknown name is ignored — the chapter still renders.
+
+`tags` is an optional list of short labels shown on component pages under Data (e.g. `CHAT-GPT`, `ASSISTANT`). Uppercase, hyphenated, at most a few per piece.
 
 Endnote material (affiliations, caveats, methodology asides) goes in a `:::notes` container directive at the end of the body — never a `## Notes` heading. The site renders it as a distinct, quieter block outside the table of contents:
 

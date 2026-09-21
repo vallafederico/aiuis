@@ -36,8 +36,9 @@ export default function Home() {
     <>
       <Metadata
         title="aiuis"
-        description="aiuis"
+        description="Interface experiments for designing with language models."
       />
+      <h1 sr-only>aiuis</h1>
       <PageContent>
         <div class="flex justify-center">
           <div class="grid grid-cols-6 gap-gutter w-grids-6">

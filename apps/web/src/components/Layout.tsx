@@ -45,6 +45,8 @@ const GlobalLayout = (props: { children: JSX.Element }) => {
 
   return (
     <main
+      id="content"
+      tabindex="-1"
       use:scroll
       style="padding-inline: calc(2/12*100vw)"
     >
@@ -58,6 +60,9 @@ export default function Layout(props: {
 }) {
   return (
     <>
+      <a href="#content" sr-only>
+        Skip to content
+      </a>
       <Nav />
       <Grid />
 

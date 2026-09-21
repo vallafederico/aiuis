@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { useLocation } from "@acme/router";
 import MsdfText from "./webgl/MsdfText";
 import SdfImage from "./webgl/SdfImage";
 
@@ -20,35 +21,39 @@ const NAV_CRUMBS: { to: string; text: string }[] = [
 // }
 
 export const Nav = () => {
+  const location = useLocation();
   return (
     <>
-      <div class="fixed top-0 right-0 pr-gx py-[3svh]">
+      <div class="fixed top-0 right-0 z-20 pr-gx py-[3svh]">
         <div class="w-grid-1">
-          <a href="/">
+          <a href="/" aria-label="aiuis home">
             <SdfImage
               name="logo"
               class="w-full"
+              aria-hidden="true"
               //   blur={{ radius: 24, angle: 180, from: 0.2 }}
             />
           </a>
         </div>
       </div>
       <nav
-        class="flex fixed top-0 left-0 flex-col h-lvh pl-gx"
+        aria-label="Site"
+        class="flex fixed top-0 left-0 z-20 flex-col h-lvh pl-gx"
       >
         <div
           class="flex flex-col justify-between h-full
             w-grid-2 py-[3svh]"
         >
-          <Breadcrumbs items={NAV_CRUMBS} />
+          <Breadcrumbs items={NAV_CRUMBS} pathname={location.pathname} />
           <div class="flex flex-col">
             <div>
-              <a href="/">
-                <SdfImage name="logotype" class="w-full" />
+              <a href="/" aria-label="aiuis home">
+                <SdfImage name="logotype" class="w-full" aria-hidden="true" />
               </a>
             </div>
             <div class="flex flex-col gap-4">
               <ListBlock
+                pathname={location.pathname}
                 title="Preface"
                 items={[
                   {
@@ -62,6 +67,7 @@ export const Nav = () => {
                 ]}
               />
               <ListBlock
+                pathname={location.pathname}
                 title="Foundations"
                 items={[
                   {
@@ -83,6 +89,7 @@ export const Nav = () => {
                 ]}
               />
               <ListBlock
+                pathname={location.pathname}
                 title="UIs"
                 items={[
                   {
@@ -146,12 +153,14 @@ export const Nav = () => {
 const ListBlock = ({
   title,
   items,
+  pathname,
 }: {
   title: string;
   items: {
     title: string;
     href: string;
   }[];
+  pathname: string;
 }) => {
   return (
     <div class="flex flex-col gap-1">
@@ -163,14 +172,14 @@ const ListBlock = ({
             weird
           />
         </p>
-        <h2 class="text-2xl -tracking-widest">
+        <p class="text-2xl -tracking-widest">
           <MsdfText
             text={title}
             font="AlteHaasGroteskBold"
             tracking={-0.12}
             weird
           />
-        </h2>
+        </p>
       </div>
       <ul>
         <For each={items}>
@@ -179,6 +188,7 @@ const ListBlock = ({
               number={String(index() + 1)}
               title={item.title}
               href={item.href}
+              current={pathname === item.href}
             />
           )}
         </For>
@@ -191,10 +201,12 @@ const ListItem = ({
   number,
   title,
   href,
+  current,
 }: {
   number: string;
   title: string;
   href: string;
+  current: boolean;
 }) => {
   return (
     <li class="flex items-center">
@@ -205,7 +217,7 @@ const ListItem = ({
           weird
         />
       </p>
-      <a href={href}>
+      <a href={href} aria-current={current ? "page" : undefined}>
         <MsdfText
           text={title}
           font="AlteHaasGroteskBold"
@@ -218,8 +230,10 @@ const ListItem = ({
 
 const Breadcrumbs = ({
   items,
+  pathname,
 }: {
   items: { to: string; text: string }[];
+  pathname: string;
 }) => {
   return (
     <div
@@ -232,6 +246,7 @@ const Breadcrumbs = ({
             <a
               href={crumb.to}
               class="text-sm"
+              aria-current={pathname === crumb.to ? "page" : undefined}
             >
               <MsdfText
                 text={crumb.text}

@@ -15,6 +15,7 @@
   --font-*: initial;
   --font-sans: alte-haas, sans-serif;
   --font-garara: garara, sans-serif;
+  --font-mono: chivo-mono, ui-monospace, monospace;
 
   /* palette — everything hangs off --color-key; swap it (red, whatever) to re-skin.
      paper: the key color knocked back to an off-white tint. */
@@ -113,12 +114,63 @@ h4 {
   -ms-user-select: none; /* Internet Explorer/Edge */
 }
 
-[data-selectable] {
+[data-selectable],
+[data-msdf] {
   user-select: text;
   -webkit-user-select: text;
   -khtml-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
+  cursor: text;
+}
+
+/* Parent `none` can swallow mouse selection in some engines; opt the
+   wrapping block back in when it contains selectable MSDF copy. */
+:is(p, h1, h2, h3, h4):has([data-selectable]) {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* WebGL paints the glyphs. HTML stays in the document for layout, hit
+   targets, selection, assistive tech, and crawlers — fill is transparent
+   so it doesn't double the MSDF. Selected range is a super light blue.
+   Noscript in entry-server restores full key color without JS. */
+[data-msdf] {
+  opacity: 1;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: rgb(0 0 255 / 0.35);
+}
+
+[data-msdf]::selection,
+[data-selectable]::selection {
+  color: rgb(0 0 255 / 0.22);
+  -webkit-text-fill-color: rgb(0 0 255 / 0.22);
+  background: rgb(0 0 255 / 0.08);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--color-key);
+  outline-offset: 2px;
+}
+
+[sr-only]:focus,
+[sr-only]:active {
+  position: absolute;
+  left: var(--gx, 1rem);
+  top: 1rem;
+  z-index: 1000;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  color: var(--color-key);
+  background: var(--color-paper);
 }
 
 /* make images not draggable */
@@ -172,4 +224,9 @@ body {
 
 .lenis.lenis-stopped {
   overflow: clip;
+}
+
+/* Shift+G grid overlay: box every element so layout sits on the columns */
+html.grid-debug * {
+  outline: 1px solid rgb(128 128 128 / 0.35);
 }

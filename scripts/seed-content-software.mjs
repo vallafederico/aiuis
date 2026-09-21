@@ -39,19 +39,46 @@ function walk(dir, base = dir) {
   return files;
 }
 
+function unquote(value) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
 function parseFrontmatter(raw) {
   const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!match) return { frontmatter: {}, body: raw };
   const frontmatter = {};
-  for (const line of match[1].split("\n")) {
+  const lines = match[1].split("\n");
+  const scalars = new Set(["title", "slug", "section", "order", "description", "component"]);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
     const idx = line.indexOf(":");
     if (idx === -1) continue;
     const key = line.slice(0, idx).trim();
-    if (!["title", "slug", "section", "order", "description"].includes(key)) continue;
     let value = line.slice(idx + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
+    if (key === "tags") {
+      const tags = [];
+      if (value.startsWith("[")) {
+        const inner = value.endsWith("]") ? value.slice(1, -1) : value.slice(1);
+        tags.push(...inner.split(",").map((item) => unquote(item.trim())).filter(Boolean));
+      } else if (value) {
+        tags.push(unquote(value));
+      }
+      while (i + 1 < lines.length && /^\s+-\s+\S/.test(lines[i + 1])) {
+        i += 1;
+        tags.push(unquote(lines[i].replace(/^\s+-\s+/, "").trim()));
+      }
+      frontmatter.tags = tags;
+      continue;
     }
+    if (!scalars.has(key)) continue;
+    value = unquote(value);
     frontmatter[key] = /^-?\d+(\.\d+)?$/.test(value) ? Number(value) : value;
   }
   return { frontmatter, body: match[2].replace(/^\n/, "") };
@@ -162,6 +189,92 @@ await mcpRequest(apiUrl, token, "initialize", {
 });
 await mcpRequest(apiUrl, token, "notifications/initialized", {}, { notification: true });
 
+let piecesFields = {};
+async function refreshPiecesSchema() {
+  const schema = await callTool(apiUrl, token, "get_schema", { collection: "pieces" });
+  piecesFields = schema.fields ?? {};
+  console.log(`pieces fields: ${Object.keys(piecesFields).join(", ") || "(none)"}`);
+  return schema;
+}
+
+try {
+  await refreshPiecesSchema();
+} catch (error) {
+  console.warn(`get_schema: ${error instanceof Error ? error.message : error}`);
+}
+
+if (!piecesFields.tags) {
+  const piecesSchemaFile = files.find((f) => f.path === "schema/pieces.md");
+  if (piecesSchemaFile) {
+    const hostedPiecesSchema = piecesSchemaFile.content.replace(
+      "values: [preface, foundations, uis]",
+      "values: [notes, foundations, product]",
+    );
+    const patchRes = await fetch(`${apiUrl}/api/v1/admin/seed`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        files: [{ path: "schema/pieces.md", content: hostedPiecesSchema }],
+        reindex: false,
+      }),
+    });
+    console.warn(`schema patch admin/seed ${patchRes.status}: ${(await patchRes.text()).slice(0, 300)}`);
+    try {
+      await refreshPiecesSchema();
+    } catch (error) {
+      console.warn(`get_schema after patch: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+}
+
+function hostedFrontmatter(fm) {
+  const out = {
+    title: fm.title,
+    slug: fm.slug,
+    section: hostedSection(fm.section),
+    order: fm.order,
+  };
+  if (fm.description) out.description = fm.description;
+  if (piecesFields.component && fm.component) out.component = fm.component;
+  if (piecesFields.tags && Array.isArray(fm.tags)) out.tags = fm.tags;
+  return out;
+}
+
+function looksLikeTags(value) {
+  if (typeof value !== "string" || !value.trim()) return false;
+  return value.split(/,\s*/).every((tag) => /^[A-Z0-9][A-Z0-9-]*$/.test(tag.trim()));
+}
+
+async function syncExistingFields(slug, fm) {
+  if (!Array.isArray(fm.tags) || fm.tags.length === 0) return false;
+  const doc = await callTool(apiUrl, token, "read_doc", { id: `pieces/${slug}` });
+  const id = doc.frontmatter?._id;
+  const rev = doc.frontmatter?._rev;
+  if (!id || !rev) throw new Error(`read_doc pieces/${slug}: missing _id/_rev`);
+  const edits = piecesFields.tags
+    ? [{ op: "set_field", field: "tags", value: fm.tags }]
+    : (() => {
+        const current = doc.frontmatter?.description;
+        if (current && !looksLikeTags(current)) {
+          return [];
+        }
+        return [{ op: "set_field", field: "description", value: fm.tags.join(", ") }];
+      })();
+  if (edits.length === 0) return false;
+  const edited = await callTool(apiUrl, token, "edit_doc", {
+    id,
+    base_rev: rev,
+    note: "Set DATA tags",
+    edits,
+  });
+  await callTool(apiUrl, token, "publish", { id, base_rev: edited.rev });
+  return true;
+}
+
 for (const file of pieceFiles) {
   const { frontmatter, body } = parseFrontmatter(file.content);
   const slug = frontmatter.slug;
@@ -172,10 +285,7 @@ for (const file of pieceFiles) {
   try {
     const created = await callTool(apiUrl, token, "create_doc", {
       collection: "pieces",
-      frontmatter: {
-        ...frontmatter,
-        section: hostedSection(frontmatter.section),
-      },
+      frontmatter: hostedFrontmatter(frontmatter),
       body: stripDirectives(body),
     });
     await callTool(apiUrl, token, "publish", { id: created.id, base_rev: created.rev });
@@ -183,7 +293,13 @@ for (const file of pieceFiles) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("slug_conflict") || message.includes("already exists")) {
-      console.log(`[skip] ${slug}: already exists`);
+      try {
+        const updated = await syncExistingFields(slug, frontmatter);
+        console.log(updated ? `[updated] ${slug}` : `[skip] ${slug}: already exists`);
+      } catch (syncError) {
+        console.error(`[error] ${slug} update: ${syncError instanceof Error ? syncError.message : syncError}`);
+        process.exitCode = 1;
+      }
       continue;
     }
     console.error(`[error] ${slug}: ${message}`);

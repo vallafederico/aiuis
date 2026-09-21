@@ -98,6 +98,7 @@ export default function MsdfText(props: MsdfTextProps) {
   return (
     <span
       {...rest}
+      data-selectable
       style={{
         display: "inline-block",
         position: "relative",
@@ -108,16 +109,15 @@ export default function MsdfText(props: MsdfTextProps) {
           : {}),
       }}
     >
+      {/* Real HTML stays in the tree for layout, hit-testing, selection,
+          screen readers, and crawlers. [data-msdf] fill is transparent while
+          WebGL paints; selection is a super light blue. <noscript> in
+          entry-server restores full key color without JS. */}
       <span
         ref={el}
-        aria-hidden="true"
-        style={{ visibility: "hidden", "white-space": "pre" }}
-      >
-        {local.text}
-      </span>
-      <span
+        data-msdf
         data-selectable
-        style={{ position: "absolute", inset: "0", opacity: "0" }}
+        style={{ "white-space": "pre" }}
       >
         {local.text}
       </span>

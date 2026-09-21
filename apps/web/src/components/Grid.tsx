@@ -1,4 +1,5 @@
 import {
+  createEffect,
   createSignal,
   For,
   onCleanup,
@@ -26,6 +27,11 @@ export default function Grid() {
   const [mounted, setMounted] = createSignal(false);
   const [columns, setColumns] = createSignal(0);
   const [visible, setVisible] = createSignal(false);
+
+  createEffect(() => {
+    if (isServer) return;
+    document.documentElement.classList.toggle("grid-debug", visible());
+  });
 
   const handleResize = () => {
     const { columns: c } = getGridValues();
@@ -58,6 +64,7 @@ export default function Grid() {
     if (isServer) return;
     window.removeEventListener("resize", handleResize);
     document.removeEventListener("keydown", handleKeyDown);
+    document.documentElement.classList.remove("grid-debug");
   });
 
   const styles =
@@ -66,6 +73,7 @@ export default function Grid() {
   return (
     <Show when={mounted()}>
       <div
+        aria-hidden="true"
         class={visible() ? styles : "invisible"}
         style="width: calc(100vw - var(--scrollbar-w, 0px))"
       >

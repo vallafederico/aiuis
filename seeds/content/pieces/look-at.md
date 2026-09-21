@@ -3,6 +3,11 @@ title: Look At
 slug: look-at
 section: uis
 order: 6
+component: look-at
+tags:
+  - ATTENTION
+  - VISION
+  - OVERLAY
 ---
 
 Look At is a visual attention interface: it shows the user what the model is attending to in a document or image before producing an output. The chapter documents the design process, the prototype, and what we learned from watching people watch the model watch them.

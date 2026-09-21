@@ -1,0 +1,160 @@
+.uis-mock {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  max-width: 100%;
+  outline: 1px solid var(--color-key);
+  background: color-mix(in srgb, var(--color-key) 5%, var(--color-paper));
+  color: var(--color-key);
+}
+
+.uis-mock-kicker {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-key);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.uis-mock-kicker::after {
+  content: " · mock";
+  letter-spacing: 0.2em;
+  opacity: 0.45;
+}
+
+.uis-mock-fill {
+  flex: 1;
+  min-height: 0;
+}
+
+.uis-mock-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uis-mock-row {
+  flex-shrink: 0;
+  height: 2.25rem;
+  border-bottom: 1px solid rgb(0 0 255 / 0.25);
+}
+
+.uis-mock-row.is-open {
+  flex: 1;
+  height: auto;
+  padding: 10px;
+}
+
+.uis-mock-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px 18px;
+}
+
+.uis-mock-line {
+  height: 8px;
+  background: rgb(0 0 255 / 0.18);
+}
+
+.uis-mock-line.w-2\/3 {
+  width: 66%;
+}
+
+.uis-mock-line.w-1\/2 {
+  width: 50%;
+}
+
+.uis-mock-nav {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--gutter);
+  padding: 12px;
+}
+
+.uis-mock-nav-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  outline: 1px solid rgb(0 0 255 / 0.2);
+  padding: 8px;
+}
+
+.uis-mock-tiles {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gutter);
+  padding: 12px;
+}
+
+.uis-mock-tile {
+  background: rgb(0 0 255 / 0.12);
+  outline: 1px solid rgb(0 0 255 / 0.35);
+}
+
+.uis-mock-chat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+}
+
+.uis-mock-bubble {
+  width: 72%;
+  height: 2.5rem;
+  background: rgb(0 0 255 / 0.12);
+  outline: 1px solid rgb(0 0 255 / 0.25);
+}
+
+.uis-mock-bubble-self {
+  align-self: flex-end;
+  width: 58%;
+}
+
+.uis-mock-input {
+  height: 2.25rem;
+  outline: 1px solid var(--color-key);
+}
+
+.uis-mock-stage {
+  position: relative;
+  flex: 1;
+  margin: 12px;
+  background: rgb(0 0 255 / 0.08);
+  outline: 1px solid rgb(0 0 255 / 0.25);
+}
+
+.uis-mock-focus {
+  position: absolute;
+  top: 22%;
+  left: 28%;
+  width: 36%;
+  height: 40%;
+  outline: 1px solid var(--color-key);
+}
+
+.uis-mock-prompt {
+  height: 2.25rem;
+  margin: 12px 12px 0;
+  outline: 1px solid var(--color-key);
+}
+
+.uis-mock-result {
+  flex: 1;
+  margin: 12px;
+  background: rgb(0 0 255 / 0.1);
+  outline: 1px solid rgb(0 0 255 / 0.3);
+}

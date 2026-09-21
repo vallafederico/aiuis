@@ -11,6 +11,9 @@ export default createHandler(() => (
           <link rel="icon" href="/favicon.ico" />
           {/* (*) FIGURE OUT HOW IT WORKS */}
           {/* <link rel="robots" href="/robots" /> */}
+          <noscript>
+            <style>{`[data-msdf]{color:var(--color-key)!important}`}</style>
+          </noscript>
           {assets}
         </head>
         <body>

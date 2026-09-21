@@ -52,11 +52,6 @@ function ensureFontEntry(fontName: string): FontEntry {
 export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
   let container!: HTMLSpanElement;
   const [width, setWidth] = createSignal<number>();
-  // Hidden until wrap is computed — prevents the wide-text flash on first paint.
-  // SSR must also ship hidden: the server can't know container width, so its
-  // fallback is the unwrapped single line — exactly the flash. No-JS readers
-  // get the noscript span instead.
-  const [visible, setVisible] = createSignal(false);
 
   const size = createElementSize(() => container);
 
@@ -68,11 +63,6 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
     if (!w) return;
     const timer = setTimeout(() => setWidth(w), RESIZE_DEBOUNCE_MS);
     onCleanup(() => clearTimeout(timer));
-  });
-
-  // Reveal the block once wrap is ready (metrics sync + width measured).
-  createEffect(() => {
-    if (fontEntry().metrics() && width()) setVisible(true);
   });
 
   onMount(() => {
@@ -94,15 +84,14 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
   return (
     <span
       ref={container}
+      data-selectable
       class={`block w-full ${props.class ?? ""}`}
-      style={{
-        ...(props.lineHeight !== undefined ? { "line-height": String(props.lineHeight) } : {}),
-        visibility: visible() ? "visible" : "hidden",
-      }}
+      style={
+        props.lineHeight !== undefined
+          ? { "line-height": String(props.lineHeight) }
+          : undefined
+      }
     >
-      {/* No-JS fallback: visibility:visible on the inner span explicitly overrides the
-          parent's visibility:hidden (visibility is inherited but child can override). */}
-      <noscript><span style="visibility:visible">{props.text}</span></noscript>
       <For each={lines()}>
         {(line) =>
           line === "" ? (

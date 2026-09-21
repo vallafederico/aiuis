@@ -3,6 +3,11 @@ title: Bot
 slug: bot
 section: uis
 order: 5
+component: bot
+tags:
+  - CHAT
+  - AVATAR
+  - TYPING
 ---
 
 The chatbot is the most direct AI interface and also the one most prone to anthropomorphism. This chapter examines how small typographic and interaction choices—typing indicators, avatar presence, name choice—shift user expectations and calibration, and proposes a more honest baseline.
