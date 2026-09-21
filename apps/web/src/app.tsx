@@ -39,6 +39,7 @@ export default function App() {
               type="text/plain"
               href="/robots.txt"
             />
+            <Link rel="describedby" href="/llms.txt" />
 
             <Layout>{props.children}</Layout>
 

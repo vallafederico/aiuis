@@ -63,7 +63,6 @@ export function useLayoutTransition(options: LayoutTransitionOptions = {}): void
       return;
     }
     if (controller.hasCustomTransition()) return;
-    el.style.opacity = "0";
     await enter(ctx, el);
   });
 }

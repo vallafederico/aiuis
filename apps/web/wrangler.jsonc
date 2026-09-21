@@ -16,6 +16,9 @@
 		"CONTENT_API_URL": "https://aiuis.content.software",
 		"CONTENT_CDN_URL": "https://cdn.content.software/aiuis"
 	},
+	"ai": {
+		"binding": "AI"
+	},
 	"observability": {
 		"enabled": true
 	},

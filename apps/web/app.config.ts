@@ -32,7 +32,7 @@ const plugins = [
 export default defineConfig({
 	// .mdx/.md files are compiled to solid components by @local/content's plugin
 	extensions: ["mdx", "md"],
-	// serves /llms.txt and per-page /<path>/llms.txt from the cms
+	// /llms.txt, /llms-full.txt, piece .md, and file-CMS pair documents
 	middleware: "./src/middleware.ts",
 	server: {
 		// cloudflare workers + static assets — deploy with `pnpm deploy` (wrangler)
@@ -45,6 +45,8 @@ export default defineConfig({
 			"/foundations/**": { prerender: false },
 			"/uis/**": { prerender: false },
 			"/api/**": { prerender: false },
+			"/llms.txt": { prerender: false },
+			"/llms-full.txt": { prerender: false },
 		},
 	},
 	vite: {

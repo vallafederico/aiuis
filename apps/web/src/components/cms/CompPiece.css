@@ -16,10 +16,10 @@
   inset: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  /* Two-column side margins (cols 1–3 and 10–12), so the well is w-grids-6. */
-  padding-left: calc(var(--gx) + var(--spacing-grid-3));
-  padding-right: calc(var(--gx) + var(--spacing-grid-3));
+  justify-content: center;
+  /* Nav and meta are fixed overlays; the well sizes itself (w-grids-*). */
+  padding-left: var(--gx);
+  padding-right: var(--gx);
   pointer-events: none;
 }
 
@@ -33,6 +33,7 @@
 }
 
 .uis-meta-num {
+  display: flex;
   font-family: var(--font-garara);
   font-size: 12px;
   line-height: 0.9;
@@ -53,18 +54,26 @@
 }
 
 .uis-tag {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 5px 10px;
   border-radius: 60px;
-  background: #dfdfdf;
+  background: transparent;
   font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.32em;
-  color: var(--color-key);
+  color: inherit;
+  text-decoration: none;
+}
+
+.uis-tag-fill {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .uis-meta-date {

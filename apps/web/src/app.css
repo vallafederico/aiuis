@@ -131,6 +131,10 @@ h4 {
   -webkit-user-select: none;
 }
 
+html.is-intro main {
+  opacity: var(--intro, 0);
+}
+
 a:focus-visible {
   outline: 2px solid var(--color-key);
   outline-offset: 2px;

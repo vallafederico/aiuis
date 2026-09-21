@@ -11,8 +11,20 @@ export const uiTags: Record<string, string[]> = {
 
 export function tagsFor(slug: string, fromCms: unknown): string[] {
   const parsed = labelsFromCms(fromCms);
-  if (parsed.length > 0) return parsed;
-  return uiTags[slug] ?? [];
+  const tags = parsed.length > 0 ? parsed : (uiTags[slug] ?? []);
+  return tags.map(canonicalTag);
+}
+
+export function canonicalTag(tag: string): string {
+  return tag.replaceAll("_", "-").replace(/\s+/g, "-").toUpperCase();
+}
+
+export function isDataTag(tag: string): boolean {
+  return /^[A-Z0-9][A-Z0-9-]*$/.test(canonicalTag(tag));
+}
+
+export function tagPath(tag: string): string {
+  return `/data/${encodeURIComponent(canonicalTag(tag))}`;
 }
 
 export function labelsFromCms(fromCms: unknown): string[] {

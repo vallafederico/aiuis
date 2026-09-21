@@ -1,0 +1,31 @@
+.tag-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tag-page-title {
+  margin: 0;
+}
+
+.tag-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tag-page-list a {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.tag-page-section {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.tag-page-item {
+  font-size: 1.5rem;
+  letter-spacing: -0.12em;
+}

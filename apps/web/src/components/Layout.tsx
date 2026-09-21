@@ -6,10 +6,8 @@ import {
 
 import Grid from "~/components/Grid";
 import { Nav } from "~/components/Nav";
-import gsap from "~/lib/gsap";
 import { Scroll, scroll } from "~/lib/utils/scroll";
-
-const FADE_DURATION = 0.4;
+import { beginPageEntry, beginPageLeave } from "~/components/webgl/mosaic-clock";
 
 const resetScroll = (_ctx: TransitionContextValue) => {
   Scroll.lenis?.scrollTo(0, { immediate: true });
@@ -19,28 +17,8 @@ const resetScroll = (_ctx: TransitionContextValue) => {
 const GlobalLayout = (props: { children: JSX.Element }) => {
   useLayoutTransition({
     onEnter: (ctx) => resetScroll(ctx),
-    leave: (_ctx, el) =>
-      new Promise((resolve) => {
-        gsap.to(el, {
-          opacity: 0,
-          duration: FADE_DURATION,
-          onComplete: resolve,
-        });
-      }),
-    enter: (_ctx, el) => {
-      gsap.set(el, { opacity: 0 });
-      return new Promise((resolve) => {
-        gsap.fromTo(
-          el,
-          { opacity: 0 },
-          {
-            opacity: 1,
-            duration: FADE_DURATION,
-            onComplete: resolve,
-          },
-        );
-      });
-    },
+    leave: () => beginPageLeave(),
+    enter: () => beginPageEntry(),
   });
 
   return (

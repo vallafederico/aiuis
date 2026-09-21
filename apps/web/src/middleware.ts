@@ -1,22 +1,58 @@
 import { createMiddleware } from "@solidjs/start/middleware";
 import { getEntry, getLlms, getPage } from "~/content";
+import {
+  buildLlmsFullTxt,
+  buildLlmsTxt,
+  llmTextResponse,
+  parsePieceSeoPath,
+  pieceMarkdown,
+  piecePath,
+} from "~/lib/llm-seo";
+import { SITE } from "~/lib/site";
 
 /**
- * Serves llms.txt for cms-backed urls: `/llms.txt` is the base document,
- * `/<page>/llms.txt` is the entry's pair (linked in its frontmatter) or the
- * base as fallback. Urls without a cms entry fall through to the 404.
+ * LLM-facing text: `/llms.txt` is the CMS-backed index, `/llms-full.txt`
+ * concatenates published chapters, piece URLs serve markdown at `.md` and
+ * `/llms.txt`. File-CMS pages keep their pair documents.
  */
 export default createMiddleware({
-	onRequest: (event) => {
+	onRequest: async (event) => {
 		const url = new URL(event.request.url);
 
 		if (url.hostname === "www.aiu.is")
 			return redirect(`https://aiu.is${url.pathname}${url.search}`);
 
-		if (!url.pathname.endsWith("/llms.txt") && url.pathname !== "/llms.txt")
-			return;
+		if (url.pathname === "/llms.txt") {
+			try {
+				return llmTextResponse(await buildLlmsTxt());
+			} catch {
+				return respond(getLlms());
+			}
+		}
 
-		if (url.pathname === "/llms.txt") return respond(getLlms());
+		if (url.pathname === "/llms-full.txt") {
+			try {
+				return llmTextResponse(await buildLlmsFullTxt());
+			} catch {
+				return undefined;
+			}
+		}
+
+		const piece = parsePieceSeoPath(url.pathname);
+		if (piece) {
+			try {
+				const markdown = await pieceMarkdown(piece.section, piece.slug);
+				if (markdown === null) return;
+				const html = `${SITE.url}${piecePath(piece.section, piece.slug)}`;
+				return llmTextResponse(markdown, {
+					Link: `<${html}>; rel="canonical", <${SITE.url}/llms.txt>; rel="describedby"`,
+				});
+			} catch {
+				return undefined;
+			}
+		}
+
+		if (!url.pathname.endsWith("/llms.txt")) return;
 
 		const path = url.pathname.slice(0, -"/llms.txt".length);
 		const entry = resolveEntry(path);
@@ -39,6 +75,6 @@ const redirect = (location: string) =>
 const respond = (text: string | undefined) =>
 	text !== undefined
 		? new Response(text, {
-				headers: { "Content-Type": "text/plain; charset=utf-8" },
+				headers: { "Content-Type": "text/markdown; charset=utf-8" },
 			})
 		: undefined;

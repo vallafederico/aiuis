@@ -1,33 +1,28 @@
-import { pagePath } from "@local/content";
-import { getCollection } from "~/content";
+import { sitemapEntries } from "~/lib/llm-seo";
 import { SITE } from "~/lib/site";
 
-// generated from the cms: pages route by file path, posts under /_/content
-export function GET() {
-	const entries = [
-		...getCollection("pages", (page) => !page.data.draft).map((page) => ({
-			url: pagePath(page.slug),
-			updated: page.data.updated,
-		})),
-		...getCollection("posts", (post) => !post.data.draft).map((post) => ({
-			url: `/_/content/${post.slug}`,
-			updated: post.data.updated ?? post.data.date,
-		})),
-	];
+function lastmod(updated: Date | string | null | undefined): string | null {
+	if (!updated) return null;
+	const date = updated instanceof Date ? updated : new Date(updated);
+	if (Number.isNaN(date.getTime())) return null;
+	return date.toISOString().slice(0, 10);
+}
+
+export async function GET() {
+	const entries = await sitemapEntries();
 
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries
-	.map((entry) =>
-		[
+	.map((entry) => {
+		const mod = lastmod(entry.updated);
+		return [
 			"<url>",
 			`  <loc>${SITE.url}${entry.url}</loc>`,
-			...(entry.updated
-				? [`  <lastmod>${entry.updated.toISOString().slice(0, 10)}</lastmod>`]
-				: []),
+			...(mod ? [`  <lastmod>${mod}</lastmod>`] : []),
 			"</url>",
-		].join("\n"),
-	)
+		].join("\n");
+	})
 	.join("\n")}
 </urlset>`;
 

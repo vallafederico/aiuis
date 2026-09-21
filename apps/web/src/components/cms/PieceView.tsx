@@ -22,12 +22,14 @@ type PieceResult =
       component: string | null;
       tags: string[];
       updated: string | null;
+      updatedIso: string | null;
     }
   | { unavailable: true }
   | null;
 
 async function publishedMeta(slug: string): Promise<{
   updated: string | null;
+  updatedIso: string | null;
   tags: unknown;
 }> {
   try {
@@ -35,10 +37,11 @@ async function publishedMeta(slug: string): Promise<{
     const item = list.items.find((entry) => entry.slug === slug);
     return {
       updated: formatUpdated(item?.updated),
+      updatedIso: item?.updated ?? null,
       tags: item?.card?.tags,
     };
   } catch {
-    return { updated: null, tags: undefined };
+    return { updated: null, updatedIso: null, tags: undefined };
   }
 }
 
@@ -58,7 +61,7 @@ export const getPiece = query(
         slug,
         section,
       );
-      const published = component ? await publishedMeta(slug) : { updated: null, tags: undefined };
+      const published = await publishedMeta(slug);
       let cmsTags: unknown = (data as { tags?: unknown }).tags ?? published.tags;
       if (component && labelsFromCms(cmsTags).length === 0) {
         try {
@@ -78,6 +81,7 @@ export const getPiece = query(
         component,
         tags,
         updated: published.updated,
+        updatedIso: published.updatedIso,
       };
     } catch (e: unknown) {
       const status = cmsStatus(e);
@@ -137,6 +141,7 @@ export function PieceView(props: {
       >
         <Show
           when={piece()}
+          keyed
           fallback={
             <>
               <HttpStatusCode code={404} />
@@ -147,24 +152,27 @@ export function PieceView(props: {
           }
         >
           {(p) => {
-            const extracted = () => extractAside(p().body_hast, "cms-foreword");
-            const foreword = () => extracted().node;
-            const bodyWithoutForeword = () => extracted().rest;
-            const Ui = () => resolveUi(p().component);
+            const extracted = extractAside(p.body_hast, "cms-foreword");
+            const Ui = resolveUi(p.component);
             return (
               <div class="contents">
                 <Metadata
-                  title={`${p().title} — aiuis`}
-                  description={metaDescription(p())}
+                  title={`${p.title} — aiuis`}
+                  description={metaDescription(p)}
+                  path={`/${p.section}/${p.slug}`}
+                  type="article"
+                  markdown={`/${p.section}/${p.slug}.md`}
+                  dateModified={p.updatedIso}
                 />
                 <Show
-                  when={Ui()}
+                  when={Ui}
+                  keyed
                   fallback={
                     <PageContent flow width={props.width}>
                       <h1 class="mb-8">
-                        <CmsMsdfBlock text={p().title} class="text-6xl -tracking-widest" />
+                        <CmsMsdfBlock text={p.title} class="text-6xl -tracking-widest" />
                       </h1>
-                      <Show when={foreword()}>
+                      <Show when={extracted.node}>
                         {(node) => (
                           <div class="cms-foreword-wrap mb-8 w-grids-5">
                             <CmsForeword node={node()} />
@@ -172,26 +180,23 @@ export function PieceView(props: {
                         )}
                       </Show>
                       <article class="cms-body max-w-none text-[2rem] leading-snug">
-                        <CmsBody hast={bodyWithoutForeword()} />
+                        <CmsBody hast={extracted.rest} />
                       </article>
                     </PageContent>
                   }
                 >
-                  {(Comp) => {
-                    const Feature = Comp();
-                    return (
-                      <CompPiece
-                        title={p().title}
-                        body={p().excerpt}
-                        tags={p().tags}
-                        updated={p().updated}
-                      >
-                        <Suspense>
-                          <Feature slug={p().slug} title={p().title} />
-                        </Suspense>
-                      </CompPiece>
-                    );
-                  }}
+                  {(Feature) => (
+                    <CompPiece
+                      title={p.title}
+                      body={p.excerpt}
+                      tags={p.tags}
+                      updated={p.updated}
+                    >
+                      <Suspense>
+                        <Feature slug={p.slug} title={p.title} />
+                      </Suspense>
+                    </CompPiece>
+                  )}
                 </Show>
               </div>
             );

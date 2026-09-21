@@ -1,17 +1,7 @@
 # aiuis
 
-> File-based mdx cms on solid-start: pages and collections live in
-> src/content, custom-developed routes mix in cms documents via <Slot>.
+> Working notes on designing interfaces for systems that think back.
 
-This is the base llms.txt. It's served at /llms.txt and is the fallback for
-any cms-backed page without its own pair document — append /llms.txt to a
-page url to get its llm-friendly version.
-
-## Pages
-
-- About: /_/about
-- Privacy: /privacy
-
-## Posts
-
-- Index: /_/content
+Fallback index served when hosted chapters cannot be listed. The live
+`/llms.txt` is generated from published CMS pieces and links each chapter's
+markdown (`.md`) version.

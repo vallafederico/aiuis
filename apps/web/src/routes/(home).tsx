@@ -36,7 +36,8 @@ export default function Home() {
     <>
       <Metadata
         title="aiuis"
-        description="Interface experiments for designing with language models."
+        description="Working notes on designing interfaces for systems that think back."
+        path="/"
       />
       <h1 sr-only>aiuis</h1>
       <PageContent>

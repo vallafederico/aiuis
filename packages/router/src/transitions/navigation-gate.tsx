@@ -39,6 +39,10 @@ export function NavigationGate(): null {
 
     e.preventDefault();
 
+    if (typeof window !== "undefined") {
+      preload(e.to, { preloadData: true });
+    }
+
     const replace = Boolean(e.options?.replace);
     controller.begin(replace ? "replace" : "forward");
 
@@ -55,11 +59,6 @@ export function NavigationGate(): null {
       await controller.runBranchLeave(live.element, live.ctx);
       controller.finishLeavePhase();
       controller.markLeaveGateCompleted();
-    }
-
-    if (typeof window !== "undefined") {
-      preload(e.to, { preloadData: true });
-      await new Promise<void>((resolve) => queueMicrotask(resolve));
     }
 
     controller.armGateSkip(e.to);
