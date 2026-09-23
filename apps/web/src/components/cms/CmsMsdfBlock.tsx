@@ -1,8 +1,9 @@
-import { createEffect, createMemo, createRoot, createSignal, For, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, For, onCleanup, onMount, useContext } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import MsdfText from "~/components/webgl/MsdfText";
 import { loadMsdfFont, getMsdfFontMetricsSync, type BmFont } from "~/components/webgl/msdf-text";
+import { PieceReadContext } from "~/components/ArticleFocus";
 import { normalizeMsdfText } from "./normalizeMsdfText";
 import { wrapMsdfText } from "./wrapMsdfText";
 
@@ -50,6 +51,7 @@ function ensureFontEntry(fontName: string): FontEntry {
 }
 
 export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
+  const articleLine = useContext(PieceReadContext);
   let container!: HTMLSpanElement;
   const [width, setWidth] = createSignal<number>();
 
@@ -102,6 +104,7 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
                 font={props.font ?? "AlteHaasGroteskBold"}
                 tracking={props.tracking}
                 alpha={props.alpha}
+                articleLine={articleLine}
               />
             </span>
           )

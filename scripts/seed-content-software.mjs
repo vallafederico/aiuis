@@ -15,13 +15,18 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const seedsDir = join(root, "seeds");
 
 // Hosted default pieces schema: section enum is notes|foundations|product
-// (not preface|foundations|uis), and :::foreword / :::notes are unknown.
+// (not preface|foundations|uis). :::foreword / :::notes stay in the body;
+// schema/directives/{name}.md registers them so derive emits the asides.
 const SITE_TO_HOSTED_SECTION = { preface: "notes", foundations: "foundations", uis: "product" };
 
 function hostedSection(section) {
   return SITE_TO_HOSTED_SECTION[section] ?? section;
 }
 
+// The hosted project has no directive registry, and this token cannot register
+// schema/directives. :::notes fails validation. Raw HTML asides are stripped
+// on derive and the note text disappears from the article. Unwrap only when
+// creating a doc. The site lifts these paragraphs back into asides.
 function stripDirectives(body) {
   return body
     .replace(/^:::foreword\n([\s\S]*?)\n:::\n*/m, "$1\n\n")
@@ -89,11 +94,57 @@ function loadProject() {
   const credsPath = process.env.CONTENT_CREDENTIALS ?? join(homedir(), ".config", "content-software", "credentials.json");
   const creds = JSON.parse(readFileSync(credsPath, "utf8"));
   const project = creds.projects?.[config.projectId] ?? Object.values(creds.projects ?? {}).find((p) => p.slug === config.slug);
-  if (!project?.token) {
+  if (!project?.token && !project?.adminToken && !process.env.CONTENT_ADMIN_TOKEN && !process.env.CONTENT_TOKEN) {
     throw new Error("No stored token for this project. Run: pnpm content login --project aiuis");
   }
   const apiUrl = (project.apiUrl ?? config.apiUrl ?? `https://${config.slug}.content.software`).replace(/\/api$/, "").replace(/\/$/, "");
-  return { project, apiUrl, token: project.token };
+  // Prefer an admin-capable bearer for schema/taxonomy seed. Ordinary CLI project
+  // tokens can write content + skills but not POST /api/v1/admin/seed.
+  const token =
+    process.env.CONTENT_ADMIN_TOKEN ??
+    project?.adminToken ??
+    process.env.CONTENT_TOKEN ??
+    project?.token;
+  return { project, apiUrl, token, credsPath };
+}
+
+function adminTokenMissingMessage(apiUrl) {
+  return [
+    "Missing CMS admin token — schema/taxonomy seed needs capabilities.admin.",
+    "",
+    "Ordinary `pnpm content login` project tokens are write-only (content + skills).",
+    "Mint an admin bearer for this project (bootstrap-admin / panel), then either:",
+    "",
+    "  1. Paste it here and ask me to store it, or",
+    "  2. export CONTENT_ADMIN_TOKEN=<token>",
+    "  3. save it as projects.project_aiuis.adminToken in",
+    "     ~/.config/content-software/credentials.json",
+    "",
+    `Then re-run: pnpm seed:content`,
+    `Probe: POST ${apiUrl}/api/v1/admin/seed  (must not return capability_denied)`,
+  ].join("\n");
+}
+
+/** True when the bearer can hit admin/seed. */
+async function hasAdminCapability(apiUrl, token) {
+  const res = await fetch(`${apiUrl}/api/v1/admin/seed`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ files: [], reindex: false }),
+  });
+  if (res.ok) return true;
+  if (res.status === 403) {
+    const body = await res.text();
+    if (body.includes("capability_denied") || body.includes("admin capability")) return false;
+  }
+  // 401 / other → treat as missing usable admin token
+  if (res.status === 401 || res.status === 403) return false;
+  // Empty seed may 400 on some builds; anything other than capability denial counts as admin.
+  return res.status !== 401 && res.status !== 403;
 }
 
 let mcpSessionId = null;
@@ -152,23 +203,44 @@ async function callTool(apiUrl, token, name, args) {
 
 const { apiUrl, token } = loadProject();
 const files = walk(seedsDir);
-const schemaFiles = files.filter((f) => f.path.startsWith("schema/") || f.path.startsWith("skills/"));
-const pieceFiles = files.filter((f) => f.path.startsWith("content/pieces/") && f.path.endsWith(".md"));
-
-const seedRes = await fetch(`${apiUrl}/api/v1/admin/seed`, {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-  body: JSON.stringify({ files: schemaFiles }),
+const revertAsides = process.argv.includes("--revert-asides");
+const schemaFiles = files.filter((f) => {
+  if (revertAsides) return false;
+  return f.path.startsWith("schema/") || f.path.startsWith("skills/");
 });
-const seedBody = await seedRes.text();
-if (seedRes.ok) {
+const pieceFiles = files.filter((f) => f.path.startsWith("content/pieces/") && f.path.endsWith(".md"));
+const needsSchemaSeed = !revertAsides && schemaFiles.some((f) => f.path.startsWith("schema/"));
+
+if (needsSchemaSeed && !(await hasAdminCapability(apiUrl, token))) {
+  console.error(adminTokenMissingMessage(apiUrl));
+  process.exit(1);
+}
+
+async function adminSeed(filesPayload, opts = {}) {
+  const res = await fetch(`${apiUrl}/api/v1/admin/seed`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ files: filesPayload, ...opts }),
+  });
+  const body = await res.text();
+  return { res, body };
+}
+
+const seedRes = schemaFiles.length === 0 ? null : await adminSeed(schemaFiles);
+const seedBody = seedRes?.body ?? "";
+if (seedRes?.res.ok) {
   console.log(`Seeded ${schemaFiles.length} schema/skill files`);
-} else {
-  console.warn(`admin/seed ${seedRes.status}: ${seedBody}`);
+} else if (seedRes) {
+  if (seedRes.res.status === 403 || seedRes.res.status === 401) {
+    console.error(adminTokenMissingMessage(apiUrl));
+    console.error(`admin/seed ${seedRes.res.status}: ${seedBody}`);
+    process.exit(1);
+  }
+  console.warn(`admin/seed ${seedRes.res.status}: ${seedBody}`);
   for (const file of schemaFiles.filter((f) => f.path.startsWith("skills/"))) {
     const name = file.path.replace(/\.md$/, "");
     await fetch(`${apiUrl}/api/v1/skills/${encodeURIComponent(name)}`, {
@@ -210,19 +282,16 @@ if (!piecesFields.tags) {
       "values: [preface, foundations, uis]",
       "values: [notes, foundations, product]",
     );
-    const patchRes = await fetch(`${apiUrl}/api/v1/admin/seed`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        files: [{ path: "schema/pieces.md", content: hostedPiecesSchema }],
-        reindex: false,
-      }),
-    });
-    console.warn(`schema patch admin/seed ${patchRes.status}: ${(await patchRes.text()).slice(0, 300)}`);
+    const { res: patchRes, body: patchBody } = await adminSeed(
+      [{ path: "schema/pieces.md", content: hostedPiecesSchema }],
+      { reindex: false },
+    );
+    if (patchRes.status === 403 || patchRes.status === 401) {
+      console.error(adminTokenMissingMessage(apiUrl));
+      console.error(`schema patch admin/seed ${patchRes.status}: ${patchBody.slice(0, 300)}`);
+      process.exit(1);
+    }
+    console.warn(`schema patch admin/seed ${patchRes.status}: ${patchBody.slice(0, 300)}`);
     try {
       await refreshPiecesSchema();
     } catch (error) {
@@ -238,15 +307,42 @@ function hostedFrontmatter(fm) {
     section: hostedSection(fm.section),
     order: fm.order,
   };
-  if (fm.description) out.description = fm.description;
   if (piecesFields.component && fm.component) out.component = fm.component;
-  if (piecesFields.tags && Array.isArray(fm.tags)) out.tags = fm.tags;
+  if (piecesFields.tags && Array.isArray(fm.tags) && fm.tags.length > 0) {
+    out.tags = fm.tags;
+  }
+  if (fm.description) out.description = fm.description;
   return out;
 }
 
+const TAG_LABEL = /^[A-Z0-9][A-Z0-9.-]*$/;
+const TAG_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 function looksLikeTags(value) {
   if (typeof value !== "string" || !value.trim()) return false;
-  return value.split(/,\s*/).every((tag) => /^[A-Z0-9][A-Z0-9-]*$/.test(tag.trim()));
+  const parts = value.split(/,\s*/).map((tag) => tag.trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.every((tag) => TAG_LABEL.test(tag) || TAG_SLUG.test(tag));
+}
+
+async function revertHtmlAsides(slug) {
+  const doc = await callTool(apiUrl, token, "read_doc", { id: `pieces/${slug}` });
+  const id = doc.frontmatter?._id;
+  const rev = doc.frontmatter?._rev;
+  const body = typeof doc.body === "string" ? doc.body : "";
+  if (!id || !rev) throw new Error(`read_doc pieces/${slug}: missing _id/_rev`);
+  const edits = [...body.matchAll(/<aside class="cms-(?:notes|foreword)">\n<p>([\s\S]*?)<\/p>\n<\/aside>/g)].map(
+    (match) => ({ op: "str_replace", old: match[0], new: match[1] }),
+  );
+  if (edits.length === 0) return false;
+  const edited = await callTool(apiUrl, token, "edit_doc", {
+    id,
+    base_rev: rev,
+    note: "Restore note text stripped by the HTML aside",
+    edits,
+  });
+  await callTool(apiUrl, token, "publish", { id, base_rev: edited.rev });
+  return true;
 }
 
 async function syncExistingFields(slug, fm) {
@@ -255,15 +351,20 @@ async function syncExistingFields(slug, fm) {
   const id = doc.frontmatter?._id;
   const rev = doc.frontmatter?._rev;
   if (!id || !rev) throw new Error(`read_doc pieces/${slug}: missing _id/_rev`);
-  const edits = piecesFields.tags
-    ? [{ op: "set_field", field: "tags", value: fm.tags }]
-    : (() => {
-        const current = doc.frontmatter?.description;
-        if (current && !looksLikeTags(current)) {
-          return [];
-        }
-        return [{ op: "set_field", field: "description", value: fm.tags.join(", ") }];
-      })();
+  const edits = [];
+  if (piecesFields.tags) {
+    edits.push({ op: "set_field", field: "tags", value: fm.tags });
+    const current = doc.frontmatter?.description;
+    if (typeof current === "string" && looksLikeTags(current)) {
+      edits.push({ op: "set_field", field: "description", value: "" });
+    }
+  } else {
+    const current = doc.frontmatter?.description;
+    if (current && !looksLikeTags(current)) {
+      return false;
+    }
+    edits.push({ op: "set_field", field: "description", value: fm.tags.join(", ") });
+  }
   if (edits.length === 0) return false;
   const edited = await callTool(apiUrl, token, "edit_doc", {
     id,
@@ -280,6 +381,21 @@ for (const file of pieceFiles) {
   const slug = frontmatter.slug;
   if (!slug) {
     console.error(`[skip] ${file.path}: missing slug`);
+    continue;
+  }
+  if (revertAsides) {
+    try {
+      const reverted = await revertHtmlAsides(slug);
+      console.log(reverted ? `[reverted] ${slug}` : `[aside-ok] ${slug}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("not_found") || message.includes("not found")) {
+        console.log(`[skip] ${slug}: not on host`);
+        continue;
+      }
+      console.error(`[error] ${slug}: ${message}`);
+      process.exitCode = 1;
+    }
     continue;
   }
   try {
@@ -306,3 +422,14 @@ for (const file of pieceFiles) {
     process.exitCode = 1;
   }
 }
+
+if (revertAsides) {
+  try {
+    const reverted = await revertHtmlAsides("look-at");
+    console.log(reverted ? `[reverted] look-at` : `[aside-ok] look-at`);
+  } catch (error) {
+    console.error(`[error] look-at: ${error instanceof Error ? error.message : error}`);
+    process.exitCode = 1;
+  }
+}
+

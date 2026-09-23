@@ -1,8 +1,12 @@
-import { For } from "solid-js";
+import { For, Show, createMemo } from "solid-js";
+import { createAsync } from "@solidjs/router";
+import { A, usePreloadRoute } from "@acme/router";
 import Metadata from "~/components/Metadata";
 import PageContent from "~/components/PageContent";
 import MsdfText from "~/components/webgl/MsdfText";
 import GlDot from "~/components/webgl/GlDot";
+import { createWipe } from "~/components/NavHit";
+import { getNavCatalog, type NavItem } from "~/lib/sections";
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const GARARA_FONTS = [
@@ -24,14 +28,59 @@ const FONT_BY_INDEX = ALPHABET.map((_, i) =>
     : "AlteHaasGroteskBold",
 );
 
-const DOT_COUNT = 6;
-const DOT_INDICES = new Set(
-  [...ALPHABET.keys()]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, DOT_COUNT),
-);
+/** Stable cell for each UI, so the same piece always owns the same letter. */
+function dotCells(items: NavItem[]): Map<number, NavItem> {
+  const used = new Set<number>();
+  const cells = new Map<number, NavItem>();
+  for (const item of items) {
+    let hash = 0;
+    for (let i = 0; i < item.href.length; i++) {
+      hash = (hash * 31 + item.href.charCodeAt(i)) >>> 0;
+    }
+    let index = hash % ALPHABET.length;
+    while (used.has(index)) index = (index + 1) % ALPHABET.length;
+    used.add(index);
+    cells.set(index, item);
+  }
+  return cells;
+}
+
+function DotCell(props: { item: NavItem; letter: string; font: string }) {
+  const preload = usePreloadRoute();
+  const motion = createWipe(220);
+  return (
+    <A
+      href={props.item.href}
+      aria-label={props.item.title}
+      class="flex h-full w-full items-center justify-center"
+      onPointerEnter={() => {
+        motion.enter();
+        preload(props.item.href, { preloadData: true });
+      }}
+      onPointerLeave={() => motion.leave()}
+      onFocusIn={() => motion.enter()}
+      onFocusOut={() => motion.leave()}
+    >
+      <GlDot show grow={motion.wipe()}>
+        <span aria-hidden="true">
+          <MsdfText
+            text={props.letter}
+            font={props.font}
+            class="text-[clamp(0.75rem,1.5vw,1.1rem)]"
+          />
+        </span>
+      </GlDot>
+    </A>
+  );
+}
 
 export default function Home() {
+  const catalog = createAsync(() => getNavCatalog());
+  const cells = createMemo(() => {
+    const uis = catalog()?.find((section) => section.href === "/uis")?.items ?? [];
+    return dotCells(uis);
+  });
+
   return (
     <>
       <Metadata
@@ -45,14 +94,23 @@ export default function Home() {
           <div class="grid grid-cols-6 gap-gutter w-grids-6">
             <For each={ALPHABET}>
               {(letter, i) => (
-                <div class="aspect-square flex-center">
-                  <GlDot show={DOT_INDICES.has(i())}>
-                    <MsdfText
-                      text={letter}
-                      font={FONT_BY_INDEX[i()]}
-                      class="text-[clamp(0.75rem,1.5vw,1.1rem)]"
-                    />
-                  </GlDot>
+                <div class="aspect-square">
+                  <Show
+                    when={cells().get(i())}
+                    fallback={
+                      <div class="flex h-full w-full items-center justify-center">
+                        <MsdfText
+                          text={letter}
+                          font={FONT_BY_INDEX[i()]}
+                          class="text-[clamp(0.75rem,1.5vw,1.1rem)]"
+                        />
+                      </div>
+                    }
+                  >
+                    {(item) => (
+                      <DotCell item={item()} letter={letter} font={FONT_BY_INDEX[i()]} />
+                    )}
+                  </Show>
                 </div>
               )}
             </For>

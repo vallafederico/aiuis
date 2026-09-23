@@ -3,17 +3,17 @@ import { createItem, type ItemController } from "shooosh";
 import type { AiVizParams } from "./ai-viz-params";
 
 const PAPER = [1.0, 1.0, 1.0] as const;
-const BLUR_BG = 36;
-const BLUR_FG = 54;
+const BLUR_BG = 18;
+const BLUR_FG = 27;
 /** blur ramp directions (deg) — soft edge points this way */
 const BLUR_DIR_BG = 35;
 const BLUR_DIR_MID = 200;
 const BLUR_DIR_FG = 120;
 
-/** Base blob radii (unchanged from the original design). */
-const RADIUS_BG = 0.08;
-const RADIUS_MID = 0.06;
-const RADIUS_FG = 0.045;
+/** Base blob radii, half the original design. */
+const RADIUS_BG = 0.04;
+const RADIUS_MID = 0.03;
+const RADIUS_FG = 0.0225;
 
 const TAU = Math.PI * 2;
 
@@ -160,6 +160,8 @@ void main() {
   float deformPhase = uUni[1].w;
   float layerOpacity = uUni[2].x;
   float driftAmount = uUni[2].y;
+  float radiusScale = max(uUni[2].z, 0.001);
+  float punched = uUni[2].w;
   vec3 fill = gradientFill(uv);
 
   // Z stack centered on the same origin; drift wanders on breath harmonics
@@ -172,9 +174,9 @@ void main() {
   vec2 fgCenter = origin + vec2(sin(driftAngleX + ${f(PHASE_FG)}), cos(driftAngleY + ${f(PHASE_FG)})) * ${f(DRIFT_AMOUNT_FG)} * driftAmount;
 
   float deg = 0.017453292519943295;
-  float bgMask = blobMask(uv, bgCenter, ${f(RADIUS_BG)}, ${BLUR_BG}.0, ${BLUR_DIR_BG}.0 * deg, res, ${f(SEED_BG)}, ${f(PHASE_BG)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
-  float midMask = blobMask(uv, midCenter, ${f(RADIUS_MID)}, ${BLUR_BG}.0, ${BLUR_DIR_MID}.0 * deg, res, ${f(SEED_MID)}, ${f(PHASE_MID)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
-  float fgMask = blobMask(uv, fgCenter, ${f(RADIUS_FG)}, float(${BLUR_FG}), ${BLUR_DIR_FG}.0 * deg, res, ${f(SEED_FG)}, ${f(PHASE_FG)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
+  float bgMask = blobMask(uv, bgCenter, ${f(RADIUS_BG)} * radiusScale, ${BLUR_BG}.0, ${BLUR_DIR_BG}.0 * deg, res, ${f(SEED_BG)}, ${f(PHASE_BG)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
+  float midMask = blobMask(uv, midCenter, ${f(RADIUS_MID)} * radiusScale, ${BLUR_BG}.0, ${BLUR_DIR_MID}.0 * deg, res, ${f(SEED_MID)}, ${f(PHASE_MID)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
+  float fgMask = blobMask(uv, fgCenter, ${f(RADIUS_FG)} * radiusScale, float(${BLUR_FG}), ${BLUR_DIR_FG}.0 * deg, res, ${f(SEED_FG)}, ${f(PHASE_FG)}, rotateAngle, breathPhase, pulseAmount, deformAmount, deformPhase) * layerOpacity;
 
   // Z stack on paper: each blend uses the already-composited layer below.
   vec3 paper = vec3(${PAPER[0]}, ${PAPER[1]}, ${PAPER[2]});
@@ -183,10 +185,17 @@ void main() {
   color = mix(color, blendExclusion(color, fill), midMask); // middleground
   color = mix(color, blendDifference(color, fill), fgMask); // foreground
 
-  outColor = vec4(color, 1.0);
+  // Corner placement punches the paper out so the page shows around the blob.
+  // The item blend is premultiplied.
+  float cover = punched > 0.5 ? max(bgMask, max(midMask, fgMask)) : 1.0;
+  outColor = vec4(color * cover, cover);
 }`;
 
-export default function AiViz(props: { params: Accessor<AiVizParams> }) {
+export default function AiViz(props: {
+  params: Accessor<AiVizParams>;
+  /** "corner" parks the blob bottom-right at the same pixel size as the full-screen view. */
+  anchor?: "center" | "corner";
+}) {
   let el!: HTMLDivElement;
   let item: ItemController | undefined;
 
@@ -217,6 +226,8 @@ export default function AiViz(props: { params: Accessor<AiVizParams> }) {
         value8: deformPhase,
         value9: p0.layerOpacity,
         value10: p0.driftAmount,
+        value11: 1,
+        value12: props.anchor === "corner" ? 1 : 0,
       },
       onFrame: (controller, frame) => {
         const t = (frame.now - start) * 0.001;
@@ -231,17 +242,27 @@ export default function AiViz(props: { params: Accessor<AiVizParams> }) {
         breathPhase += breathHz * TAU * dt;
         deformPhase += p.deformSpeed * breathHz * dt;
 
+        const rect = el.getBoundingClientRect();
+        const boxW = Math.max(rect.width, 1);
+        const boxH = Math.max(rect.height, 1);
+        // Radii are fractions of the quad. Scale them so a corner box keeps
+        // the same on-screen size as the full-viewport view.
+        const radiusScale =
+          props.anchor === "corner" ? frame.canvas.clientHeight / boxH : 1;
+
         controller.setUni({
           value1: t,
-          value2: frame.canvas.clientWidth,
-          value3: frame.canvas.clientHeight,
+          value2: boxW,
+          value3: boxH,
           value4: breathPhase,
           value5: p.pulseAmount,
           value6: rotAngle,
           value7: p.deformAmount,
           value8: deformPhase,
           value9: p.layerOpacity,
-          value10: p.driftAmount,
+          value10: p.driftAmount * radiusScale,
+          value11: radiusScale,
+          value12: props.anchor === "corner" ? 1 : 0,
         });
       },
     });
@@ -255,7 +276,11 @@ export default function AiViz(props: { params: Accessor<AiVizParams> }) {
   return (
     <div
       ref={el}
-      class="pointer-events-none fixed inset-0 h-svh w-screen"
+      class={
+        props.anchor === "corner"
+          ? "pointer-events-none h-full w-full"
+          : "pointer-events-none fixed inset-0 h-svh w-screen"
+      }
       aria-hidden="true"
     />
   );

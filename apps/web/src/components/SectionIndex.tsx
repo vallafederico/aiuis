@@ -1,13 +1,19 @@
 import { For } from "solid-js";
-import { A } from "@acme/router";
+import { createAsync } from "@solidjs/router";
 import Metadata from "~/components/Metadata";
 import PageContent from "~/components/PageContent";
 import MsdfText from "~/components/webgl/MsdfText";
-import { sectionByHref } from "~/lib/sections";
+import { NavHit, NavHitText } from "~/components/NavHit";
+import { getNavCatalog, sectionByHref } from "~/lib/sections";
 import "./SectionIndex.css";
 
 export default function SectionIndex(props: { href: string }) {
-  const section = () => sectionByHref(props.href);
+  const catalog = createAsync(() => getNavCatalog(), { deferStream: true });
+  const section = () => {
+    const sections = catalog();
+    if (!sections) return undefined;
+    return sectionByHref(sections, props.href);
+  };
   return (
     <>
       <Metadata
@@ -30,12 +36,12 @@ export default function SectionIndex(props: { href: string }) {
             <For each={section()?.items ?? []}>
               {(item, index) => (
                 <li class="flex items-center">
-                  <p class="w-15 text-[.7em] font-garara font-[10]">
-                    <MsdfText text={`${index() + 1}.`} font="Garara-10" weird />
-                  </p>
-                  <A href={item.href}>
-                    <MsdfText text={item.title} font="AlteHaasGroteskBold" weird />
-                  </A>
+                  <NavHit href={item.href} class="relative inline-flex grow items-center min-h-6 min-w-6 nav-hit">
+                    <span class="w-15 shrink-0 text-[.7em] font-garara font-[10]">
+                      <NavHitText text={`${index() + 1}.`} font="Garara-10" />
+                    </span>
+                    <NavHitText text={item.title} font="AlteHaasGroteskBold" />
+                  </NavHit>
                 </li>
               )}
             </For>

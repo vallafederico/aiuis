@@ -1,0 +1,121 @@
+.faq-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: min(40rem, 100%);
+  max-height: 72svh;
+  color: var(--color-key);
+}
+
+.faq-page-list {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.faq-page-item {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  column-gap: 0.85rem;
+  row-gap: 0;
+}
+
+.faq-page-n {
+  padding-top: 0.7em;
+  font-family: var(--font-garara);
+  font-size: 10px;
+  font-weight: 0;
+  font-variation-settings: "wght" 0;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.faq-page-q {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  letter-spacing: -0.09em;
+  line-height: 1.08;
+  text-align: left;
+  cursor: pointer;
+}
+
+.faq-page-body {
+  display: grid;
+  grid-column: 2;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.5s var(--ease-in-out, cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.faq-page-item.is-open .faq-page-body {
+  grid-template-rows: 1fr;
+}
+
+.faq-page-body-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.faq-page-a {
+  margin: 0;
+  padding: 0.7rem 0 1.1rem;
+  max-width: 34rem;
+  font-size: 0.95rem;
+  letter-spacing: -0.045em;
+  line-height: 1.38;
+}
+
+.faq-page-item.is-pending .faq-page-a {
+  opacity: 0.5;
+}
+
+.faq-page-ask {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  column-gap: 0.85rem;
+  align-items: end;
+}
+
+.faq-page-ask .faq-page-n {
+  padding-top: 0;
+  padding-bottom: 0.45em;
+}
+
+.faq-page-ask-input {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0.4rem;
+  border: 0;
+  border-bottom: 1px solid rgb(0 0 255 / 0.28);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  letter-spacing: -0.09em;
+  line-height: 1.08;
+}
+
+.faq-page-ask-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-key);
+}
+
+.faq-page-ask-input::placeholder {
+  color: var(--color-key);
+  opacity: 0.28;
+}
+
+.faq-page-ask-input:disabled {
+  opacity: 0.45;
+}

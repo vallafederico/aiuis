@@ -71,6 +71,11 @@ export type MsdfTextLayout = {
   blur?: ProgressiveBlur;
   /** RGB color (0–1 range), defaults to blue [0, 0, 1] */
   color?: [number, number, number];
+  /** Knock out to paper left of this 0–1 wipe (difference against a key bar). */
+  knockout?: boolean;
+  /** Mix the whole string by wipe instead of a left-to-right clip. */
+  knockoutFill?: boolean;
+  paper?: [number, number, number];
   /** opacity multiplier (0–1), defaults to 1 */
   alpha?: number;
   /** stretch the msdf layout to fill the DOM box — distorts glyphs; the beloved accident */
@@ -218,7 +223,6 @@ export function buildMsdfTextFragment(
 
   const fmt = (n: number) => n.toFixed(6);
   const [r, g, b] = layout.color ?? [0, 0, 1];
-  const a = layout.alpha ?? 1.0;
   const src = glyphs
     .map((g) => `vec4(${g.src.map(fmt).join(", ")})`)
     .join(",\n\t");
@@ -232,6 +236,7 @@ export function buildMsdfTextFragment(
   const mainPrologue = weirdMode
     ? `void main() {
   float widthPx = max(uUni[0].y, 1.0); // value2: element width in px
+  float heightPx = max(uUni[0].w, 1.0); // value4: element height in px
   vec2 local = vUv; // quad space, y down (matches bmfont cells)`
     : `const float BOX_ASPECT = ${fmt(w / h)};
 
@@ -279,8 +284,27 @@ ${mainPrologue}
   }
 
   vec3 key = vec3(${fmt(r)}, ${fmt(g)}, ${fmt(b)});
-  float opacity = ${fmt(a)};
-  outColor = vec4(key * alpha * opacity, alpha * opacity);
+  float opacity = clamp(uUni[0].x, 0.0, 1.0); // value1
+  vec3 fill = key;${
+    layout.knockout
+      ? `
+  vec3 paper = vec3(${fmt((layout.paper ?? [0.9137, 0.9137, 0.9176])[0])}, ${fmt((layout.paper ?? [0.9137, 0.9137, 0.9176])[1])}, ${fmt((layout.paper ?? [0.9137, 0.9137, 0.9176])[2])});
+  float wipe = clamp(uUni[2].x, 0.0, 1.0); // value9 — not value3, which blurAlpha reads as px
+  float origin = uUni[2].y; // value10: text left, in the link's width
+  float span = uUni[2].z; // value11: text width / link width
+  span = span < 0.0001 ? 1.0 : span;
+  float along = origin + local.x * span;
+  fill = mix(key, paper, ${layout.knockoutFill ? "wipe" : "step(0.0005, wipe) * step(along, wipe)"});`
+      : ""
+  }
+  float coverR = uUni[3].y; // value14, physical px. 0 skips.
+  if (coverR > 0.0) {
+    vec3 coverPaper = vec3(0.9137, 0.9137, 0.9176);
+    vec2 fragPx = vUv * vec2(widthPx, heightPx);
+    float coverD = length(fragPx - vec2(uUni[2].w, uUni[3].x));
+    fill = mix(fill, coverPaper, 1.0 - smoothstep(coverR - 1.5, coverR, coverD));
+  }
+  outColor = vec4(fill * alpha * opacity, alpha * opacity);
 }`;
 
   return { fragment, aspect: w / h, width: w, height: h };

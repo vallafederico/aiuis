@@ -1,6 +1,22 @@
 .section-index {
-  width: max-content;
+  /* Columns 4–9, the centered six. Links fill it so the hover reaches the last one. */
+  width: var(--spacing-grids-6);
   /* Column 4: one column clear of the two-column nav.
      Main is padded by 2/12 of the viewport, so cancel that and sit on the column edge. */
   margin-left: calc(var(--gx) + var(--spacing-grid-3) - (100vw * 2 / 12));
+}
+
+.section-index ul {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.section-index li {
+  display: flex;
+  padding-block: 0.22rem;
+}
+
+.section-index li a {
+  flex-grow: 1;
 }

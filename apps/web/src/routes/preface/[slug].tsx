@@ -1,5 +1,8 @@
+import { lazy } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { PieceView, getPiece } from "~/components/cms/PieceView";
+import { getPiece } from "~/lib/piece";
+
+const PieceView = lazy(() => import("~/components/cms/PieceView"));
 
 export const route = {
   preload: ({ params }: { params: { slug: string } }) =>

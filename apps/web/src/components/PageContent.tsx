@@ -13,7 +13,7 @@ export default function PageContent(props: {
     <div
       class={`flex justify-center ${
         props.flow
-          ? "pt-[40svh] pb-20"
+          ? "pt-[40svh] pb-[40svh]"
           : "h-svh items-center overflow-hidden py-20"
       } ${props.spacing ?? ""}`}
     >

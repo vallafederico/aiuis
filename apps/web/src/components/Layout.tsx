@@ -1,6 +1,7 @@
-import { Suspense, type JSX } from "solid-js";
+import { Show, Suspense, type JSX } from "solid-js";
 import {
   useLayoutTransition,
+  useLocation,
   type TransitionContextValue,
 } from "@acme/router";
 
@@ -14,7 +15,7 @@ const resetScroll = (_ctx: TransitionContextValue) => {
   Scroll.refresh();
 };
 
-const GlobalLayout = (props: { children: JSX.Element }) => {
+const GlobalLayout = (props: { children: JSX.Element; bare?: boolean }) => {
   useLayoutTransition({
     onEnter: (ctx) => resetScroll(ctx),
     leave: () => beginPageLeave(),
@@ -26,7 +27,7 @@ const GlobalLayout = (props: { children: JSX.Element }) => {
       id="content"
       tabindex="-1"
       use:scroll
-      style="padding-inline: calc(2/12*100vw)"
+      style={props.bare ? undefined : "padding-inline: calc(2/12*100vw)"}
     >
       {props.children}
     </main>
@@ -36,16 +37,21 @@ const GlobalLayout = (props: { children: JSX.Element }) => {
 export default function Layout(props: {
   children: JSX.Element;
 }) {
+  const location = useLocation();
+  const bare = () => location.pathname.replace(/\/+$/, "") === "/ai-viz";
+
   return (
     <>
-      <a href="#content" sr-only>
-        Skip to content
-      </a>
-      <Nav />
-      <Grid />
+      <Show when={!bare()}>
+        <a href="#content" sr-only>
+          Skip to content
+        </a>
+        <Nav />
+        <Grid />
+      </Show>
 
       <Suspense>
-        <GlobalLayout>{props.children}</GlobalLayout>
+        <GlobalLayout bare={bare()}>{props.children}</GlobalLayout>
       </Suspense>
     </>
   );

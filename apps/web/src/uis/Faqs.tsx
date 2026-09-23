@@ -1,14 +1,22 @@
-import { For, createEffect, createSignal, onMount } from "solid-js";
+import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { MockFrame } from "./Mock";
 import type { UiProps } from "./types";
 import {
   SEED_FAQS,
   askFaq,
+  faqJudgeAvailable,
+  faqSynthesisAvailable,
+  indexFaqs,
   loadRememberedFaqs,
   saveRememberedFaqs,
   type FaqItem,
 } from "~/lib/faq";
 import "./Faqs.css";
+import {
+  pulseAiVizResponse,
+  resetAiVizActivity,
+  setAiVizActivity,
+} from "~/lib/ai-viz-activity";
 
 export default function Faqs(_props: UiProps) {
   const [items, setItems] = createSignal<FaqItem[]>(SEED_FAQS);
@@ -16,15 +24,37 @@ export default function Faqs(_props: UiProps) {
   const [pendingId, setPendingId] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const [ready, setReady] = createSignal(false);
+  const [judgeOn, setJudgeOn] = createSignal(false);
+  const [synthesisOn, setSynthesisOn] = createSignal(false);
   let input: HTMLInputElement | undefined;
 
   onMount(() => {
+    void faqJudgeAvailable()
+      .then(setJudgeOn)
+      .catch(() => setJudgeOn(false));
+    void faqSynthesisAvailable()
+      .then(setSynthesisOn)
+      .catch(() => setSynthesisOn(false));
     const remembered = loadRememberedFaqs();
     if (remembered.length > 0) {
       setItems([...SEED_FAQS, ...remembered]);
       setOpenId(remembered[remembered.length - 1].id);
     }
     setReady(true);
+    setAiVizActivity("thinking");
+    void indexFaqs()
+      .then((grounded) => {
+        setItems((list) => {
+          const byId = new Map(grounded.map((item) => [item.id, item]));
+          return list.map((item) => byId.get(item.id) ?? item);
+        });
+        setAiVizActivity("idle");
+      })
+      .catch(() => setAiVizActivity("idle"));
+  });
+
+  onCleanup(() => {
+    resetAiVizActivity();
   });
 
   createEffect(() => {
@@ -54,6 +84,7 @@ export default function Faqs(_props: UiProps) {
     if (input) input.value = "";
     setItems((list) => [...list, { id, question, answer: "" }]);
     setPendingId(id);
+    setAiVizActivity("thinking");
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setOpenId(id));
     });
@@ -64,6 +95,7 @@ export default function Faqs(_props: UiProps) {
       setItems((list) => list.filter((item) => item.id !== id));
       setOpenId(result.id);
       setPendingId(null);
+      pulseAiVizResponse();
       input?.focus();
       return;
     }
@@ -72,6 +104,7 @@ export default function Faqs(_props: UiProps) {
       setError(result.message);
       setItems((list) => list.filter((item) => item.id !== id));
       setPendingId(null);
+      setAiVizActivity("idle");
       input?.focus();
       return;
     }
@@ -84,6 +117,7 @@ export default function Faqs(_props: UiProps) {
       ),
     );
     setPendingId(null);
+    pulseAiVizResponse();
     input?.focus();
   };
 
@@ -137,6 +171,13 @@ export default function Faqs(_props: UiProps) {
             Ask
           </button>
         </form>
+        <Show when={!judgeOn() || !synthesisOn()}>
+          <p class="uis-faq-status">
+            {!judgeOn() ? "no judge" : ""}
+            {!judgeOn() && !synthesisOn() ? " · " : ""}
+            {!synthesisOn() ? "no synthesis · indexed citation only" : ""}
+          </p>
+        </Show>
       </div>
     </MockFrame>
   );

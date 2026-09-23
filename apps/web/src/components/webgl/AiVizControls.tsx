@@ -31,7 +31,7 @@ export default function AiVizControls(props: {
 }) {
   return (
     <div
-      class="pointer-events-auto fixed top-4 right-4 z-10 max-h-[calc(100svh-2rem)] w-56
+      class="pointer-events-auto fixed right-4 bottom-4 z-10 max-h-[calc(100svh-2rem)] w-56
         overflow-y-auto rounded-lg border border-black/10 bg-white/80 p-3 font-sans
         text-[11px] text-black shadow-sm backdrop-blur-sm"
     >

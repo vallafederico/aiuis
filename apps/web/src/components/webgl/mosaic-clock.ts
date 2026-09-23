@@ -8,8 +8,27 @@ export const PAGE_ENTRY_MS = MOSAIC_MS / 2;
 export const CRUMB_MOSAIC_MS = 300;
 /** Start the crumb mosaic once the page-in play is this far through. */
 const CRUMB_START_AT = 0.8;
-/** Let the exit play this far, then start the entry while it is still going. */
-const LEAVE_HANDOFF = 0.68;
+/**
+ * Release the leave gate once the clock has fallen this low. At this point
+ * nearly every mosaic cell is fully displaced, so the DOM swap lands under
+ * full scramble and the content flip is unrecognizable.
+ */
+const LEAVE_RELEASE_AT = 0.08;
+/**
+ * Content opacity keeps this floor through most of the transition, so the
+ * scrambled cells stay visible and leave/entry read as one continuous
+ * scatter-then-gather instead of two plays around a blank beat.
+ */
+const CONTENT_FLOOR = 0.35;
+/**
+ * Exception: a brief dip around the DOM swap. Below SWAP_DIP_START the
+ * opacity eases toward zero, reaching it near SWAP_DIP_END — just under the
+ * gate release point — so the frames on either side of the swap are nearly
+ * identical and the content flip cannot be seen. The dip lasts only a few
+ * frames each way, too short to read as a beat.
+ */
+const SWAP_DIP_START = 0.16;
+const SWAP_DIP_END = 0.03;
 
 type Play = {
   from: number;
@@ -29,6 +48,8 @@ let pageInArmed = false;
 let pageEntry = false;
 let pageLeave = false;
 let leaveGate: Array<() => void> | null = null;
+let fullFrame = false;
+let snapshotMode = false;
 
 function emit() {
   sink?.(progress, crumb);
@@ -41,6 +62,26 @@ export function mosaicProgress() {
 
 export function crumbProgress() {
   return crumb;
+}
+
+/** When true the post mosaics the whole frame, including nav chrome. */
+export function mosaicFullFrame() {
+  return fullFrame;
+}
+
+export function setMosaicFullFrame(on: boolean) {
+  fullFrame = on;
+  emit();
+}
+
+/**
+ * When the post pass holds a snapshot of the outgoing page, parked mosaic
+ * cells keep showing old-page tiles through the swap, so the DOM never needs
+ * to fade: content stays at full opacity and the shader does all the mixing.
+ * Off (e.g. WebGPU, no snapshot support) falls back to the opacity dip.
+ */
+export function setMosaicSnapshotMode(on: boolean) {
+  snapshotMode = on;
 }
 
 export function setMosaicSink(
@@ -87,7 +128,18 @@ function paintPageOpacity() {
   if ((!pageLeave && !pageEntry) || typeof document === "undefined") return;
   const el = document.querySelector("[data-router-branch]");
   if (!(el instanceof HTMLElement)) return;
-  el.style.opacity = progress >= 0.999 ? "1" : Math.max(0, progress).toFixed(3);
+  if (snapshotMode) {
+    el.style.opacity = "1";
+    return;
+  }
+  const p = Math.max(0, progress);
+  const base = CONTENT_FLOOR + (1 - CONTENT_FLOOR) * p;
+  const t = Math.min(
+    1,
+    Math.max(0, (p - SWAP_DIP_END) / (SWAP_DIP_START - SWAP_DIP_END)),
+  );
+  const dip = t * t * (3 - 2 * t);
+  el.style.opacity = progress >= 0.999 ? "1" : (base * dip).toFixed(3);
 }
 
 function releaseLeaveGate() {
@@ -168,7 +220,7 @@ export function beginPageEntry(): Promise<void> {
   return next.promise;
 }
 
-export function playMosaic(to: 0 | 1): Promise<void> {
+export function playMosaic(to: 0 | 1, duration = MOSAIC_MS): Promise<void> {
   if (to === 0) {
     interruptCrumb(1);
     pageInArmed = false;
@@ -179,7 +231,7 @@ export function playMosaic(to: 0 | 1): Promise<void> {
     return Promise.resolve();
   }
   const joining = current?.to === to;
-  const next = startPlay(current, progress, to, MOSAIC_MS);
+  const next = startPlay(current, progress, to, duration);
   current = next.play;
   if (to === 1 && !joining) pageInArmed = true;
   emit();
@@ -233,7 +285,7 @@ export function tickMosaic(now: number): boolean {
     progress = step.progress;
     sink?.(progress, crumb);
     paintPageOpacity();
-    if (current.to === 0 && step.t >= LEAVE_HANDOFF) releaseLeaveGate();
+    if (current.to === 0 && progress <= LEAVE_RELEASE_AT) releaseLeaveGate();
     if (current.to === 1 && pageInArmed && step.t >= CRUMB_START_AT) {
       pageInArmed = false;
       notifyPageIn();

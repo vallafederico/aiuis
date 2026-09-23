@@ -12,7 +12,7 @@ Buttons assumed a system that was fast, deterministic, and silent about uncertai
 | --- | --- |
 | Code | Loop, AND/OR, order, whether anything disappears, URL |
 | Jev (TypeSafe) | Rank, filter, route, find, confidence, “should chrome appear?” (~150ms) |
-| LLM | FAQ answers, infinite-article prose, bot replies, prompt rewrite, captions |
+| LLM | FAQ answers, infinite-article prose, prompt rewrite, captions |
 | Vision / image | Look at pixels, generate/iterate an image, provenance gap vs the prompt |
 
 Jev decides. An LLM writes. A vision/image model sees or draws. Typing indicators belong on the generate path, not on the judgment. If `exists` / confidence is low, stay quiet.
@@ -45,11 +45,11 @@ A short list. The last row is an Ask field. An answer becomes a new FAQ; the emp
 
 Jev (when wired): pick/open a matching row instead of generating. Rank remaining questions. Uncertain match stays closed. LLM only on a miss, and only if `exists` says the catalog can’t cover it. Remembered in this browser via localStorage.
 
-### Look At
+### Find
 
-Needle on a chapter. Query or pointer → spans light up by probability. Empty if `exists` is low. Attribution is the highlight; there is no summary unless the reader asks, and then the LLM still cites the span Jev picked. Vision later if the target is an image.
+Site-wide needle (⌘F). Query → spans light up by probability, anywhere on the site. Choice over paragraph IDs + Noul `exists`. Empty if `exists` is low: a miss is silence, not a bogus #1. Attribution is the highlight; there is no summary unless the reader asks, and then the LLM still cites the span Jev picked. Same closed-set rank primitive as catalog search. Vision later if the target is an image.
 
-This is the smallest honest prototype: one piece of text, one query, a focus field whose intensity is a number.
+Absorbs the old Look At chapter (needle on a single chapter); site-wide is the same primitive over a larger set. Still the smallest honest prototype: text, a query, a focus field whose intensity is a number.
 
 ### Navigation
 
@@ -59,13 +59,13 @@ The live nav is already the experiment (“what is in play”). Search reorders 
 
 At the end of a section, Choice: continue / deepen / aside / stop. Noul “are they still with this thread?” gates generation. LLM writes the next block. Split Choice → two ghost openings; generate the one they scroll into.
 
-### Bot
-
-Jev routes first: answer from FAQ / go to a piece / ask a missing control / generate. LLM only on generate. Avatar and typing follow that path — the honest baseline the chapter already wants. Incomplete intent becomes a missing control, not a chat follow-up.
-
 ### Images
 
 Filter/rank a grid by caption, prompt, and provenance tags. Soft chips: generated vs documented, prompt-gap, off-brief. Vision scores “does this image match the prompt?” Provenance stays visible; models only order and cut.
+
+### Generative Moodboard
+
+Now a chapter. The board is the prompt: two named axes, empty space as the generate verb. Full notes in the [Generative Moodboard](#generative-moodboard) section below.
 
 ### Image Generation
 
@@ -121,12 +121,11 @@ Fits the Image Generation chapter’s loop (iterate, know when to stop) as its o
 
 ## New components worth a chapter
 
-- **Find (⌘F)** — site-wide Needle. Same primitive as Look At, as its own verb. LLM only if they want a sentence *about* the hit.
-- **Filters** — mixing desk: hard tags + soft Nouls + floor. AnyFilter / Dev Ed pattern, on this catalog.
+- **Filters** — mixing desk: hard tags + soft Nouls + floor. AnyFilter / Dev Ed pattern, from [Raksha’s roundup](https://x.com/rakshaa_t/status/2101950814545961082), on this catalog.
 - **Inbox / rank** — same list, importance instead of nav order. Ranking as the default, not a search mode.
 - **Command palette** — natural language → typed action (open piece, apply chip, find span) with confidence gates.
 - **Smart drop** — drop a tag, quote, or image onto a piece; Jev picks the slot (related / evidence / discard).
-- **Attention overlay** — Look At without a query: pointer + viewport as state.
+- **Attention overlay** — Find without a query: pointer + viewport as state.
 - **Restraint meter** — “would chrome appear?” as you type. For Representing Thinking / Interactions.
 - **Distribution view** — full Choice probabilities as overlapping ghosts, not a winner. Calibration.
 - **Correction** — select a bad highlight/rank/hide and tell Jev what it should have been. Recoverability as UI.
@@ -141,15 +140,24 @@ Fits the Image Generation chapter’s loop (iterate, know when to stop) as its o
 Real, but not this site’s argument. Do not start here.
 
 - Mood-as-you-type (scores drive a visual, like the flower)
-- Combinatorial pick from a known set (Stefan’s search-over-objects, design-system flags)
+- Combinatorial pick from a known set ([Stefan, when a designer gets access to Jev](https://x.com/heystefan_/status/2101369117496521042): search over objects, design-system flags)
 - Timeline / video find (transcripts, not frames)
-- Live stream filter (chat/comments) if Bot grows a feed
+- A picture that recomposes when the frame changes ([Runway Labs](https://x.com/runwayml_labs/status/2102035097436455021))
 
 ---
 
 ## What to steal (and what not to)
 
-From Raksha T’s Jev roundup and TypeSafe cookbooks:
+Keep the original post next to the idea.
+
+- [Raksha T — Jev use cases saved from X](https://x.com/rakshaa_t/status/2101950814545961082)
+- [Stefan — when a designer gets access to Jev](https://x.com/heystefan_/status/2101369117496521042), quoted at the top of that thread
+- [Jonathan Moore — speaking a layout into place](https://x.com/Moore/status/2102078191758102998)
+- [Peng Zheng — semantic autocomplete](https://x.com/pengzheng_/status/2102069593485238508)
+- [Runway Labs — responsive generative video](https://x.com/runwayml_labs/status/2102035097436455021)
+- TypeSafe cookbooks: [semantic find](https://docs.typesafe.ai/cookbooks/semantic_find.md), [rerank](https://docs.typesafe.ai/cookbooks/rerank_typesafe.md)
+
+From [Raksha’s roundup](https://x.com/rakshaa_t/status/2101950814545961082) and those cookbooks:
 
 - **Semantic find, not a results page.** Needle: find what you mean; highlight the source; do not generate an answer.
 - **Live filter chips.** Rows drop out in real time; a wrong hide can be put back.
@@ -158,17 +166,37 @@ From Raksha T’s Jev roundup and TypeSafe cookbooks:
 
 Thread rule: no generated answer unless generation is the component.
 
+From [Peng Zheng](https://x.com/pengzheng_/status/2102069593485238508), semantic autocomplete. Two clips, same loop: a loose phrase completes into something the system already knows, while you are still typing.
+
+- “go to the cafe…” becomes “the cafe I went to last week with Alex Morgan,” with a small probability mark while it settles, then a concrete line (“Blue Bottle Coffee”) once you take it.
+- “add … and my fi…” completes into a named file, with the source’s icon on the suggestion. The ghost text is a match, not a new sentence.
+
+Steal the ghost completion and the probability on it. The closed set is this catalog: pieces, tags, spans. A weak match stays blank. Accepting writes the match into the query. It does not generate the weekend plan, or a new document.
+
+From [Jonathan Moore](https://x.com/Moore/status/2102078191758102998), speaking a layout into place (Jev, shadcn, a local transcription model):
+
+- **Point, then speak.** The pointer names the target. The sentence is the verb (“add an email input”, “make the button full”). The model does not have to guess which element.
+- **One change.** The prompt says so, and the trace enforces it: hear the request, read the canvas, choose an action and a target, apply, stop.
+- **The trace is the wait.** A side panel writes the steps as they happen — heard words, canvas context, “evaluating”, “awaiting the result”, then “Applied” with what changed. Judging and building are different lines. No spinner standing in for both.
+- **Name the target on the thing.** While it decides, the chosen element wears its label (“Send button”). You can see what it thinks you meant before the edit lands.
+- **Pause to apply.** Listening is a state you can stop. Apply is a separate act, so a bad hearing does not have to become a change.
+
+Steal the loop, not the product. This site does not speak new components into a blank canvas. The useful part is a pointed target plus a verb, and a trace that keeps hearing, judging, and applying apart. Voice and typing are the same input.
+
+From [Runway Labs](https://x.com/runwayml_labs/status/2102035097436455021), responsive generative video. The opening clip is a painted ski slope. Wide, it holds three numbered markers: the lift, the trees, the run. The frame is dragged tall, and the same slope restacks into a vertical picture: lift on one side, run down the middle, trees on the other. The picture answers the new frame.
+
+Steal the constraint, not a generated operating system. On this site the grid already changes with the viewport. A generated image can do the same: the axes, the tags, and the sources stay put, and the picture recomposes for the frame it is in. That belongs with Images and the moodboard, after those exist. The thread goes on past this clip.
+
 ---
 
 ## Build order
 
 1. FAQs (live) — Jev pick still to wire
-2. Look At (in-chapter find)
+2. Find (site-wide ⌘F needle)
 3. Navigation search + chips
-4. Bot routing
-5. Infinite Article fork
-6. Images as caption–prompt judges
-7. **Generative Moodboard**
-8. Image Generation controls around a single prompt/result, if still needed
+4. Infinite Article fork
+5. Images as caption–prompt judges
+6. **Generative Moodboard**
+7. Image Generation controls around a single prompt/result, if still needed
 
 1–3 are the same two primitives: rank a closed set, and don’t act when `exists` is low.

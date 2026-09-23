@@ -10,8 +10,8 @@ export const uis: Record<string, Component<UiProps>> = {
   "infinite-article": lazy(() => import("./InfiniteArticle")),
   navigation: lazy(() => import("./Navigation")),
   images: lazy(() => import("./Images")),
-  bot: lazy(() => import("./Bot")),
-  "look-at": lazy(() => import("./LookAt")),
+  find: lazy(() => import("./Find")),
+  "generative-moodboard": lazy(() => import("./GenerativeMoodboard")),
   "image-generation": lazy(() => import("./ImageGeneration")),
 };
 
@@ -27,4 +27,14 @@ export function resolveUiName(
 export function resolveUi(name: string | null): Component<UiProps> | undefined {
   if (!name) return undefined;
   return uis[name];
+}
+
+/** Art-directed pages for `/uis/:slug`. Schematics stay on the `uis` map. */
+export const directedUis: Record<string, Component<UiProps>> = {
+  faqs: lazy(() => import("./directed/Faqs")),
+};
+
+export function resolveDirectedUi(name: string | null): Component<UiProps> | undefined {
+  if (!name) return undefined;
+  return directedUis[name];
 }

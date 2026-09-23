@@ -2,7 +2,8 @@ import type { CollectionDocItem } from "@content-software/client";
 import { pagePath } from "@local/content";
 import { getCollection, getLlms } from "~/content";
 import { cms, cmsStatus, siteSection } from "~/lib/cms";
-import { tagsFor } from "~/uis/meta";
+import { resolvePieceTags } from "~/lib/piece-tags";
+import { tagPath } from "~/uis/meta";
 import { SITE } from "~/lib/site";
 
 export const SECTION_ORDER = ["preface", "foundations", "uis"] as const;
@@ -16,6 +17,7 @@ type PieceCard = {
   section?: unknown;
   order?: unknown;
   description?: unknown;
+  excerpt?: unknown;
   tags?: unknown;
 };
 
@@ -57,14 +59,6 @@ export function parsePieceSeoPath(
   return { section, slug };
 }
 
-function looksLikeTags(value: string): boolean {
-  const parts = value.split(/,\s*/).map((tag) => tag.trim()).filter(Boolean);
-  return (
-    parts.length > 0 &&
-    parts.every((tag) => /^[A-Z0-9][A-Z0-9-]*$/.test(tag))
-  );
-}
-
 async function listAllPieceItems(): Promise<CollectionDocItem<PieceCard>[]> {
   const first = await cms().listCollection<PieceCard>("pieces");
   const items = [...first.items];
@@ -81,17 +75,19 @@ async function listAllPieceItems(): Promise<CollectionDocItem<PieceCard>[]> {
 }
 
 export async function listSeoPieces(): Promise<SeoPiece[]> {
+  const client = cms();
   const items = await listAllPieceItems();
-  return items
-    .map((item) => {
+  const pieces = await Promise.all(
+    items.map(async (item) => {
       const section = siteSection(String(item.card?.section ?? ""));
       if (!isPieceSection(section)) return null;
-      const raw =
+      const excerpt =
+        typeof item.card?.excerpt === "string" ? item.card.excerpt.trim() : "";
+      const description =
         typeof item.card?.description === "string" ? item.card.description.trim() : "";
-      const summary = raw && !looksLikeTags(raw) ? raw : "";
+      const summary = excerpt || description;
       const order =
         typeof item.card?.order === "number" ? item.card.order : Number.POSITIVE_INFINITY;
-      const cmsTags = item.card?.tags ?? (raw && looksLikeTags(raw) ? raw : undefined);
       return {
         slug: item.slug,
         section,
@@ -99,9 +95,11 @@ export async function listSeoPieces(): Promise<SeoPiece[]> {
         summary,
         updated: item.updated || null,
         order,
-        tags: tagsFor(item.slug, cmsTags),
+        tags: await resolvePieceTags(item.slug, item.card, client),
       };
-    })
+    }),
+  );
+  return pieces
     .filter((piece): piece is SeoPiece => piece !== null)
     .sort((a, b) => {
       const bySection =
@@ -259,7 +257,7 @@ export async function sitemapEntries(): Promise<SitemapEntry[]> {
       updated: piece.updated,
     })),
     ...[...new Set(pieces.flatMap((piece) => piece.tags))].sort().map((tag) => ({
-      url: `/data/${encodeURIComponent(tag)}`,
+      url: tagPath(tag),
     })),
   ];
 }

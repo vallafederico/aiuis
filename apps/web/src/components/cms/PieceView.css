@@ -4,21 +4,41 @@
   margin-top: 1.25em;
 }
 
-/* .cms-notes — quiet endnote; the "Notes" label and dimmed body text are
-   rendered via MsdfText/CmsMsdfBlock (see CmsBody.tsx) since CSS opacity
-   on this element doesn't reach the WebGL-drawn glyphs */
+/* .cms-notes — quiet endnote. Glyphs are MsdfText, so color lives on the
+   text component, not on this element's CSS color. */
 .cms-notes {
+  max-width: 100%;
   margin-top: 3rem;
   padding-top: 1.5rem;
-  border-top: 1px solid currentColor;
-  font-size: 0.8125rem; /* between xs and sm — quieter than body */
+  font-size: 0.8125rem;
   line-height: 1.6;
 }
 
-/* Don't let Tailwind prose style the aside's p tags with extra top margin */
-.cms-notes > p {
+/* Desktop: two note columns, each three page columns wide, side by side. */
+@media (min-width: 769px) {
+  .cms-notes-body {
+    display: grid;
+    grid-template-columns: var(--spacing-grids-3) var(--spacing-grids-3);
+    column-gap: var(--gutter);
+    align-items: start;
+  }
+}
+
+.cms-notes-body > div {
+  min-width: 0;
+}
+
+.cms-notes-body p {
   margin-top: 0;
   margin-bottom: 0;
+}
+
+.cms-notes-body p + p {
+  margin-top: 0.75rem;
+}
+
+.cms-notes > .cms-notes-label {
+  margin-bottom: 1.5rem;
 }
 
 /* .cms-foreword — lead-in between title and body; half size, no chrome */

@@ -1,0 +1,161 @@
+.uis-mock[data-ui="find"] {
+  width: var(--spacing-grids-6);
+  max-width: 100%;
+}
+
+.uis-mock[data-ui="find"] .uis-mock-kicker::after {
+  content: " · live";
+  opacity: 0.45;
+}
+
+.uis-find {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.uis-find-search {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-key);
+}
+
+.uis-find.is-dark .uis-find-search {
+  border-bottom-color: rgb(0 0 255 / 0.18);
+}
+
+.uis-find-input {
+  width: 100%;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: -0.04em;
+}
+
+.uis-find-input:focus {
+  outline: none;
+  background: rgb(0 0 255 / 0.06);
+}
+
+.uis-find.is-dark .uis-find-input:focus {
+  background: transparent;
+}
+
+.uis-find-input::placeholder {
+  color: var(--color-key);
+  opacity: 0.4;
+}
+
+.uis-find-hits {
+  display: flex;
+  flex-shrink: 0;
+  max-height: 7rem;
+  flex-direction: column;
+  gap: 1px;
+  overflow: auto;
+  border-bottom: 1px solid rgb(0 0 255 / 0.15);
+}
+
+.uis-find.is-partial .uis-find-hits {
+  opacity: 0.55;
+}
+
+.uis-find-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.4rem 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.uis-find-hit:hover {
+  background: rgb(0 0 255 / 0.06);
+}
+
+.uis-find-hit-title {
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  opacity: 0.55;
+}
+
+.uis-find-hit-preview {
+  font-size: 12px;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.uis-find-doc {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+  overflow: auto;
+  padding: 0.25rem 10px 0.5rem;
+}
+
+.uis-find-p {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: -0.03em;
+  line-height: 1.45;
+  transition: background-color 0.25s ease;
+}
+
+.uis-find-p.is-hit {
+  background: color-mix(
+    in srgb,
+    var(--color-key) calc(var(--find-hit, 1) * 18%),
+    transparent
+  );
+  outline: 1px solid
+    color-mix(in srgb, var(--color-key) calc(var(--find-hit, 1) * 35%), transparent);
+  outline-offset: 2px;
+}
+
+.uis-find-p-meta {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.4;
+}
+
+.uis-find-empty {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-size: 12px;
+  opacity: 0.45;
+}
+
+.uis-find-hit-badge {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+.uis-find-status {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.35rem 10px;
+  border-top: 1px solid rgb(0 0 255 / 0.12);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}

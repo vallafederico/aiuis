@@ -19,6 +19,11 @@ void main() {
   vec2 q = abs(p - halfSize) - (halfSize - vec2(r));
   float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
   float a = 1.0 - smoothstep(-0.75, 0.75, d);
+  // value1 > 1 draws the whole shape (current-page strike, pills).
+  // 0–1 wipes that shape from the left (hover).
+  float wipe = uUni[0].x;
+  float full = step(1.5, wipe);
+  a *= mix(step(vUv.x, clamp(wipe, 0.0, 1.0)), 1.0, full);
   vec3 fill = vec3(uUni[1].x, uUni[1].y, uUni[1].z);
   outColor = vec4(fill * a, a);
 }
@@ -34,10 +39,14 @@ export default function GlRoundRect(props: {
   radius?: number;
   /** Draw order. Text sits at 10; pass a higher layer to paint over glyphs. */
   layer?: number;
+  /** 0–1 left-to-right fill. Omit for a full rect. */
+  wipe?: number;
   children?: JSX.Element;
 }) {
   let el!: HTMLDivElement;
   let item: ItemController | undefined;
+  let wipeRef = props.wipe == null ? 2 : props.wipe;
+  let fillRef: [number, number, number] = [0.8745, 0.8745, 0.8745];
 
   const syncSize = () => {
     const rect = el.getBoundingClientRect();
@@ -50,7 +59,6 @@ export default function GlRoundRect(props: {
 
   createEffect(() => {
     if (isServer || !webgl.loaded) return;
-    const fill = props.fill ?? ([0.8745, 0.8745, 0.8745] as const);
     const radius = props.radius;
     const rect = el.getBoundingClientRect();
     const dpr = getCanvasDensity();
@@ -61,10 +69,11 @@ export default function GlRoundRect(props: {
       uni: {
         value2: (rect.width || 1) * dpr,
         value4: (rect.height || 1) * dpr,
-        value5: fill[0],
-        value6: fill[1],
-        value7: fill[2],
+        value5: fillRef[0],
+        value6: fillRef[1],
+        value7: fillRef[2],
         value8: radius == null ? -1 : radius * dpr,
+        value1: wipeRef,
       },
     });
     window.requestAnimationFrame(syncSize);
@@ -74,6 +83,17 @@ export default function GlRoundRect(props: {
       item?.destroy();
       item = undefined;
     });
+  });
+
+  createEffect(() => {
+    wipeRef = props.wipe == null ? 2 : props.wipe;
+    item?.setUni({ value1: wipeRef });
+  });
+
+  createEffect(() => {
+    const fill = props.fill ?? ([0.8745, 0.8745, 0.8745] as [number, number, number]);
+    fillRef = fill;
+    item?.setUni({ value5: fill[0], value6: fill[1], value7: fill[2] });
   });
 
   return (

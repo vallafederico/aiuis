@@ -4,11 +4,11 @@ name: page-building
 audience: [content-agent]
 attach: collection:pages
 mode: always
-description: "Full-agentic composition rules for the pages collection — slice ordering, adjacency, reuse patterns"
+description: "Full-agentic composition rules for the pages collection: slice ordering, adjacency, reuse patterns"
 lint:
   banned_terms: ["click here", "learn more"]
 ---
-# Page building — slice composition rules
+# Page building
 
 ## Before you start
 
@@ -31,7 +31,7 @@ Call `query({ collection: "pages", status: "published" })` and read two or three
 hero → prose: always valid.
 prose → prose: valid; use when you have a clear topic break.
 prose → cta: valid at the end; avoid mid-page unless the page is explicitly a landing page with a high-intent reader.
-cta → prose: avoid — it implies the call to action failed and you are backpedaling.
+cta → prose: avoid. It implies the call to action failed and you are backpedaling.
 
 ## Never fabricate testimonial references or external claims
 

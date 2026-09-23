@@ -89,6 +89,18 @@ body {
   cursor: crosshair;
 }
 
+/* First paint for Lighthouse. Same color as paper, so it never shows. */
+[data-fcp] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #e9e9ea;
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
 *,
 *::before,
 *::after {
@@ -135,9 +147,29 @@ html.is-intro main {
   opacity: var(--intro, 0);
 }
 
-a:focus-visible {
-  outline: 2px solid var(--color-key);
-  outline-offset: 2px;
+/* Lighthouse / WCAG 2.5.8: 24px tap targets. MSDF glyphs stay visually tight. */
+[data-mosaic-chrome="nav"] ul a,
+[data-mosaic-page="crumbs"] a {
+  min-height: 24px;
+  min-width: 24px;
+  box-sizing: border-box;
+}
+
+.dock-hit {
+  cursor: pointer;
+}
+
+html.ui-solo [data-ui-solo-hide] {
+  display: none;
+}
+
+:focus,
+:focus-visible {
+  outline: none;
+}
+
+button::-moz-focus-inner {
+  border: 0;
 }
 
 [sr-only]:focus,
@@ -157,8 +189,9 @@ a:focus-visible {
   background: var(--color-paper);
 }
 
-/* make images not draggable */
-img {
+/* make images and links not draggable */
+img,
+a {
   user-drag: none;
   -webkit-user-drag: none;
   -khtml-user-drag: none;

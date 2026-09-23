@@ -1,5 +1,8 @@
+import { lazy } from "solid-js";
 import { useParams } from "@solidjs/router";
-import { TagView, getTagPage } from "~/components/cms/TagView";
+import { getTagPage } from "~/lib/tags";
+
+const TagView = lazy(() => import("~/components/cms/TagView"));
 
 export const route = {
   preload: ({ params }: { params: { tag: string } }) => getTagPage(params.tag),

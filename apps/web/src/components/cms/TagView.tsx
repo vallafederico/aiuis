@@ -3,16 +3,18 @@ import { createAsync } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
 import Metadata from "~/components/Metadata";
 import PageContent from "~/components/PageContent";
+import { NavHit, NavHitText } from "~/components/NavHit";
 import MsdfText from "~/components/webgl/MsdfText";
 import GlRoundRect from "~/components/webgl/GlRoundRect";
 import { SECTION_LABEL, piecePath } from "~/lib/llm-seo";
 import { getTagPage } from "~/lib/tags";
+import { tagPath } from "~/uis/meta";
 import "./CompPiece.css";
 import "./TagView.css";
 
 export { getTagPage };
 
-export function TagView(props: { tag: string }) {
+export default function TagView(props: { tag: string }) {
   const data = createAsync(() => getTagPage(props.tag), { deferStream: true });
   const page = () => {
     const d = data();
@@ -51,9 +53,9 @@ export function TagView(props: { tag: string }) {
           {(result) => (
             <>
               <Metadata
-                title={`${result.tag} — aiuis`}
-                description={`Pieces tagged ${result.tag}.`}
-                path={`/data/${encodeURIComponent(result.tag)}`}
+                title={`${result.label} — aiuis`}
+                description={`Pieces tagged ${result.label}.`}
+                path={tagPath(result.tag)}
               />
               <PageContent flow>
                 <div class="tag-page">
@@ -64,7 +66,7 @@ export function TagView(props: { tag: string }) {
                     <span class="uis-tag">
                       <GlRoundRect class="uis-tag-fill" />
                       <MsdfText
-                        text={result.tag}
+                        text={result.label}
                         font="AlteHaasGroteskBold"
                         tracking={0.32}
                         weird
@@ -75,23 +77,21 @@ export function TagView(props: { tag: string }) {
                     <For each={result.pieces}>
                       {(piece) => (
                         <li>
-                          <a href={piecePath(piece.section, piece.slug)}>
+                          <NavHit class="nav-hit" href={piecePath(piece.section, piece.slug)}>
                             <span class="tag-page-section">
-                              <MsdfText
+                              <NavHitText
                                 text={`${SECTION_LABEL[piece.section].charAt(0)}.`}
                                 font="Garara-10"
-                                weird
                               />
                             </span>
                             <span class="tag-page-item">
-                              <MsdfText
+                              <NavHitText
                                 text={piece.title}
                                 font="AlteHaasGroteskBold"
                                 tracking={-0.12}
-                                weird
                               />
                             </span>
-                          </a>
+                          </NavHit>
                         </li>
                       )}
                     </For>

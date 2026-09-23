@@ -1,97 +1,19 @@
 import { Show, Suspense } from "solid-js";
-import { createAsync, query } from "@solidjs/router";
+import { createAsync } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
 import Metadata from "~/components/Metadata";
+import { ArticleFocus } from "~/components/ArticleFocus";
 import PageContent from "~/components/PageContent";
 import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
 import { CmsBody, CmsForeword } from "~/components/cms/CmsBody";
 import { CompPiece } from "~/components/cms/CompPiece";
 import { extractAside, hastToPlainText, type HastNode } from "~/components/cms/hast";
-import { cms, cmsStatus, siteSection } from "~/lib/cms";
-import { formatUpdated, labelsFromCms, tagsFor, tagsFromMarkdown } from "~/uis/meta";
-import { resolveUi, resolveUiName } from "~/uis/registry";
+import { liftKnownAsides } from "~/lib/article-asides";
+import { getPiece } from "~/lib/piece";
+import { resolveUi } from "~/uis/registry";
 import "./PieceView.css";
 
-type PieceResult =
-  | {
-      slug: string;
-      section: string;
-      body_hast: HastNode | null;
-      title: string;
-      excerpt: string;
-      component: string | null;
-      tags: string[];
-      updated: string | null;
-      updatedIso: string | null;
-    }
-  | { unavailable: true }
-  | null;
-
-async function publishedMeta(slug: string): Promise<{
-  updated: string | null;
-  updatedIso: string | null;
-  tags: unknown;
-}> {
-  try {
-    const list = await cms().listCollection("pieces");
-    const item = list.items.find((entry) => entry.slug === slug);
-    return {
-      updated: formatUpdated(item?.updated),
-      updatedIso: item?.updated ?? null,
-      tags: item?.card?.tags,
-    };
-  } catch {
-    return { updated: null, updatedIso: null, tags: undefined };
-  }
-}
-
-export const getPiece = query(
-  async (slug: string, expectedSection: string): Promise<PieceResult> => {
-    "use server";
-    try {
-      const data = await cms().getDoc("pieces", slug, { format: "json" });
-      const section =
-        typeof data.section === "string" ? siteSection(data.section) : null;
-      if (!section || section !== expectedSection) return null;
-      const title = typeof data.title === "string" && data.title ? data.title : slug;
-      const body_hast = (data.body_hast as HastNode | undefined) ?? null;
-      const excerpt = typeof data.excerpt === "string" ? data.excerpt : "";
-      const component = resolveUiName(
-        (data as { component?: unknown }).component,
-        slug,
-        section,
-      );
-      const published = await publishedMeta(slug);
-      let cmsTags: unknown = (data as { tags?: unknown }).tags ?? published.tags;
-      if (component && labelsFromCms(cmsTags).length === 0) {
-        try {
-          const markdown = await cms().getDoc("pieces", slug, { format: "md" });
-          if (typeof markdown === "string") cmsTags = tagsFromMarkdown(markdown);
-        } catch {
-          /* derive JSON omits extra fields; markdown is best-effort */
-        }
-      }
-      const tags = tagsFor(slug, cmsTags);
-      return {
-        slug,
-        section,
-        body_hast,
-        title,
-        excerpt,
-        component,
-        tags,
-        updated: published.updated,
-        updatedIso: published.updatedIso,
-      };
-    } catch (e: unknown) {
-      const status = cmsStatus(e);
-      if (status === 404) return null;
-      if (status === 503) return { unavailable: true };
-      throw e;
-    }
-  },
-  "piece"
-);
+export { getPiece } from "~/lib/piece";
 
 function metaDescription(piece: {
   excerpt: string;
@@ -110,7 +32,7 @@ function metaDescription(piece: {
   return `${text.slice(0, 157).trimEnd()}…`;
 }
 
-export function PieceView(props: {
+export default function PieceView(props: {
   slug: string;
   section: string;
   /* grid width for the piece body — passed through to PageContent */
@@ -152,7 +74,7 @@ export function PieceView(props: {
           }
         >
           {(p) => {
-            const extracted = extractAside(p.body_hast, "cms-foreword");
+            const extracted = extractAside(liftKnownAsides(p.body_hast), "cms-foreword");
             const Ui = resolveUi(p.component);
             return (
               <div class="contents">
@@ -169,19 +91,21 @@ export function PieceView(props: {
                   keyed
                   fallback={
                     <PageContent flow width={props.width}>
-                      <h1 class="mb-8">
-                        <CmsMsdfBlock text={p.title} class="text-6xl -tracking-widest" />
-                      </h1>
-                      <Show when={extracted.node}>
-                        {(node) => (
-                          <div class="cms-foreword-wrap mb-8 w-grids-5">
-                            <CmsForeword node={node()} />
-                          </div>
-                        )}
-                      </Show>
-                      <article class="cms-body max-w-none text-[2rem] leading-snug">
-                        <CmsBody hast={extracted.rest} />
-                      </article>
+                      <ArticleFocus>
+                        <h1 class="mb-8">
+                          <CmsMsdfBlock text={p.title} class="text-6xl -tracking-widest" />
+                        </h1>
+                        <Show when={extracted.node}>
+                          {(node) => (
+                            <div class="cms-foreword-wrap mb-8 w-grids-4">
+                              <CmsForeword node={node()} />
+                            </div>
+                          )}
+                        </Show>
+                        <article class="cms-body max-w-none text-[2rem] leading-snug">
+                          <CmsBody hast={extracted.rest} />
+                        </article>
+                      </ArticleFocus>
                     </PageContent>
                   }
                 >

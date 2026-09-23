@@ -73,20 +73,54 @@ function CmsHeading(props: { node: HastElement }) {
   );
 }
 
+function noteLines(node: HastElement): string[] {
+  return elementChildren(node, "p").flatMap((paragraph) =>
+    hastToPlainText(paragraph)
+      .split(/\n+/)
+      .map((line) => line.replace(/[ \t]+/g, " ").trim())
+      .filter(Boolean),
+  );
+}
+
+/** A brief note stays in the first column. A longer list fills down, then across. */
+const SHORT_NOTE_WORDS = 40;
+
+function noteColumns(lines: string[]): [string[], string[]] {
+  if (lines.length === 0) return [[], []];
+  const wordCount = lines.join(" ").split(/\s+/).filter(Boolean).length;
+  if (wordCount < SHORT_NOTE_WORDS) return [lines, []];
+  if (lines.length === 1) {
+    const sentences = lines[0].split(/(?<=[.!?])\s+/).filter(Boolean);
+    if (sentences.length < 2) return [lines, []];
+    const mid = Math.ceil(sentences.length / 2);
+    return [sentences.slice(0, mid), sentences.slice(mid)];
+  }
+  const mid = Math.ceil(lines.length / 2);
+  return [lines.slice(0, mid), lines.slice(mid)];
+}
+
 function CmsNotes(props: { node: HastElement }) {
-  const paragraphs = () => elementChildren(props.node, "p");
+  const columns = () => noteColumns(noteLines(props.node));
   return (
     <aside class={hastClassNames(props.node).join(" ") || "cms-notes"}>
-      <p class="cms-notes-label uppercase tracking-[0.15em] text-[0.6875rem] mb-2">
-        <MsdfText text="Notes" font="Garara-10" alpha={0.7} />
+      <p class="cms-notes-label uppercase tracking-[0.15em] text-[0.6875rem]">
+        <MsdfText text="Notes" font="Garara-10" />
       </p>
-      <For each={paragraphs()}>
-        {(child) => (
-          <p>
-            <CmsMsdfBlock text={hastToPlainText(child)} alpha={0.55} />
-          </p>
-        )}
-      </For>
+      <div class="cms-notes-body">
+        <For each={columns()}>
+          {(column) => (
+            <div>
+              <For each={column}>
+                {(line) => (
+                  <p>
+                    <CmsMsdfBlock text={line} />
+                  </p>
+                )}
+              </For>
+            </div>
+          )}
+        </For>
+      </div>
     </aside>
   );
 }

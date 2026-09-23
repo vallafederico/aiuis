@@ -1,35 +1,139 @@
-import { For, Show, type JSX } from "solid-js";
+import { For, Show, onCleanup, onMount, type JSX } from "solid-js";
+import { createAsync } from "@solidjs/router";
+import { A, onEnter, onLeave, useLocation } from "@acme/router";
 import "./CompPiece.css";
 import CmsMsdfBlock from "./CmsMsdfBlock";
 import MsdfText from "~/components/webgl/MsdfText";
 import GlRoundRect from "~/components/webgl/GlRoundRect";
-import { tagPath } from "~/uis/meta";
+import { CountDigits } from "~/components/CountDigits";
+import { createWipe, NavHit, NavHitText } from "~/components/NavHit";
+import { getNavCatalog, navNumberFor } from "~/lib/sections";
+import { labelForTag, tagPath } from "~/uis/meta";
+import { readCssColor } from "~/components/webgl/css-color";
+
+const FEATURE_FADE_MS = 120;
+const FEATURE_DELAY_MS = 200;
+const PILL: [number, number, number] = [0.8745, 0.8745, 0.8745];
+
+function lerp3(
+  from: [number, number, number],
+  to: [number, number, number],
+  t: number,
+): [number, number, number] {
+  return [
+    from[0] + (to[0] - from[0]) * t,
+    from[1] + (to[1] - from[1]) * t,
+    from[2] + (to[2] - from[2]) * t,
+  ];
+}
+
+function TagHit(props: { href: string; label: string }) {
+  const motion = createWipe(220);
+  const fill = () => lerp3(PILL, readCssColor("--color-key"), motion.wipe());
+  return (
+    <A
+      href={props.href}
+      class="uis-tag pointer-events-auto"
+      onPointerEnter={() => motion.enter()}
+      onPointerLeave={() => motion.leave()}
+      onFocusIn={() => motion.enter()}
+      onFocusOut={() => motion.leave()}
+    >
+      <GlRoundRect class="uis-tag-fill" fill={fill()} />
+      <MsdfText
+        text={props.label}
+        font="AlteHaasGroteskBold"
+        tracking={0.32}
+        knockout
+        knockoutFill
+        wipe={motion.wipe()}
+        weird
+      />
+    </A>
+  );
+}
 
 export function CompPiece(props: {
   title: string;
   body: string;
   tags: string[];
   updated: string | null;
+  /** When set, a small Schematics link sits at the bottom of the meta sidebar. */
+  schematicsHref?: string;
   children: JSX.Element;
 }) {
+  const location = useLocation();
+  const catalog = createAsync(() => getNavCatalog(), { deferStream: true });
+  const number = () => {
+    const sections = catalog();
+    if (!sections) return null;
+    return navNumberFor(sections, location.pathname);
+  };
+
   const blurb = () => {
     const body = props.body.trim();
     if (!body) return props.title;
     return `${props.title} — ${body}`;
   };
 
+  let feature: HTMLDivElement | undefined;
+  let enterTimer = 0;
+
+  const clearEnter = () => {
+    if (typeof window === "undefined") return;
+    window.clearTimeout(enterTimer);
+  };
+
+  const fadeFeatureIn = () => {
+    if (!feature || typeof window === "undefined") return;
+    clearEnter();
+    feature.style.opacity = "";
+    feature.classList.remove("is-in", "is-out");
+    enterTimer = window.setTimeout(() => {
+      if (!feature) return;
+      void feature.offsetWidth;
+      feature.classList.add("is-in");
+    }, FEATURE_DELAY_MS);
+  };
+
+  onMount(fadeFeatureIn);
+  onEnter(fadeFeatureIn);
+
+  onLeave(() => {
+    if (!feature || typeof window === "undefined") return;
+    clearEnter();
+    feature.style.opacity = "";
+    feature.classList.remove("is-in");
+    feature.classList.add("is-out");
+    return new Promise<void>((resolve) => {
+      window.setTimeout(resolve, FEATURE_FADE_MS);
+    });
+  });
+
+  onCleanup(() => {
+    clearEnter();
+    feature?.classList.remove("is-in", "is-out");
+  });
+
   return (
     <div class="uis-page">
       <h1 class="sr-only">{props.title}</h1>
-      <div class="uis-feature">{props.children}</div>
+      <div class="uis-feature" ref={feature}>
+        {props.children}
+      </div>
       {/* Last two grid columns, gx gutter to the viewport. Copy wraps at 80%. */}
-      <aside class="uis-meta pointer-events-none fixed top-0 right-0 z-5 flex h-lvh flex-col justify-center pr-gx py-[3svh]">
+      <aside
+        data-ui-solo-hide
+        class="uis-meta pointer-events-none fixed top-0 right-0 z-5 flex h-lvh flex-col justify-center pr-gx py-[3svh]"
+      >
         <div class="uis-meta-col flex w-grids-2 flex-col gap-8">
-          <p class="uis-meta-num" aria-hidden="true">
-            <MsdfText text="0" font="Garara-0" weird />
-            <MsdfText text="0" font="Garara-10" weird />
-            <MsdfText text="2" font="Garara-10" weird />
-          </p>
+          <Show when={number()}>
+            {(n) => (
+              <p class="uis-meta-num" aria-hidden="true">
+                <CountDigits value={n()} />
+              </p>
+            )}
+          </Show>
           <p class="uis-meta-blurb max-w-[80%]">
             <CmsMsdfBlock text={blurb()} tracking={-0.053} />
           </p>
@@ -38,19 +142,14 @@ export function CompPiece(props: {
               <p class="uis-meta-label">
                 <MsdfText text="DATA" font="Garara-10" weird />
               </p>
-              <ul class="flex flex-col items-start gap-2">
+              <ul class="flex flex-wrap items-start gap-2">
                 <For each={props.tags}>
                   {(tag) => (
-                    <li>
-                      <a class="uis-tag pointer-events-auto" href={tagPath(tag)}>
-                        <GlRoundRect class="uis-tag-fill" />
-                        <MsdfText
-                          text={tag.replaceAll("_", "-").toUpperCase()}
-                          font="AlteHaasGroteskBold"
-                          tracking={0.32}
-                          weird
-                        />
-                      </a>
+                    <li class="w-max">
+                      <TagHit
+                        href={tagPath(tag)}
+                        label={labelForTag(tag)}
+                      />
                     </li>
                   )}
                 </For>
@@ -72,6 +171,16 @@ export function CompPiece(props: {
                   />
                 </p>
               </div>
+            )}
+          </Show>
+          <Show when={props.schematicsHref}>
+            {(href) => (
+              <NavHit
+                href={href()}
+                class="uis-meta-hit pointer-events-auto relative inline-flex items-center"
+              >
+                <NavHitText text="Schematics" font="AlteHaasGroteskBold" />
+              </NavHit>
             )}
           </Show>
         </div>

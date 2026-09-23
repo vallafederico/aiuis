@@ -4,7 +4,7 @@ import { SITE } from "~/lib/site";
 const DEFAULTS = {
   title: "aiuis",
   description: "Working notes on designing interfaces for systems that think back.",
-  image: { src: "", alt: "" },
+  image: { src: `${SITE.url}/og.png`, alt: "aiuis" },
 };
 
 export default function Metadata({
@@ -58,13 +58,17 @@ export default function Metadata({
       <Meta property="og:title" content={title} />
       <Meta property="og:description" content={description} />
       <Meta property="og:type" content={type} />
-      <Meta name="twitter:card" content="summary" />
+      <Meta name="twitter:card" content="summary_large_image" />
       <Meta name="twitter:title" content={title} />
       <Meta name="twitter:description" content={description} />
       {canonical && <Link rel="canonical" href={canonical} />}
       {canonical && <Meta property="og:url" content={canonical} />}
       {image.src && <Meta property="og:image" content={image.src} />}
       {image.src && <Meta property="og:image:alt" content={image.alt} />}
+      {image.src && <Meta property="og:image:width" content="1200" />}
+      {image.src && <Meta property="og:image:height" content="630" />}
+      {image.src && <Meta name="twitter:image" content={image.src} />}
+      {image.src && <Meta name="twitter:image:alt" content={image.alt} />}
       {markdownHref && (
         <Link rel="alternate" type="text/markdown" href={markdownHref} />
       )}

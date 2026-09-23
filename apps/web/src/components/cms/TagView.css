@@ -11,11 +11,19 @@
 .tag-page-list {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  align-items: stretch;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.tag-page-list li {
+  display: flex;
 }
 
 .tag-page-list a {
+  position: relative;
   display: flex;
+  flex-grow: 1;
   align-items: baseline;
   gap: 0.75rem;
 }
