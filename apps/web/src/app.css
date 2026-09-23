@@ -147,6 +147,12 @@ html.is-intro main {
   opacity: var(--intro, 0);
 }
 
+/* Pages with their own CSS entrance from first paint. Dimming them until the
+   WebGL intro ends would hide the LCP element until the canvas is ready. */
+html.is-intro main:has([data-own-intro]) {
+  opacity: 1;
+}
+
 /* Lighthouse / WCAG 2.5.8: 24px tap targets. MSDF glyphs stay visually tight. */
 [data-mosaic-chrome="nav"] ul a,
 [data-mosaic-page="crumbs"] a {

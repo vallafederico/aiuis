@@ -21,17 +21,20 @@
   padding-left: var(--gx);
   padding-right: var(--gx);
   pointer-events: none;
-  opacity: 0;
-}
-
-.uis-feature.is-in {
-  opacity: 1;
-  transition: opacity 120ms linear;
+  animation: uis-feature-in 120ms linear 200ms both;
 }
 
 .uis-feature.is-out {
+  animation: none;
   opacity: 0;
   transition: opacity 120ms linear;
+}
+
+/* Not 0: content first painted under opacity 0 is not an LCP candidate. */
+@keyframes uis-feature-in {
+  from {
+    opacity: 0.01;
+  }
 }
 
 .uis-feature > * {

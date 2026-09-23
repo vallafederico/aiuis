@@ -84,14 +84,23 @@ export default function MsdfText(props: MsdfTextProps) {
     syncSize();
   };
 
+  // The aa band scales with these. A read while hidden (solo mode,
+  // mid-transition) returns 0 and would leave the glyphs soft once shown.
   const syncSize = () => {
     const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
     const dpr = getCanvasDensity();
     item?.setUni({
-      value2: (rect.width || 1) * dpr,
-      value4: (rect.height || 1) * dpr,
+      value2: rect.width * dpr,
+      value4: rect.height * dpr,
     });
   };
+
+  onMount(() => {
+    const resize = new ResizeObserver(syncSize);
+    resize.observe(el);
+    onCleanup(() => resize.disconnect());
+  });
 
   onMount(() => {
     if (!local.articleLine) return;

@@ -47,6 +47,7 @@ export {
   getBranchKey,
   destinationPathname,
   isSameLeafNavigation,
+  locationKeySearch,
 } from "./transitions/same-leaf";
 
 export type {

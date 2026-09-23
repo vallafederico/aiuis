@@ -20,7 +20,7 @@ export function loadSdf(name: string): Promise<SdfAssets> {
   if (!cached) {
     cached = Promise.all([
       fetch(`/msdf/${name}.json`).then((r) => r.json() as Promise<SdfMeta>),
-      loadTexture(`/msdf/${name}.png`, { fit: "stretch", data: true }),
+      loadTexture(`/msdf/${name}.sdf.webp`, { fit: "stretch", data: true }),
     ]).then(([meta, texture]) => ({ meta, texture }));
     sdfCache.set(name, cached);
   }

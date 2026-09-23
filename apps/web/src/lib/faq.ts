@@ -52,8 +52,11 @@ export function loadRememberedFaqs(): FaqItem[] {
       const id = typeof rec.id === "string" ? rec.id : "";
       const question =
         typeof rec.question === "string" ? formatQuestion(rec.question) : "";
-      const answer = typeof rec.answer === "string" ? rec.answer.trim() : "";
+      const answer = stripFaqSelfCite(
+        typeof rec.answer === "string" ? rec.answer.trim() : "",
+      );
       if (!id || !question || !answer) continue;
+      if (looksLikeRefusal(answer)) continue;
       if (SEED_FAQS.some((item) => item.id === id)) continue;
       if (seedQuestions.has(normQuestion(question))) continue;
       if (out.some((item) => item.id === id || normQuestion(item.question) === normQuestion(question))) {
@@ -296,9 +299,20 @@ function seedFallback(question: string): { question: string; answer: string } | 
   return SEED_FAQS[0] ?? null;
 }
 
+export function stripFaqSelfCite(text: string) {
+  return text.replace(/\s*From FAQs\.?\s*$/i, "").trim();
+}
+
+/** Splits the trailing "From <Title>." that `cited()` appends. */
+export function splitFaqCite(text: string): { body: string; source: string | null } {
+  const match = text.match(/^(.*?)\s*From ([^.]+?)\.\s*$/s);
+  if (!match) return { body: text, source: null };
+  return { body: match[1]!, source: match[2]!.trim() };
+}
+
 function cited(excerpt: string, title: string) {
-  const text = excerpt.replace(/\s+/g, " ").trim();
-  if (!title || title === "Brief") return text;
+  const text = stripFaqSelfCite(excerpt.replace(/\s+/g, " ").trim());
+  if (!title || title === "Brief" || /^faqs?$/i.test(title.trim())) return text;
   if (/\bfrom\s+\S+/i.test(text)) return text;
   return `${text} From ${title}.`;
 }

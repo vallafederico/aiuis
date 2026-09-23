@@ -1,11 +1,19 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { createAsync } from "@solidjs/router";
 import Metadata from "~/components/Metadata";
 import PageContent from "~/components/PageContent";
 import MsdfText from "~/components/webgl/MsdfText";
+import SdfImage from "~/components/webgl/SdfImage";
 import { NavHit, NavHitText } from "~/components/NavHit";
 import { getNavCatalog, sectionByHref } from "~/lib/sections";
 import "./SectionIndex.css";
+
+/** SDF marks in public/msdf, from src/assets/msdf/svg/section-*.svg. */
+const SECTION_ICON: Record<string, string> = {
+  "/preface": "section-preface",
+  "/foundations": "section-foundations",
+  "/uis": "section-uis",
+};
 
 export default function SectionIndex(props: { href: string }) {
   const catalog = createAsync(() => getNavCatalog(), { deferStream: true });
@@ -24,7 +32,11 @@ export default function SectionIndex(props: { href: string }) {
       <PageContent flow width="w-full">
         <div class="section-index flex flex-col gap-4">
           <h1 class="flex items-center text-2xl -tracking-widest">
-            <span class="w-15" aria-hidden="true" />
+            <span class="flex w-15 shrink-0 items-center" aria-hidden="true">
+              <Show when={SECTION_ICON[props.href]}>
+                {(name) => <SdfImage name={name()} class="section-index-icon" />}
+              </Show>
+            </span>
             <MsdfText
               text={section()?.title ?? ""}
               font="AlteHaasGroteskBold"

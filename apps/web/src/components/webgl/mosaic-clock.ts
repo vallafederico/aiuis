@@ -49,11 +49,23 @@ let pageEntry = false;
 let pageLeave = false;
 let leaveGate: Array<() => void> | null = null;
 let fullFrame = false;
+let chromeOnly = false;
+let chromeMix = false;
+let snapshotRequester: (() => Promise<boolean>) | undefined;
 let snapshotMode = false;
+let tickRaf = 0;
+let lastTickAt = -1;
 
 function emit() {
   sink?.(progress, crumb);
   getDefaultEngine()?.requestFrame();
+  if ((current || crumbPlay) && !tickRaf && typeof requestAnimationFrame !== "undefined") {
+    const loop = (now: number) => {
+      const running = tickMosaic(now);
+      tickRaf = running ? requestAnimationFrame(loop) : 0;
+    };
+    tickRaf = requestAnimationFrame(loop);
+  }
 }
 
 export function mosaicProgress() {
@@ -72,6 +84,31 @@ export function mosaicFullFrame() {
 export function setMosaicFullFrame(on: boolean) {
   fullFrame = on;
   emit();
+}
+
+/** Mosaic nav / logo / meta only — occupancy stays put (solo enter/exit). */
+export function mosaicChromeOnly() {
+  return chromeOnly;
+}
+
+/** Chrome-only play mixes per tile with the snapshot taken before the swap. */
+export function mosaicChromeMix() {
+  return chromeOnly && chromeMix;
+}
+
+export function setMosaicChromeOnly(on: boolean, mixSnapshot = false) {
+  chromeOnly = on;
+  chromeMix = on && mixSnapshot;
+  emit();
+}
+
+/** Registered by the post pass. Resolves true once a snapshot of the current frame exists. */
+export function setMosaicSnapshotRequester(fn: (() => Promise<boolean>) | undefined) {
+  snapshotRequester = fn;
+}
+
+export function requestMosaicSnapshot(): Promise<boolean> {
+  return snapshotRequester?.() ?? Promise.resolve(false);
 }
 
 /**
@@ -225,6 +262,14 @@ export function playMosaic(to: 0 | 1, duration = MOSAIC_MS): Promise<void> {
     interruptCrumb(1);
     pageInArmed = false;
   }
+  // A play can sit on `current` after the clock has already arrived — pump
+  // stopped, intro ended, progress is settled. Joining that object never
+  // resolves (and interrupting it can no-op). Finish it before starting.
+  if (current && Math.abs(progress - current.to) < 0.001) {
+    const stale = current.resolvers;
+    current = null;
+    for (const resolve of stale) resolve();
+  }
   if (Math.abs(progress - to) < 0.001 && !current) {
     progress = to;
     emit();
@@ -277,6 +322,8 @@ function advance(play: Play, now: number): { progress: number; t: number; done: 
 
 /** Advance both clocks. Returns true while either play is in flight. */
 export function tickMosaic(now: number): boolean {
+  if (now - lastTickAt < 8) return !!(current || crumbPlay);
+  lastTickAt = now;
   let running = false;
 
   if (current) {

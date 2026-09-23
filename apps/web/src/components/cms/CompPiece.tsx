@@ -1,4 +1,4 @@
-import { For, Show, onCleanup, onMount, type JSX } from "solid-js";
+import { For, Show, onCleanup, type JSX } from "solid-js";
 import { createAsync } from "@solidjs/router";
 import { A, onEnter, onLeave, useLocation } from "@acme/router";
 import "./CompPiece.css";
@@ -12,7 +12,6 @@ import { labelForTag, tagPath } from "~/uis/meta";
 import { readCssColor } from "~/components/webgl/css-color";
 
 const FEATURE_FADE_MS = 120;
-const FEATURE_DELAY_MS = 200;
 const PILL: [number, number, number] = [0.8745, 0.8745, 0.8745];
 
 function lerp3(
@@ -76,44 +75,21 @@ export function CompPiece(props: {
     return `${props.title} — ${body}`;
   };
 
+  // The fade in is a CSS animation from first paint (LCP must not wait on
+  // hydration). JS only drives the leave, and undoes it if a leave is cancelled.
   let feature: HTMLDivElement | undefined;
-  let enterTimer = 0;
 
-  const clearEnter = () => {
-    if (typeof window === "undefined") return;
-    window.clearTimeout(enterTimer);
-  };
-
-  const fadeFeatureIn = () => {
-    if (!feature || typeof window === "undefined") return;
-    clearEnter();
-    feature.style.opacity = "";
-    feature.classList.remove("is-in", "is-out");
-    enterTimer = window.setTimeout(() => {
-      if (!feature) return;
-      void feature.offsetWidth;
-      feature.classList.add("is-in");
-    }, FEATURE_DELAY_MS);
-  };
-
-  onMount(fadeFeatureIn);
-  onEnter(fadeFeatureIn);
+  onEnter(() => feature?.classList.remove("is-out"));
 
   onLeave(() => {
     if (!feature || typeof window === "undefined") return;
-    clearEnter();
-    feature.style.opacity = "";
-    feature.classList.remove("is-in");
     feature.classList.add("is-out");
     return new Promise<void>((resolve) => {
       window.setTimeout(resolve, FEATURE_FADE_MS);
     });
   });
 
-  onCleanup(() => {
-    clearEnter();
-    feature?.classList.remove("is-in", "is-out");
-  });
+  onCleanup(() => feature?.classList.remove("is-out"));
 
   return (
     <div class="uis-page">
@@ -124,6 +100,7 @@ export function CompPiece(props: {
       {/* Last two grid columns, gx gutter to the viewport. Copy wraps at 80%. */}
       <aside
         data-ui-solo-hide
+        data-mosaic-chrome="meta"
         class="uis-meta pointer-events-none fixed top-0 right-0 z-5 flex h-lvh flex-col justify-center pr-gx py-[3svh]"
       >
         <div class="uis-meta-col flex w-grids-2 flex-col gap-8">

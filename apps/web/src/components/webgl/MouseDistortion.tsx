@@ -8,6 +8,9 @@ import {
   crumbProgress,
   mosaicProgress,
   mosaicFullFrame,
+  mosaicChromeOnly,
+  mosaicChromeMix,
+  setMosaicSnapshotRequester,
   beginPageEntry,
   beginPageLeave,
   playMosaic,
@@ -74,14 +77,32 @@ function readChromeUv(backend: string) {
   const padY = 8 / H;
   const nav = document.querySelector<HTMLElement>("[data-mosaic-chrome=nav]");
   const logo = document.querySelector<HTMLElement>("[data-mosaic-chrome=logo]");
+  const meta = document.querySelector<HTMLElement>("[data-mosaic-chrome=meta]");
   const crumbs = document.querySelector<HTMLElement>("[data-mosaic-page=crumbs]");
   const navBox = nav?.getBoundingClientRect();
+  const metaBox = meta?.getBoundingClientRect();
   const navRight = navBox ? navBox.right / W + padX : 0;
+  // Solo hides meta / logo / crumbs (display: none, zero rects). Keep their
+  // last shown boxes so the solo mosaic still covers where they were.
+  if (!meta) lastChrome.metaLeft = 1;
+  else if (metaBox && metaBox.width > 0) lastChrome.metaLeft = metaBox.left / W - padX;
+  const logoBox = uvBox(logo, backend, W, H, padX, padY);
+  const crumbsBox = uvBox(crumbs, backend, W, H, padX, padY);
+  if (shown(logoBox, padX)) lastChrome.logo = logoBox;
+  if (shown(crumbsBox, padX)) lastChrome.crumbs = crumbsBox;
   return {
     navRight,
-    logo: uvBox(logo, backend, W, H, padX, padY),
-    crumbs: uvBox(crumbs, backend, W, H, padX, padY),
+    metaLeft: lastChrome.metaLeft,
+    logo: lastChrome.logo,
+    crumbs: lastChrome.crumbs,
   };
+}
+
+const lastChrome = { metaLeft: 1, logo: EMPTY_BOX, crumbs: EMPTY_BOX };
+
+/** A display:none element measures as a zero rect, i.e. only the padding. */
+function shown(box: typeof EMPTY_BOX, padX: number) {
+  return box.maxX - box.minX > padX * 2 + 1e-6;
 }
 
 /**
@@ -102,6 +123,10 @@ bool inBox(vec2 u, vec4 b) {
 
 bool inNavChrome(vec2 u, float navRight, vec4 logo) {
   return u.x < navRight || inBox(u, logo);
+}
+
+bool inSoloChrome(vec2 u, float navRight, vec4 logo, vec4 crumbs, float metaLeft) {
+  return inBox(u, crumbs) || inNavChrome(u, navRight, logo) || u.x > metaLeft;
 }
 
 // Staggered hop: each cell starts on another grid square and settles home.
@@ -188,8 +213,27 @@ vec4 applyEffect(vec4 color, vec2 uv, vec2 resolution, vec4 uni[4]) {
 
   vec2 zoomed = lensUv(uv, resolution, radiusUv, strength);
 
-  // uni[1].w: 1 = mosaic the whole frame, 2 = snapshot mix is available.
+  // uni[1].w: 1 = whole frame, 2 = snapshot mix, 3 = chrome only,
+  // 4 = chrome only with snapshot mix.
   float w = uni[1].w;
+  if (w > 2.5) {
+    // crumbP is packed as the meta column's left edge in this mode.
+    float metaLeft = crumbP;
+    if (!inSoloChrome(uv, navRight, logo, crumbs, metaLeft) || p >= 0.999) {
+      return texture(uTexture, zoomed);
+    }
+    vec2 srcUv = gridHop(zoomed, resolution, p);
+    if (!inSoloChrome(srcUv, navRight, logo, crumbs, metaLeft)) srcUv = zoomed;
+    // Parked cells keep the frame from before the solo swap; each flips to
+    // the live frame once it starts moving, so the swap mixes per tile.
+    if (w > 3.5) {
+      vec2 grid = max(floor(resolution / 32.0), vec2(4.0));
+      if (p < hash21(floor(zoomed * grid)) * 0.58) {
+        return texture(uSnap, clamp(srcUv, 0.0, 1.0));
+      }
+    }
+    return texture(uTexture, clamp(srcUv, 0.0, 1.0));
+  }
   bool mixOld = w > 1.5;
   if (w > 0.5 && !mixOld) {
     return mosaic(uv, zoomed, resolution, p, vec4(0.0, 0.0, 1.0, 1.0), false);
@@ -295,7 +339,14 @@ fn applyEffect(color: vec4f, uv: vec2f, resolution: vec2f, uni: Uni) -> vec4f {
   let logo = uni.values2;
   let crumbs = uni.values3;
   let zoomed = lensUv(uv, resolution, radiusUv, strength);
-  if (uni.values1.w > 0.5) {
+  let w = uni.values1.w;
+  if (w > 2.5) {
+    if (inBox(uv, crumbs) || inNavChrome(uv, navRight, logo) || uv.x > crumbP) {
+      return mosaic(uv, zoomed, resolution, p, vec4f(0.0, 0.0, 1.0, 1.0));
+    }
+    return textureSample(uTexture, uSampler, clamp(zoomed, vec2f(0.0), vec2f(1.0)));
+  }
+  if (w > 0.5 && w < 1.5) {
     return mosaic(uv, zoomed, resolution, p, vec4f(0.0, 0.0, 1.0, 1.0));
   }
   if (inBox(uv, crumbs)) {
@@ -459,6 +510,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
     let snapReady = false;
     let snapTex: WebGLTexture | null = null;
     let snapGl: WebGL2RenderingContext | null = null;
+    let snapWaiters: Array<(ok: boolean) => void> = [];
     const snapHandle = () =>
       snapTex && snapGl ? { texture: snapTex, gl: snapGl } : null;
 
@@ -483,9 +535,14 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const chromeUni = () => ({
       value6: chrome.navRight,
-      value7: crumbProgress(),
-      // 1 = mosaic the whole frame, 2 = snapshot mixing available.
-      value8: intro || mosaicFullFrame() ? 1 : snapReady ? 2 : 0,
+      value7: mosaicChromeOnly() ? chrome.metaLeft : crumbProgress(),
+      // 1 = whole frame, 2 = snapshot mix, 3 = chrome only (occupancy stays),
+      // 4 = chrome only mixed with the pre-swap snapshot.
+      value8: intro || mosaicFullFrame()
+        ? 1
+        : mosaicChromeOnly()
+          ? mosaicChromeMix() && snapReady ? 4 : 3
+          : snapReady ? 2 : 0,
       value9: chrome.logo.minX,
       value10: chrome.logo.minY,
       value11: chrome.logo.maxX,
@@ -538,6 +595,13 @@ export default function MouseDistortion(props: MouseDistortionProps) {
             snapReady = true;
             setMosaicSnapshotMode(true);
           }
+          const waiters = snapWaiters;
+          snapWaiters = [];
+          for (const resolve of waiters) resolve(true);
+        } else if (snapWaiters.length && frame.inputTexture.backend !== "webgl2") {
+          const waiters = snapWaiters;
+          snapWaiters = [];
+          for (const resolve of waiters) resolve(false);
         }
 
         const dt = Math.min(frame.delta * 0.001, 0.1);
@@ -593,7 +657,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
           getDefaultEngine()?.requestFrame();
         }
 
-        if (mouseSettled && radiusSettled && !trailHot && !intro && !mosaicFullFrame()) {
+        if (mouseSettled && radiusSettled && !trailHot && !intro && !mosaicFullFrame() && !mosaicChromeOnly()) {
           return;
         }
 
@@ -643,7 +707,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const strikeUni = () => ({
       value1: mosaicProgress(),
-      value2: intro || mosaicFullFrame() ? 1 : 0,
+      value2: intro || mosaicFullFrame() || mosaicChromeOnly() ? 1 : 0,
       value3: snapReady ? 1 : 0,
       value5: strikeBox.from.minX,
       value6: strikeBox.from.minY,
@@ -711,6 +775,23 @@ export default function MouseDistortion(props: MouseDistortionProps) {
     void playMosaic(1);
     kick();
 
+    setMosaicSnapshotRequester(
+      () =>
+        new Promise<boolean>((resolve) => {
+          if (!alive) return resolve(false);
+          snapWaiters.push(resolve);
+          wantSnapshot = true;
+          getDefaultEngine()?.requestFrame();
+          // Never hold a solo toggle hostage to a frame that does not come.
+          setTimeout(() => {
+            const i = snapWaiters.indexOf(resolve);
+            if (i < 0) return;
+            snapWaiters.splice(i, 1);
+            resolve(false);
+          }, 120);
+        }),
+    );
+
     const onPointerMove = (e: PointerEvent) => {
       const ox = offset[0] / window.innerWidth;
       const oy = offset[1] / window.innerHeight;
@@ -775,6 +856,9 @@ export default function MouseDistortion(props: MouseDistortionProps) {
       alive = false;
       clearHoldTimer();
       captureStrike = null;
+      setMosaicSnapshotRequester(undefined);
+      for (const resolve of snapWaiters) resolve(false);
+      snapWaiters = [];
       setMosaicSnapshotMode(false);
       if (snapTex && snapGl) snapGl.deleteTexture(snapTex);
       snapTex = null;

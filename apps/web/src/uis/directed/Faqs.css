@@ -1,8 +1,18 @@
+.uis-feature:has(.faq-page) {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--grid-column-width));
+  column-gap: var(--gutter);
+  align-items: center;
+  justify-content: start;
+}
+
 .faq-page {
   display: flex;
+  grid-column: 4 / span 6;
   flex-direction: column;
   gap: 0.35rem;
-  width: min(40rem, 100%);
+  width: auto;
+  max-width: none;
   max-height: 72svh;
   color: var(--color-key);
 }
@@ -19,14 +29,64 @@
   list-style: none;
 }
 
-.faq-page-item {
+.faq-page-item,
+.faq-page-ask {
   display: grid;
-  grid-template-columns: 2.25rem minmax(0, 1fr);
-  column-gap: 0.85rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  column-gap: var(--gutter);
+}
+
+/*
+ * First-paint intro, no JS: lines rise on expo.out and fade on a softer curve,
+ * staggered by --i. Keeping it off the hydration path keeps LCP at first paint.
+ * Faqs.tsx drops [data-intro] once it is done; later lines animate in via GSAP.
+ */
+.faq-page {
+  --faq-intro-delay: 0.1s;
+  --faq-stagger: 0.16s;
+}
+
+.faq-page[data-intro] .faq-page-item,
+.faq-page[data-intro] .faq-page-ask {
+  animation:
+    faq-line-rise 1.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    faq-line-fade 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation-delay: calc(var(--faq-intro-delay) + var(--i, 0) * var(--faq-stagger));
+}
+
+.faq-page[data-intro] .faq-page-ask {
+  --i: var(--n, 0);
+}
+
+.faq-page[data-intro] .faq-page-item.is-open .faq-page-a {
+  animation: faq-line-fade 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation-delay: calc(var(--faq-intro-delay) + (var(--i, 0) + 1) * var(--faq-stagger));
+}
+
+@keyframes faq-line-rise {
+  from {
+    transform: translateY(0.8em);
+  }
+}
+
+/* Not 0: an element first painted at opacity 0 is not an LCP candidate, and a
+   compositor-run fade never repaints it, so LCP would land when the intro ends. */
+@keyframes faq-line-fade {
+  from {
+    opacity: 0.01;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.faq-page-item {
   row-gap: 0;
+  align-items: start;
 }
 
 .faq-page-n {
+  grid-column: 1;
   padding-top: 0.7em;
   font-family: var(--font-garara);
   font-size: 10px;
@@ -37,6 +97,7 @@
 }
 
 .faq-page-q {
+  grid-column: 2 / -1;
   margin: 0;
   padding: 0;
   border: 0;
@@ -52,9 +113,9 @@
 
 .faq-page-body {
   display: grid;
-  grid-column: 2;
+  grid-column: 2 / span 4;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.5s var(--ease-in-out, cubic-bezier(0.4, 0, 0.2, 1));
+  transition: grid-template-rows 1.2s var(--expo-out, cubic-bezier(0.19, 1, 0.22, 1));
 }
 
 .faq-page-item.is-open .faq-page-body {
@@ -69,30 +130,67 @@
 .faq-page-a {
   margin: 0;
   padding: 0.7rem 0 1.1rem;
-  max-width: 34rem;
   font-size: 0.95rem;
   letter-spacing: -0.045em;
   line-height: 1.38;
+  opacity: 0;
+}
+
+.faq-page-cite {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(0 0 255 / 0.28);
+  transition:
+    background-color 0.2s linear,
+    color 0.2s linear,
+    border-color 0.2s linear;
+}
+
+.faq-page-cite:hover,
+.faq-page-cite:focus-visible {
+  background: var(--color-key);
+  color: var(--color-paper);
+  border-bottom-color: var(--color-key);
+}
+
+.faq-page-dots {
+  display: none;
+  align-items: center;
+  height: calc(0.95rem * 1.38);
+  padding: 0.7rem 0 1.1rem;
+  box-sizing: content-box;
+}
+
+.faq-page-item.is-pending .faq-page-dots {
+  display: flex;
 }
 
 .faq-page-item.is-pending .faq-page-a {
-  opacity: 0.5;
+  display: none;
+}
+
+/* Terminal-style cursor block, one line of answer type tall. */
+.faq-page-dots i {
+  width: 0.5em;
+  height: 1em;
+  font-size: 0.95rem;
+  background: currentColor;
+  animation: faq-cursor 1s steps(1, end) infinite;
+}
+
+@keyframes faq-cursor {
+  50% {
+    opacity: 0;
+  }
 }
 
 .faq-page-ask {
-  display: grid;
   flex-shrink: 0;
-  grid-template-columns: 2.25rem minmax(0, 1fr);
-  column-gap: 0.85rem;
-  align-items: end;
-}
-
-.faq-page-ask .faq-page-n {
-  padding-top: 0;
-  padding-bottom: 0.45em;
+  align-items: start;
 }
 
 .faq-page-ask-input {
+  grid-column: 2 / -1;
   width: 100%;
   margin: 0;
   padding: 0 0 0.4rem;
@@ -118,4 +216,30 @@
 
 .faq-page-ask-input:disabled {
   opacity: 0.45;
+}
+
+@media (max-width: 768px) {
+  .faq-page {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-page[data-intro] .faq-page-item,
+  .faq-page[data-intro] .faq-page-ask,
+  .faq-page[data-intro] .faq-page-item.is-open .faq-page-a {
+    animation: none;
+  }
+
+  .faq-page-body {
+    transition: none;
+  }
+
+  .faq-page-item.is-open .faq-page-a {
+    opacity: 1;
+  }
+
+  .faq-page-dots i {
+    animation: none;
+  }
 }

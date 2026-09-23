@@ -14,7 +14,7 @@ import { TransitionController } from "./transitions/controller";
 import { ControllerContext } from "./transitions/context";
 import { BranchStack } from "./transitions/branch-stack";
 import { NavigationGate } from "./transitions/navigation-gate";
-import { getBranchKey } from "./transitions/same-leaf";
+import { getBranchKey, locationKeySearch } from "./transitions/same-leaf";
 import type { TransitionConfig } from "./types";
 
 export interface RouterProps {
@@ -66,7 +66,7 @@ export function Router(props: RouterProps): JSX.Element {
     );
 
     const locationKey = createMemo(
-      () => branchKey() + (location.search || ""),
+      () => branchKey() + locationKeySearch(location.search || ""),
     );
 
     if (!cfg) {

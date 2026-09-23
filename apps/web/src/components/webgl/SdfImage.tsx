@@ -36,9 +36,15 @@ export default function SdfImage(props: SdfImageProps) {
   let item: ItemController | undefined;
   let disposed = false;
   let generation = 0;
+  let resize: ResizeObserver | undefined;
 
-  const syncWidth = () =>
-    item?.setUni({ value2: (el.clientWidth || 1) * getCanvasDensity() });
+  // The aa band is scaled by this width. Read 0 while hidden (solo mode,
+  // mid-transition) it would stick at 1px and draw the mark soft, so it
+  // follows the element's own size, not just window resizes.
+  const syncWidth = () => {
+    if (!el.clientWidth) return;
+    item?.setUni({ value2: el.clientWidth * getCanvasDensity() });
+  };
 
   createEffect(() => {
     if (!webgl.loaded) return;
@@ -63,6 +69,10 @@ export default function SdfImage(props: SdfImageProps) {
           },
         });
         window.requestAnimationFrame(syncWidth);
+        if (!resize) {
+          resize = new ResizeObserver(syncWidth);
+          resize.observe(el);
+        }
         window.addEventListener("resize", syncWidth);
       })
       .catch((error) => console.error("[SdfImage]", name, error));
@@ -72,6 +82,7 @@ export default function SdfImage(props: SdfImageProps) {
     disposed = true;
     if (isServer) return;
     window.removeEventListener("resize", syncWidth);
+    resize?.disconnect();
     item?.destroy();
   });
 

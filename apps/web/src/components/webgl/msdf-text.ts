@@ -55,7 +55,7 @@ export function loadMsdfFont(font: string): Promise<MsdfFontAssets> {
   if (!cached) {
     cached = Promise.all([
       fetch(`/msdf/${font}.json`).then((r) => r.json() as Promise<BmFont>),
-      loadTexture(`/msdf/${font}.png`, { fit: "stretch", format: "rgb", data: true }),
+      loadTexture(`/msdf/${font}.sdf.webp`, { fit: "stretch", format: "rgb", data: true }),
     ]).then(([metrics, texture]) => ({ metrics, texture }));
     fontCache.set(font, cached);
   }

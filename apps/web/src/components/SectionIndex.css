@@ -6,6 +6,10 @@
   margin-left: calc(var(--gx) + var(--spacing-grid-3) - (100vw * 2 / 12));
 }
 
+.section-index-icon {
+  width: 0.9em;
+}
+
 .section-index ul {
   display: flex;
   flex-direction: column;

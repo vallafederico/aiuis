@@ -1,12 +1,27 @@
 // @refresh reload
+import { getRequestEvent } from "solid-js/web";
 import { createHandler, StartServer } from "@solidjs/start/server";
 
 const PAPER = "#E9E9EA";
 
+function soloHtmlClass() {
+  const event = getRequestEvent();
+  const raw = event?.request?.url;
+  if (!raw) return undefined;
+  try {
+    const url = new URL(raw);
+    if (!url.searchParams.has("solo")) return undefined;
+    if (!/^\/uis\/[^/]+/.test(url.pathname)) return undefined;
+    return "ui-solo";
+  } catch {
+    return undefined;
+  }
+}
+
 export default createHandler(() => (
   <StartServer
     document={({ assets, children, scripts }) => (
-      <html lang="en">
+      <html lang="en" class={soloHtmlClass()}>
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />

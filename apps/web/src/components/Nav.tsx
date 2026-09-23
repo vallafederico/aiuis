@@ -8,7 +8,7 @@ import {
   onMount,
 } from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { A, onLeave, useLocation, usePreloadRoute } from "@acme/router";
+import { A, onLeave, useLocation, useNavigate, usePreloadRoute } from "@acme/router";
 import GlMark from "./webgl/GlMark";
 import GlRoundRect from "./webgl/GlRoundRect";
 import MsdfText from "./webgl/MsdfText";
@@ -25,7 +25,17 @@ import {
   navTotal,
   type NavSection,
 } from "~/lib/sections";
-import { iconMorph, isComponentPath, resetSolo, solo, toggleSolo } from "~/lib/solo";
+import {
+  enterSolo,
+  enterSoloInstant,
+  exitSolo,
+  hasSoloQuery,
+  iconMorph,
+  isComponentPath,
+  resetSolo,
+  solo,
+  withSoloPath,
+} from "~/lib/solo";
 import { labelForTag } from "~/uis/meta";
 import { CountDigits } from "./CountDigits";
 import { NavHit, NavHitText, createWipe } from "./NavHit";
@@ -84,9 +94,32 @@ function NavMsdf(props: {
 export const Nav = () => {
   const location = useLocation();
   const preload = usePreloadRoute();
+  const [soloReady, setSoloReady] = createSignal(false);
 
-  onLeave(() => {
-    resetSolo();
+  onMount(() => {
+    if (isComponentPath(location.pathname) && hasSoloQuery(location.search)) {
+      enterSoloInstant();
+    }
+    setSoloReady(true);
+  });
+
+  createEffect((prev?: { path: string }) => {
+    if (!soloReady()) return prev;
+    const path = location.pathname;
+    const want = isComponentPath(path) && hasSoloQuery(location.search);
+    const pathChanged = prev != null && prev.path !== path;
+    if (want) {
+      if (!solo()) {
+        // Another page's mosaic already covers the landing. Same-path ?solo
+        // (Hide interface) has to play the solo enter itself.
+        if (pathChanged) enterSoloInstant();
+        else void enterSolo();
+      }
+    } else if (solo()) {
+      if (pathChanged) resetSolo();
+      else void exitSolo();
+    }
+    return { path };
   });
 
   return (
@@ -381,13 +414,20 @@ function DockHit(props: {
 }
 
 function ComponentDock(props: { sections: NavSection[]; pathname: string }) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const neighbors = () => componentNeighbors(props.sections, props.pathname);
+  const hrefFor = (href: string) => (solo() ? withSoloPath(href) : href);
   return (
     <Show when={isComponentPath(props.pathname)}>
       <div class="fixed bottom-[3svh] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 pointer-events-auto">
         <Show when={neighbors()}>
           {(pair) => (
-            <DockHit href={pair().prev.href} label={`Previous, ${pair().prev.title}`} kind="prev" />
+            <DockHit
+              href={hrefFor(pair().prev.href)}
+              label={`Previous, ${pair().prev.title}`}
+              kind="prev"
+            />
           )}
         </Show>
         <DockHit
@@ -395,11 +435,20 @@ function ComponentDock(props: { sections: NavSection[]; pathname: string }) {
           morph={iconMorph()}
           pressed={solo()}
           label={solo() ? "Show interface" : "Hide interface"}
-          onClick={() => void toggleSolo()}
+          onClick={() => {
+            navigate(
+              withSoloPath(location.pathname, location.search, !solo()),
+              { replace: true },
+            );
+          }}
         />
         <Show when={neighbors()}>
           {(pair) => (
-            <DockHit href={pair().next.href} label={`Next, ${pair().next.title}`} kind="next" />
+            <DockHit
+              href={hrefFor(pair().next.href)}
+              label={`Next, ${pair().next.title}`}
+              kind="next"
+            />
           )}
         </Show>
       </div>
