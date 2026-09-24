@@ -2,6 +2,7 @@ import { createMemo, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import CmsMsdfBlock from "./CmsMsdfBlock";
 import MsdfText from "~/components/webgl/MsdfText";
+import { NavHit, NavHitText } from "~/components/NavHit";
 import {
   hastChildren,
   hastClassNames,
@@ -53,9 +54,9 @@ function CmsParagraph(props: { node: HastElement }) {
     >
       {(a) => (
         <p>
-          <a href={attr(a(), "href")}>
-            <CmsMsdfBlock text={hastToPlainText(a())} />
-          </a>
+          <NavHit href={attr(a(), "href") ?? "#"} class="relative inline-flex items-center">
+            <NavHitText text={hastToPlainText(a())} font="AlteHaasGroteskBold" weird={false} />
+          </NavHit>
         </p>
       )}
     </Show>
@@ -121,6 +122,32 @@ function CmsNotes(props: { node: HastElement }) {
           )}
         </For>
       </div>
+    </aside>
+  );
+}
+
+/** `:::small` in the CMS: fine print inline in the body, one line per source line. */
+function CmsSmall(props: { node: HastElement }) {
+  const paragraphs = () => elementChildren(props.node, "p");
+  const isSoleLink = (p: HastElement) => {
+    const kids = hastChildren(p).filter(isMeaningfulNode);
+    return kids.length === 1 && kids[0].type === "element" && kids[0].tagName === "a";
+  };
+  return (
+    <aside class="cms-small">
+      <For each={paragraphs()}>
+        {(p) => (
+          <Show when={!isSoleLink(p)} fallback={<CmsParagraph node={p} />}>
+            <For each={noteLines({ ...props.node, children: [p] })}>
+              {(line) => (
+                <p>
+                  <CmsMsdfBlock text={line} />
+                </p>
+              )}
+            </For>
+          </Show>
+        )}
+      </For>
     </aside>
   );
 }
@@ -255,6 +282,7 @@ function HastNodeView(props: { node: HastNode }) {
   if (/^h[1-6]$/.test(node.tagName)) return <CmsHeading node={node} />;
   if (node.tagName === "aside" && hastHasClass(node, "cms-notes")) return <CmsNotes node={node} />;
   if (node.tagName === "aside" && hastHasClass(node, "cms-foreword")) return <CmsForeword node={node} />;
+  if (node.tagName === "aside" && hastHasClass(node, "cms-small")) return <CmsSmall node={node} />;
   if (node.tagName === "figure") return <CmsFigure node={node} />;
   if (node.tagName === "img") return <CmsImg node={node} />;
   if (node.tagName === "ul" || node.tagName === "ol") return <CmsList node={node} />;

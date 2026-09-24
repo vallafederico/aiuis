@@ -41,6 +41,21 @@
   margin-bottom: 1.5rem;
 }
 
+/* .cms-small — fine print from a `:::small` directive: notes size, no label, stays in flow. */
+.cms-small {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.cms-small > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.cms-small > p + p {
+  margin-top: 0.35rem;
+}
+
 /* .cms-foreword — lead-in between title and body; half size, no chrome */
 .cms-foreword {
   font-size: 1rem;

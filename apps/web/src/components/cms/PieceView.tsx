@@ -8,7 +8,6 @@ import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
 import { CmsBody, CmsForeword } from "~/components/cms/CmsBody";
 import { CompPiece } from "~/components/cms/CompPiece";
 import { extractAside, hastToPlainText, type HastNode } from "~/components/cms/hast";
-import { liftKnownAsides } from "~/lib/article-asides";
 import { getPiece } from "~/lib/piece";
 import { resolveUi } from "~/uis/registry";
 import "./PieceView.css";
@@ -74,7 +73,7 @@ export default function PieceView(props: {
           }
         >
           {(p) => {
-            const extracted = extractAside(liftKnownAsides(p.body_hast), "cms-foreword");
+            const extracted = extractAside(p.body_hast, "cms-foreword");
             const Ui = resolveUi(p.component);
             return (
               <div class="contents">

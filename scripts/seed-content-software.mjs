@@ -23,17 +23,6 @@ function hostedSection(section) {
   return SITE_TO_HOSTED_SECTION[section] ?? section;
 }
 
-// The hosted project has no directive registry, and this token cannot register
-// schema/directives. :::notes fails validation. Raw HTML asides are stripped
-// on derive and the note text disappears from the article. Unwrap only when
-// creating a doc. The site lifts these paragraphs back into asides.
-function stripDirectives(body) {
-  return body
-    .replace(/^:::foreword\n([\s\S]*?)\n:::\n*/m, "$1\n\n")
-    .replace(/\n*:::notes\n([\s\S]*?)\n:::\s*$/m, "\n\n$1\n")
-    .replace(/:::[\w-]+[^\n]*\n([\s\S]*?)\n:::/g, "$1");
-}
-
 function walk(dir, base = dir) {
   const files = [];
   for (const entry of readdirSync(dir)) {
@@ -402,7 +391,7 @@ for (const file of pieceFiles) {
     const created = await callTool(apiUrl, token, "create_doc", {
       collection: "pieces",
       frontmatter: hostedFrontmatter(frontmatter),
-      body: stripDirectives(body),
+      body,
     });
     await callTool(apiUrl, token, "publish", { id: created.id, base_rev: created.rev });
     console.log(`[ok] ${slug}`);
