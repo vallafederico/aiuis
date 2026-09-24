@@ -2,10 +2,6 @@ import "./app.css";
 import { Link, MetaProvider } from "@solidjs/meta";
 import { Router } from "@acme/router";
 import { clientOnly } from "@solidjs/start";
-import { ContentProvider } from "@local/content/solid";
-import * as content from "~/content";
-import { mdxComponents } from "~/components/content/mdx";
-
 import { useViewport } from "~/lib/hooks/useViewport";
 
 import Layout from "~/components/Layout";
@@ -30,10 +26,7 @@ export default function App() {
     <Router
       root={(props) => (
         <MetaProvider>
-          <ContentProvider
-            content={content}
-            components={mdxComponents}
-          >
+          <>
             <Link
               rel="robots"
               type="text/plain"
@@ -46,7 +39,7 @@ export default function App() {
             <ClientCanvas />
             <ClientParticleGrid />
             <ClientMouseDistortion />
-          </ContentProvider>
+          </>
         </MetaProvider>
       )}
     >

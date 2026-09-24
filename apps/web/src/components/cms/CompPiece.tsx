@@ -6,7 +6,7 @@ import CmsMsdfBlock from "./CmsMsdfBlock";
 import MsdfText from "~/components/webgl/MsdfText";
 import GlRoundRect from "~/components/webgl/GlRoundRect";
 import { CountDigits } from "~/components/CountDigits";
-import { createWipe, NavHit, NavHitText } from "~/components/NavHit";
+import { NavHit, NavHitText, createWipe } from "~/components/NavHit";
 import { getNavCatalog, navNumberFor } from "~/lib/sections";
 import { labelForTag, tagPath } from "~/uis/meta";
 import { readCssColor } from "~/components/webgl/css-color";
@@ -26,13 +26,13 @@ function lerp3(
   ];
 }
 
-function TagHit(props: { href: string; label: string }) {
+function TagHit(props: { href: string; label: string; class?: string }) {
   const motion = createWipe(220);
   const fill = () => lerp3(PILL, readCssColor("--color-key"), motion.wipe());
   return (
     <A
       href={props.href}
-      class="uis-tag pointer-events-auto"
+      class={`uis-tag pointer-events-auto ${props.class ?? ""}`}
       onPointerEnter={() => motion.enter()}
       onPointerLeave={() => motion.leave()}
       onFocusIn={() => motion.enter()}
@@ -57,8 +57,9 @@ export function CompPiece(props: {
   body: string;
   tags: string[];
   updated: string | null;
-  /** When set, a small Schematics link sits at the bottom of the meta sidebar. */
-  schematicsHref?: string;
+  /** When set, a pill link to the other view (schematic ↔ component) sits at the bottom of the meta sidebar. */
+  altHref?: string;
+  altLabel?: string;
   children: JSX.Element;
 }) {
   const location = useLocation();
@@ -99,7 +100,7 @@ export function CompPiece(props: {
       </div>
       {/* Last two grid columns, gx gutter to the viewport. Copy wraps at 80%. */}
       <aside
-        data-ui-solo-hide
+        data-ui-component-hide
         data-mosaic-chrome="meta"
         class="uis-meta pointer-events-none fixed top-0 right-0 z-5 flex h-lvh flex-col justify-center pr-gx py-[3svh]"
       >
@@ -150,13 +151,15 @@ export function CompPiece(props: {
               </div>
             )}
           </Show>
-          <Show when={props.schematicsHref}>
+          <Show when={props.altHref}>
             {(href) => (
               <NavHit
                 href={href()}
-                class="uis-meta-hit pointer-events-auto relative inline-flex items-center"
+                class="uis-meta-alt pointer-events-auto relative inline-flex items-center min-h-6 min-w-6"
               >
-                <NavHitText text="Schematics" font="AlteHaasGroteskBold" />
+                <span class="relative inline-flex w-max">
+                  <NavHitText text={props.altLabel ?? ""} font="AlteHaasGroteskBold" />
+                </span>
               </NavHit>
             )}
           </Show>

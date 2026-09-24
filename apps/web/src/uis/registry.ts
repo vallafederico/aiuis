@@ -1,4 +1,5 @@
 import { lazy, type Component } from "solid-js";
+import { clientOnly } from "@solidjs/start";
 import type { UiProps } from "./types";
 
 /**
@@ -13,6 +14,9 @@ export const uis: Record<string, Component<UiProps>> = {
   find: lazy(() => import("./Find")),
   "generative-moodboard": lazy(() => import("./GenerativeMoodboard")),
   "image-generation": lazy(() => import("./ImageGeneration")),
+  "sketch-generation": lazy(() => import("./SketchGeneration")),
+  filters: lazy(() => import("./Filters")),
+  "type-an-analytic": lazy(() => import("./TypeAnAnalytic")),
 };
 
 export function resolveUiName(
@@ -32,7 +36,12 @@ export function resolveUi(name: string | null): Component<UiProps> | undefined {
 /** Art-directed pages for `/uis/:slug`. Schematics stay on the `uis` map. */
 export const directedUis: Record<string, Component<UiProps>> = {
   faqs: lazy(() => import("./directed/Faqs")),
-  "generative-moodboard": lazy(() => import("./directed/GenerativeMoodboard")),
+  "infinite-article": lazy(() => import("./directed/InfiniteArticle")),
+  // Client-only: its SSR render never resolves after the first request in dev.
+  "generative-moodboard": clientOnly(() => import("./directed/GenerativeMoodboard")),
+  "type-an-analytic": lazy(() => import("./directed/TypeAnAnalytic")),
+  // Client-only: draws into the site engine's WebGL context from the first frame.
+  "sketch-generation": clientOnly(() => import("./directed/SketchGeneration")),
 };
 
 export function resolveDirectedUi(name: string | null): Component<UiProps> | undefined {

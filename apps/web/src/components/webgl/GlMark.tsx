@@ -2,6 +2,7 @@ import { createEffect, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createItem, type ItemController } from "shooosh";
 import { getCanvasDensity, webgl } from "~/lib/stores/webglStore";
+import { onPageMosaicIn } from "./mosaic-clock";
 import { readCssColor } from "./css-color";
 import { glslShaders } from "./shaders";
 
@@ -73,15 +74,25 @@ export default function GlMark(props: {
 
   const kindValue = () => (props.kind === "prev" ? 0 : props.kind === "next" ? 1 : 2);
 
+  // A read while the page is mid-swap returns 0 (or a scaled sliver). The
+  // stroke width is 16/size, so baking that leaves the mark soft after the
+  // transition. Skip it and measure again once the box is real.
+  const readSize = () => {
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 8 || rect.height < 8) return null;
+    const dpr = getCanvasDensity();
+    return { w: rect.width * dpr, h: rect.height * dpr };
+  };
+
   const sync = () => {
     if (!item) return;
-    const rect = el.getBoundingClientRect();
-    const dpr = getCanvasDensity();
+    const size = readSize();
+    if (!size) return;
     item.setUni({
       value1: kindValue(),
-      value2: (rect.width || 1) * dpr,
+      value2: size.w,
       value3: props.morph ?? 0,
-      value4: (rect.height || 1) * dpr,
+      value4: size.h,
       value5: colorRef[0],
       value6: colorRef[1],
       value7: colorRef[2],
@@ -96,24 +107,29 @@ export default function GlMark(props: {
   createEffect(() => {
     if (isServer || !webgl.loaded) return;
     const kind = kindValue();
-    const rect = el.getBoundingClientRect();
     const dpr = getCanvasDensity();
+    const size = readSize();
     item?.destroy();
     item = createItem(el, {
       layer: 30,
       shaders,
       uni: {
         value1: kind,
-        value2: (rect.width || 1) * dpr,
+        value2: size?.w ?? 16 * dpr,
         value3: 0,
-        value4: (rect.height || 1) * dpr,
+        value4: size?.h ?? 16 * dpr,
         value5: colorRef[0],
         value6: colorRef[1],
         value7: colorRef[2],
       },
     });
+    const resize = new ResizeObserver(sync);
+    resize.observe(el);
+    const unlisten = onPageMosaicIn(sync);
     window.addEventListener("resize", sync);
     onCleanup(() => {
+      resize.disconnect();
+      unlisten();
       window.removeEventListener("resize", sync);
       item?.destroy();
       item = undefined;

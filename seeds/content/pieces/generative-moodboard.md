@@ -2,7 +2,7 @@
 title: Generative Moodboard
 slug: generative-moodboard
 section: uis
-order: 6
+order: 3
 component: generative-moodboard
 tags:
   - image-model

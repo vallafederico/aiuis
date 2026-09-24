@@ -3,15 +3,18 @@ import { pagePath } from "@local/content";
 import { getCollection, getLlms } from "~/content";
 import { cms, cmsStatus, siteSection } from "~/lib/cms";
 import { resolvePieceTags } from "~/lib/piece-tags";
+import { isPieceVisible } from "~/lib/publish";
 import { tagPath } from "~/uis/meta";
 import { SITE } from "~/lib/site";
+import {
+  SECTION_LABEL,
+  SECTION_ORDER,
+  isPieceSection,
+  pieceMarkdownPath,
+  piecePath,
+} from "~/lib/piece-sections";
 
-export const SECTION_ORDER = ["preface", "foundations", "uis"] as const;
-export const SECTION_LABEL: Record<(typeof SECTION_ORDER)[number], string> = {
-  preface: "Preface",
-  foundations: "Foundations",
-  uis: "UIs",
-};
+export { SECTION_LABEL, SECTION_ORDER, isPieceSection, pieceMarkdownPath, piecePath };
 
 type PieceCard = {
   section?: unknown;
@@ -30,20 +33,6 @@ export type SeoPiece = {
   order: number;
   tags: string[];
 };
-
-export function isPieceSection(
-  value: string,
-): value is (typeof SECTION_ORDER)[number] {
-  return (SECTION_ORDER as readonly string[]).includes(value);
-}
-
-export function piecePath(section: string, slug: string): string {
-  return `/${section}/${slug}`;
-}
-
-export function pieceMarkdownPath(section: string, slug: string): string {
-  return `${piecePath(section, slug)}.md`;
-}
 
 /** `/preface/foreword.md` or `/preface/foreword/llms.txt` */
 export function parsePieceSeoPath(
@@ -81,6 +70,7 @@ export async function listSeoPieces(): Promise<SeoPiece[]> {
     items.map(async (item) => {
       const section = siteSection(String(item.card?.section ?? ""));
       if (!isPieceSection(section)) return null;
+      if (!isPieceVisible(section, item.slug)) return null;
       const excerpt =
         typeof item.card?.excerpt === "string" ? item.card.excerpt.trim() : "";
       const description =
@@ -134,6 +124,7 @@ export async function pieceMarkdown(
   section: string,
   slug: string,
 ): Promise<string | null> {
+  if (!isPieceVisible(section, slug)) return null;
   let markdown: unknown;
   try {
     markdown = await cms().getDoc("pieces", slug, { format: "md" });

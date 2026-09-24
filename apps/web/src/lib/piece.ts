@@ -2,6 +2,7 @@ import { query } from "@solidjs/router";
 import { cms, cmsStatus, siteSection } from "~/lib/cms";
 import type { HastNode } from "~/components/cms/hast";
 import { resolvePieceTags } from "~/lib/piece-tags";
+import { isPieceVisible } from "~/lib/publish";
 import { formatUpdated } from "~/uis/meta";
 import { resolveUiName } from "~/uis/registry";
 
@@ -41,8 +42,14 @@ async function publishedMeta(slug: string): Promise<{
 export const getPiece = query(
   async (slug: string, expectedSection: string): Promise<PieceResult> => {
     "use server";
+    if (!isPieceVisible(expectedSection, slug)) return null;
     try {
-      const data = await cms().getDoc("pieces", slug, { format: "json" });
+      // Independent requests: the doc and the collection listing (for updated
+      // date / tags) run together instead of back to back.
+      const [data, published] = await Promise.all([
+        cms().getDoc("pieces", slug, { format: "json" }),
+        publishedMeta(slug),
+      ]);
       const section =
         typeof data.section === "string" ? siteSection(data.section) : null;
       if (!section || section !== expectedSection) return null;
@@ -54,7 +61,6 @@ export const getPiece = query(
         slug,
         section,
       );
-      const published = await publishedMeta(slug);
       const tags = await resolvePieceTags(
         slug,
         {

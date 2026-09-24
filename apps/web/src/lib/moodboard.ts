@@ -7,10 +7,16 @@
 import { judgeAvailable, noul, systemOne } from "~/lib/judge";
 
 export type MoodDimension =
-  | "faithSurprise"
+  | "humanPresence"
+  | "styleGlam"
   | "sparseDense"
-  | "docGenerated"
-  | "stillIterative";
+  | "material"
+  | "colorTemp"
+  | "lightHardness"
+  | "framing"
+  | "candor"
+  | "tone"
+  | "tension";
 
 export type MoodScores = Record<MoodDimension, number>;
 
@@ -24,10 +30,16 @@ export type MoodTile = {
   prompt: string;
   caption: string;
   scores: MoodScores;
+  /** Public URL for a photo tile (e.g. `/moodboard/foo.webp`). */
+  src?: string;
+  /** Width ÷ height when known; used by the art-directed board. */
+  aspect?: number;
   /** CSS background for the tile placeholder. */
   tint: string;
   sources?: Array<{ id: string; weight: number; role: string }>;
 };
+
+export { MOODBOARD_SEED_TILES, MOODBOARD_IMAGE_BASE } from "./moodboard-seeds";
 
 export type MixRecipe = {
   target: { x: number; y: number; scores: MoodScores };
@@ -42,35 +54,50 @@ export type MixResult =
   | { kind: "restrain"; message: string };
 
 export const MOOD_DIMENSIONS: MoodDimension[] = [
-  "faithSurprise",
+  "humanPresence",
+  "styleGlam",
   "sparseDense",
-  "docGenerated",
-  "stillIterative",
+  "material",
+  "colorTemp",
+  "lightHardness",
+  "framing",
+  "candor",
+  "tone",
+  "tension",
 ];
 
 export const AXIS_LABELS: Record<
   MoodDimension,
   { low: string; high: string }
 > = {
-  faithSurprise: { low: "prompt-faithful", high: "surprising" },
+  humanPresence: { low: "still-life", high: "portrait" },
+  styleGlam: { low: "quiet", high: "glamorous" },
   sparseDense: { low: "sparse", high: "dense" },
-  docGenerated: { low: "documentary", high: "generated-looking" },
-  stillIterative: { low: "still", high: "iterative" },
+  material: { low: "organic", high: "technical" },
+  colorTemp: { low: "warm", high: "cool" },
+  lightHardness: { low: "soft light", high: "hard light" },
+  framing: { low: "close-up", high: "wide" },
+  candor: { low: "staged", high: "candid" },
+  tone: { low: "playful", high: "serious" },
+  tension: { low: "calm", high: "tense" },
 };
+
+export type AxisView = { id: string; name: string; pair: AxisPair };
+
+export const AXIS_VIEWS: AxisView[] = [
+  { id: "subject", name: "Subject", pair: { x: "humanPresence", y: "styleGlam" } },
+  { id: "surface", name: "Surface", pair: { x: "sparseDense", y: "material" } },
+  { id: "light", name: "Light", pair: { x: "colorTemp", y: "lightHardness" } },
+  { id: "framing", name: "Framing", pair: { x: "framing", y: "candor" } },
+  { id: "mood", name: "Mood", pair: { x: "tone", y: "tension" } },
+];
 
 export const DEFAULT_AXIS_PAIR: AxisPair = {
-  x: "faithSurprise",
-  y: "sparseDense",
+  x: "humanPresence",
+  y: "styleGlam",
 };
 
-export const AXIS_PAIR_OPTIONS: AxisPair[] = [
-  { x: "faithSurprise", y: "sparseDense" },
-  { x: "faithSurprise", y: "docGenerated" },
-  { x: "faithSurprise", y: "stillIterative" },
-  { x: "sparseDense", y: "docGenerated" },
-  { x: "sparseDense", y: "stillIterative" },
-  { x: "docGenerated", y: "stillIterative" },
-];
+export const AXIS_PAIR_OPTIONS: AxisPair[] = AXIS_VIEWS.map((v) => v.pair);
 
 const TILE_HIT_RADIUS = 0.09;
 const DENSE_CLUSTER_RADIUS = 0.14;
@@ -335,50 +362,74 @@ export function generateTile(
 /** Four corner seeds from axis extremes on the default pair. */
 export const SEED_CORNER_TILES: MoodTile[] = [
   {
-    id: "corner-faithful-sparse",
-    caption: "Faithful sparse field",
-    prompt: "quiet editorial spread, small type, generous whitespace",
+    id: "corner-still-quiet",
+    caption: "Still-life, quiet styling",
+    prompt: "minimal still-life, soft natural light, understated props",
     scores: {
-      faithSurprise: 0.08,
-      sparseDense: 0.1,
-      docGenerated: 0.35,
-      stillIterative: 0.2,
+      humanPresence: 0.08,
+      styleGlam: 0.1,
+      sparseDense: 0.35,
+      material: 0.2,
+      colorTemp: 0.35,
+      lightHardness: 0.2,
+      framing: 0.45,
+      candor: 0.25,
+      tone: 0.3,
+      tension: 0.15,
     },
     tint: "linear-gradient(135deg, rgb(0 0 255 / 0.12), rgb(0 0 255 / 0.05))",
   },
   {
-    id: "corner-surprising-sparse",
-    caption: "Surprising sparse rupture",
-    prompt: "unexpected crop, lone saturated object on empty ground",
+    id: "corner-portrait-quiet",
+    caption: "Portrait, documentary quiet",
+    prompt: "subject in frame, natural light, low-key wardrobe",
     scores: {
-      faithSurprise: 0.92,
-      sparseDense: 0.12,
-      docGenerated: 0.55,
-      stillIterative: 0.65,
+      humanPresence: 0.92,
+      styleGlam: 0.12,
+      sparseDense: 0.55,
+      material: 0.25,
+      colorTemp: 0.4,
+      lightHardness: 0.25,
+      framing: 0.55,
+      candor: 0.7,
+      tone: 0.55,
+      tension: 0.2,
     },
     tint: "linear-gradient(200deg, rgb(0 0 255 / 0.24), rgb(0 0 255 / 0.08))",
   },
   {
-    id: "corner-faithful-dense",
-    caption: "Faithful dense grid",
-    prompt: "contact sheet grid, faithful captions, tight rows",
+    id: "corner-still-glam",
+    caption: "Still-life, high glam",
+    prompt: "styled product tableau, glossy surfaces, saturated palette",
     scores: {
-      faithSurprise: 0.1,
-      sparseDense: 0.9,
-      docGenerated: 0.75,
-      stillIterative: 0.15,
+      humanPresence: 0.1,
+      styleGlam: 0.9,
+      sparseDense: 0.75,
+      material: 0.15,
+      colorTemp: 0.55,
+      lightHardness: 0.65,
+      framing: 0.5,
+      candor: 0.15,
+      tone: 0.45,
+      tension: 0.25,
     },
     tint: "linear-gradient(45deg, rgb(0 0 255 / 0.18), rgb(0 0 255 / 0.1))",
   },
   {
-    id: "corner-surprising-dense",
-    caption: "Surprising dense collage",
-    prompt: "layered collage, overlapping textures, controlled chaos",
+    id: "corner-portrait-glam",
+    caption: "Portrait, editorial glam",
+    prompt: "fashion portrait, bold styling, studio lighting",
     scores: {
-      faithSurprise: 0.88,
-      sparseDense: 0.88,
-      docGenerated: 0.6,
-      stillIterative: 0.8,
+      humanPresence: 0.88,
+      styleGlam: 0.88,
+      sparseDense: 0.6,
+      material: 0.3,
+      colorTemp: 0.5,
+      lightHardness: 0.75,
+      framing: 0.6,
+      candor: 0.35,
+      tone: 0.6,
+      tension: 0.35,
     },
     tint: "linear-gradient(315deg, rgb(0 0 255 / 0.26), rgb(0 0 255 / 0.12))",
   },
@@ -411,16 +462,27 @@ export async function scoreTileAxes(tile: {
     const answers = await systemOne(
       { caption: tile.caption, prompt: tile.prompt },
       {
-        faithSurprise: noul(
+        humanPresence: noul(
           {
             caption: tile.caption,
             prompt: tile.prompt,
             question:
-              "Does this image read more surprising than prompt-faithful?",
+              "Is a person clearly the subject rather than a still-life?",
           },
           {
-            true: "The image is surprising relative to a strict prompt read.",
-            false: "The image is prompt-faithful.",
+            true: "A person is the subject — portrait-like.",
+            false: "Still-life or no/minimal human presence.",
+          },
+        ),
+        styleGlam: noul(
+          {
+            caption: tile.caption,
+            prompt: tile.prompt,
+            question: "Does this image read glamorous rather than quiet?",
+          },
+          {
+            true: "Fashion/editorial glam and high styling.",
+            false: "Understated, quiet, or documentary.",
           },
         ),
         sparseDense: noul(
@@ -434,26 +496,81 @@ export async function scoreTileAxes(tile: {
             false: "The image is sparse or airy.",
           },
         ),
-        docGenerated: noul(
+        material: noul(
           {
             caption: tile.caption,
             prompt: tile.prompt,
-            question: "Does this image read generated-looking rather than documentary?",
+            question: "Does this image read technical rather than organic?",
           },
           {
-            true: "The image feels generated or synthetic.",
-            false: "The image feels documentary.",
+            true: "Circuits, plastic, hard props, synthetic surfaces.",
+            false: "Body, flowers, food, soft natural textures.",
           },
         ),
-        stillIterative: noul(
+        colorTemp: noul(
           {
             caption: tile.caption,
             prompt: tile.prompt,
-            question: "Does this image read iterative rather than still?",
+            question: "Does the palette read cool rather than warm?",
           },
           {
-            true: "The image feels like a step in iteration.",
-            false: "The image feels still or final.",
+            true: "Cool palette — blues, greens, cold whites.",
+            false: "Warm palette — reds, golds, skin, lamplight.",
+          },
+        ),
+        lightHardness: noul(
+          {
+            caption: tile.caption,
+            prompt: tile.prompt,
+            question: "Does the light read hard rather than soft?",
+          },
+          {
+            true: "Direct, crisp shadows, flash, hard light.",
+            false: "Diffuse, soft shadows, gentle light.",
+          },
+        ),
+        framing: noul(
+          {
+            caption: tile.caption,
+            prompt: tile.prompt,
+            question: "Does the framing read wide rather than close-up?",
+          },
+          {
+            true: "Wide shot, whole scene in frame.",
+            false: "Tight crop, detail, close-up.",
+          },
+        ),
+        candor: noul(
+          {
+            caption: tile.caption,
+            prompt: tile.prompt,
+            question: "Does this image read candid rather than staged?",
+          },
+          {
+            true: "Caught, spontaneous, documentary.",
+            false: "Arranged, posed, art-directed.",
+          },
+        ),
+        tone: noul(
+          {
+            caption: tile.caption,
+            prompt: tile.prompt,
+            question: "Does the tone read serious rather than playful?",
+          },
+          {
+            true: "Earnest, grave, serious.",
+            false: "Humorous, light, ironic, playful.",
+          },
+        ),
+        tension: noul(
+          {
+            caption: tile.caption,
+            prompt: tile.prompt,
+            question: "Does the image read tense rather than calm?",
+          },
+          {
+            true: "Charged, unsettling, dramatic tension.",
+            false: "Still, at rest, calm.",
           },
         ),
       },

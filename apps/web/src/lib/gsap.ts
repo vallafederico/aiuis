@@ -1,6 +1,8 @@
 import { isServer } from "solid-js/web";
 import gsap from "gsap";
-import { SplitText } from "gsap/dist/SplitText";
+
+// SplitText lives in ~/lib/split-text: the shell imports this module on every
+// page, and only a couple of components split text.
 
 export interface AnimationDefaults {
   duration: number;
@@ -19,11 +21,9 @@ const def: AnimationDefaults = {
 
 if (!isServer) {
   gsap.defaults(def);
-  gsap.registerPlugin(SplitText);
 }
 
 export default gsap;
-export { SplitText };
 export { def };
 
 // Animation constants

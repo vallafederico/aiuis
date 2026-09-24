@@ -25,6 +25,10 @@ export const DATA_LABELS: Record<string, string> = {
   mix: "MIX",
   iteration: "ITERATION",
   scroll: "SCROLL",
+  filter: "FILTER",
+  chip: "CHIP",
+  control: "CONTROL",
+  sketch: "SKETCH",
 };
 
 const TAG_LABEL = /^[A-Z0-9][A-Z0-9.-]*$/;
@@ -62,6 +66,9 @@ export const uiTags: Record<string, string[]> = {
   find: ["jev", "needle", "exists"],
   "generative-moodboard": ["image-model", "axes", "mix"],
   "image-generation": ["image-model", "prompt", "iteration"],
+  "sketch-generation": ["image-model", "prompt", "sketch"],
+  filters: ["jev", "select", "rank"],
+  "type-an-analytic": ["language-model", "generation", "prompt"],
 };
 
 export function tagsFor(slug: string, fromCms: unknown): string[] {

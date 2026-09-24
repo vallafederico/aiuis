@@ -1,11 +1,6 @@
 import { query } from "@solidjs/router";
-import {
-  SECTION_LABEL,
-  SECTION_ORDER,
-  listSeoPieces,
-  piecePath,
-  type SeoPiece,
-} from "~/lib/llm-seo";
+import type { SeoPiece } from "~/lib/llm-seo";
+import { SECTION_LABEL, SECTION_ORDER, piecePath } from "~/lib/piece-sections";
 
 export type NavItem = { title: string; href: string; updated?: string | null };
 
@@ -33,6 +28,9 @@ export function sectionsFromPieces(pieces: SeoPiece[]): NavSection[] {
 /** Published chapters, in nav order. The sidebar, counts, and section indexes read this. */
 export const getNavCatalog = query(async (): Promise<NavSection[]> => {
   "use server";
+  // Dynamic: llm-seo pulls every local content module, and this file is on
+  // every page's client graph.
+  const { listSeoPieces } = await import("~/lib/llm-seo");
   return sectionsFromPieces(await listSeoPieces());
 });
 
@@ -55,12 +53,18 @@ export function navTotal(sections: NavSection[]) {
   return navPieces(sections).length;
 }
 
+/** Sub-views of a UI piece; prev / next keep whichever one you are on. */
+const UIS_SUFFIXES = ["/component", "/schematics"];
+
+function uisSuffix(path: string) {
+  const normalized = normalizePath(path);
+  return UIS_SUFFIXES.find((suffix) => normalized.endsWith(suffix)) ?? "";
+}
+
 function uisBasePath(path: string) {
   const normalized = normalizePath(path);
-  if (normalized.endsWith("/schematics")) {
-    return normalizePath(normalized.slice(0, -"/schematics".length));
-  }
-  return normalized;
+  const suffix = uisSuffix(normalized);
+  return suffix ? normalizePath(normalized.slice(0, -suffix.length)) : normalized;
 }
 
 /** 1-based index of a piece href, or null when the path is not a piece. */
@@ -74,12 +78,10 @@ export function navNumberFor(sections: NavSection[], href: string): number | nul
 export function componentNeighbors(sections: NavSection[], pathname: string) {
   const items = sections.find((section) => section.href === "/uis")?.items;
   if (!items?.length) return null;
-  const normalized = normalizePath(pathname);
-  const schematics = normalized.endsWith("/schematics");
   const base = uisBasePath(pathname);
   const index = items.findIndex((item) => normalizePath(item.href) === base);
   if (index < 0) return null;
-  const suffix = schematics ? "/schematics" : "";
+  const suffix = uisSuffix(pathname) === "/component" ? "/component" : "";
   const withSuffix = (item: NavItem): NavItem => ({
     ...item,
     href: `${normalizePath(item.href)}${suffix}`,

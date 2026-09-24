@@ -1,0 +1,270 @@
+.uis-feature:has(.inf-page) {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--grid-column-width));
+  column-gap: var(--gutter);
+  align-items: stretch;
+  justify-content: start;
+}
+
+/* Its own scroller: the page itself does not scroll on component pages. */
+.inf-page {
+  grid-column: 4 / span 6;
+  height: 100svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  color: var(--color-key);
+}
+
+.inf-page .inf-title,
+.inf-page .inf-heading,
+.inf-page .inf-p,
+.inf-page .inf-list li,
+.inf-page .inf-sel-note p {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.inf-page ::selection {
+  background: rgb(0 0 255 / 0.16);
+  color: inherit;
+}
+
+.inf-page::-webkit-scrollbar {
+  display: none;
+}
+
+.inf-article {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  padding: 18svh 0 40svh;
+}
+
+.inf-title {
+  margin: 0;
+  font-size: clamp(2.4rem, 4.2vw, 3.6rem);
+  font-weight: inherit;
+  letter-spacing: -0.09em;
+  line-height: 0.95;
+}
+
+.inf-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation:
+    inf-rise 1.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    inf-fade 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+.inf-block.is-continuation {
+  margin-top: -2rem;
+}
+
+[data-inf-area].is-near {
+  background: rgb(0 0 255 / 0.06);
+}
+
+.inf-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.inf-line.has-note {
+  grid-template-columns: minmax(0, 1fr) var(--spacing-grids-2);
+  column-gap: var(--gutter);
+}
+
+.inf-line.has-note.is-note-left {
+  grid-template-columns: var(--spacing-grids-2) minmax(0, 1fr);
+}
+
+.inf-line.is-note-left .inf-sel-note {
+  order: -1;
+}
+
+.inf-line.has-note .inf-p,
+.inf-line.has-note .inf-heading,
+.inf-line.has-note .inf-title {
+  max-width: none;
+}
+
+.inf-sel-note {
+  margin: 0;
+  min-width: 0;
+}
+
+.inf-sel-note p {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: -0.03em;
+  line-height: 1.35;
+}
+
+.inf-block.is-streaming > .inf-heading:last-child::after,
+.inf-block.is-streaming .inf-p:last-child::after,
+.inf-block.is-streaming .inf-list li:last-child::after,
+.inf-sel-note.is-writing p::after {
+  content: "";
+  display: inline-block;
+  width: 0.42em;
+  height: 0.85em;
+  margin-left: 0.12em;
+  background: currentColor;
+  vertical-align: -0.12em;
+  animation: inf-cursor 1s steps(1, end) infinite;
+}
+
+.inf-block.is-note {
+  max-width: 28em;
+}
+
+.inf-block.is-note .inf-p {
+  font-size: 0.75rem;
+}
+
+.inf-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.inf-heading {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  font-weight: inherit;
+  letter-spacing: -0.09em;
+  line-height: 1.08;
+}
+
+.inf-block.is-question .inf-heading {
+  font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+}
+
+.inf-contrast {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inf-contrast .inf-kicker {
+  display: block;
+}
+
+.inf-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.inf-list li {
+  font-size: 1.05rem;
+  letter-spacing: -0.045em;
+  line-height: 1.42;
+}
+
+.inf-p {
+  max-width: 34em;
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.045em;
+  line-height: 1.42;
+}
+
+.inf-plate {
+  width: min(100%, 34em);
+  margin: 0.25rem 0 0;
+  aspect-ratio: 4 / 3;
+  background: var(--color-paper);
+}
+
+.inf-plate img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: inf-fade 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+.inf-status {
+  min-height: 1.5rem;
+}
+
+/* Same terminal-style cursor as the FAQ answers. */
+.inf-cursor {
+  display: flex;
+  align-items: center;
+}
+
+.inf-cursor i {
+  width: 0.5em;
+  height: 1em;
+  font-size: 1.05rem;
+  background: currentColor;
+  animation: inf-cursor 1s steps(1, end) infinite;
+}
+
+.inf-stop {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.045em;
+  opacity: 0.45;
+}
+
+.inf-sentinel {
+  height: 1px;
+}
+
+@keyframes inf-rise {
+  from {
+    transform: translateY(0.8em);
+  }
+}
+
+@keyframes inf-fade {
+  from {
+    opacity: 0.01;
+  }
+}
+
+@keyframes inf-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .inf-page {
+    grid-column: 1 / -1;
+    padding: 0 var(--gx);
+  }
+
+  .inf-line.has-note {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.75rem;
+  }
+
+  .inf-sel-note {
+    width: var(--spacing-grids-2);
+    justify-self: end;
+  }
+
+  .inf-line.is-note-left .inf-sel-note {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inf-block,
+  .inf-cursor i {
+    animation: none;
+  }
+}

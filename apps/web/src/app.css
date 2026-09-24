@@ -165,7 +165,7 @@ html.is-intro main:has([data-own-intro]) {
   cursor: pointer;
 }
 
-html.ui-solo [data-ui-solo-hide] {
+html.ui-component [data-ui-component-hide] {
   display: none;
 }
 

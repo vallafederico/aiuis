@@ -38,7 +38,7 @@ export default function SdfImage(props: SdfImageProps) {
   let generation = 0;
   let resize: ResizeObserver | undefined;
 
-  // The aa band is scaled by this width. Read 0 while hidden (solo mode,
+  // The aa band is scaled by this width. Read 0 while hidden (display:none,
   // mid-transition) it would stick at 1px and draw the mark soft, so it
   // follows the element's own size, not just window resizes.
   const syncWidth = () => {

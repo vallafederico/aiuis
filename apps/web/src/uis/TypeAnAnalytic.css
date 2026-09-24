@@ -1,0 +1,8 @@
+.uis-mock[data-ui="type-an-analytic"] {
+  width: var(--spacing-grids-5);
+  max-width: 100%;
+}
+
+.uis-mock[data-ui="type-an-analytic"] .uis-mock-kicker::after {
+  content: " · pipeline";
+}

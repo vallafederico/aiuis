@@ -1,4 +1,6 @@
-import { Slot } from "@local/content/solid";
+import { ContentProvider, Slot } from "@local/content/solid";
+import * as content from "~/content";
+import { mdxComponents } from "~/components/content/mdx";
 import { animateAlpha } from "~/animation/alpha";
 import Section from "~/components/Section";
 import GridExample from "~/components/GridExample";
@@ -17,9 +19,13 @@ export default function About() {
 
         {/* head metadata + body from content/pages/_/about.mdx — same name
             in the cms and in the router */}
-        <article class="mt-8 flex max-w-[65ch] flex-col gap-4">
-          <Slot />
-        </article>
+        {/* Provided here, not at the app root: the content module bundles every
+            local MDX page, and only this route resolves one by path. */}
+        <ContentProvider content={content} components={mdxComponents}>
+          <article class="mt-8 flex max-w-[65ch] flex-col gap-4">
+            <Slot />
+          </article>
+        </ContentProvider>
       </Section>
 
       <GridExample />

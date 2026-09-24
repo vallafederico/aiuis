@@ -6,7 +6,7 @@ import PageContent from "~/components/PageContent";
 import { NavHit, NavHitText } from "~/components/NavHit";
 import MsdfText from "~/components/webgl/MsdfText";
 import GlRoundRect from "~/components/webgl/GlRoundRect";
-import { SECTION_LABEL, piecePath } from "~/lib/llm-seo";
+import { SECTION_LABEL, piecePath } from "~/lib/piece-sections";
 import { getTagPage } from "~/lib/tags";
 import { tagPath } from "~/uis/meta";
 import "./CompPiece.css";

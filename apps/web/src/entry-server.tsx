@@ -2,17 +2,19 @@
 import { getRequestEvent } from "solid-js/web";
 import { createHandler, StartServer } from "@solidjs/start/server";
 
+import { isComponentView } from "~/lib/component-view";
+
 const PAPER = "#E9E9EA";
 
-function soloHtmlClass() {
+function htmlClasses() {
   const event = getRequestEvent();
   const raw = event?.request?.url;
   if (!raw) return undefined;
   try {
     const url = new URL(raw);
-    if (!url.searchParams.has("solo")) return undefined;
-    if (!/^\/uis\/[^/]+/.test(url.pathname)) return undefined;
-    return "ui-solo";
+    const classes: string[] = [];
+    if (isComponentView(url.pathname)) classes.push("ui-component");
+    return classes.length ? classes.join(" ") : undefined;
   } catch {
     return undefined;
   }
@@ -21,7 +23,7 @@ function soloHtmlClass() {
 export default createHandler(() => (
   <StartServer
     document={({ assets, children, scripts }) => (
-      <html lang="en" class={soloHtmlClass()}>
+      <html lang="en" class={htmlClasses()}>
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -29,6 +31,14 @@ export default createHandler(() => (
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="icon" href="/favicon.ico" sizes="32x32" />
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          {/* The sans every HTML label uses; found late otherwise (via CSS). */}
+          <link
+            rel="preload"
+            href="/fonts/AlteHaasGroteskBold.woff2"
+            as="font"
+            type="font/woff2"
+            crossorigin="anonymous"
+          />
           <noscript>
             <style>{`[data-msdf]{opacity:1!important}`}</style>
           </noscript>

@@ -12,8 +12,10 @@
     "preview": "wrangler dev"
   },
   "dependencies": {
-    "@crawl-me-maybe/sitemap": "^0.0.1",
     "@acme/router": "workspace:*",
+    "@content-software/client": "file:../../../content.software/packages/client",
+    "@content-software/json": "file:../../../content.software/packages/json",
+    "@crawl-me-maybe/sitemap": "^0.0.1",
     "@local/config": "workspace:*",
     "@local/content": "workspace:*",
     "@local/tailwind": "workspace:*",
@@ -22,17 +24,17 @@
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^0.15.3",
     "@solidjs/start": "^1.2.0",
-    "@content-software/client": "file:../../../content.software/packages/client",
-    "@content-software/json": "file:../../../content.software/packages/json",
-    "shooosh": "file:../../../shooosh/package",
+    "ai": "^7.0.113",
     "classix": "^2.2.4",
     "gsap": "^3.13.0",
     "lenis": "^1.3.11",
     "lil-gui": "^0.21.0",
+    "shooosh": "file:../../../shooosh/package",
     "smooothy": "^0.0.26",
     "solid-js": "^1.9.9",
     "solid-mdx": "^0.0.7",
-    "vinxi": "^0.5.8"
+    "vinxi": "^0.5.8",
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=22"

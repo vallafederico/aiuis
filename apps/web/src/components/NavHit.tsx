@@ -111,6 +111,8 @@ export function NavHitText(props: {
   class?: string;
   /** Recede treatment (nav search); MSDF paints via WebGL, so CSS opacity can't dim it. */
   alpha?: number;
+  /** The nav's distorted letterforms; off for links set in body copy. */
+  weird?: boolean;
 }) {
   const wipe = useContext(WipeCtx);
   const [box, setBox] = createSignal({ origin: 0, span: 1 });
@@ -151,7 +153,7 @@ export function NavHitText(props: {
         wipe={wipe()}
         wipeOrigin={box().origin}
         wipeSpan={box().span}
-        weird
+        weird={props.weird ?? true}
       />
     </span>
   );

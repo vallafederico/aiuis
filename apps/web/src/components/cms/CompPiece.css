@@ -11,6 +11,12 @@
   pointer-events: none;
 }
 
+/* Component view: a full-viewport container. Layout (grid, centring) stays the component's. */
+html.ui-component .uis-feature {
+  position: fixed;
+  inset: 0;
+}
+
 .uis-feature {
   position: absolute;
   inset: 0;
@@ -100,9 +106,7 @@
   letter-spacing: 0.32em;
 }
 
-.uis-meta-hit {
+.uis-meta-alt {
   align-self: flex-start;
-  font-size: 8px;
-  line-height: 1;
-  letter-spacing: 0;
+  font-size: 0.8rem;
 }

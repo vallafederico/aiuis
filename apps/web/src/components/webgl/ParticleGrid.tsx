@@ -1,6 +1,7 @@
 import { createEffect, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createParticles, type ParticlesController } from "shooosh";
+import { componentView } from "~/lib/component-view";
 import { webgl } from "~/lib/stores/webglStore";
 
 // Generate a grid of clip-space positions
@@ -25,7 +26,11 @@ export default function ParticleGrid() {
   let particles: ParticlesController | undefined;
 
   createEffect(() => {
-    if (!webgl.loaded) return;
+    if (!webgl.loaded || componentView()) {
+      particles?.destroy();
+      particles = undefined;
+      return;
+    }
     particles?.destroy();
     particles = createParticles({
       positions: GRID_POSITIONS,

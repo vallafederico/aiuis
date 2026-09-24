@@ -3,13 +3,12 @@ import { isServer } from "solid-js/web";
 import { createPostProcessor, getDefaultEngine } from "shooosh";
 import { createLensTrail, type LensTrail } from "./mouse-trail-field";
 import { onEnter, onLeave } from "@acme/router";
+import { componentView } from "~/lib/component-view";
 import { webgl } from "~/lib/stores/webglStore";
 import {
   crumbProgress,
   mosaicProgress,
   mosaicFullFrame,
-  mosaicChromeOnly,
-  mosaicChromeMix,
   setMosaicSnapshotRequester,
   beginPageEntry,
   beginPageLeave,
@@ -83,7 +82,7 @@ function readChromeUv(backend: string) {
   const metaBox = meta?.getBoundingClientRect();
   const navRight = navBox ? navBox.right / W + padX : 0;
   // Solo hides meta / logo / crumbs (display: none, zero rects). Keep their
-  // last shown boxes so the solo mosaic still covers where they were.
+  // last shown boxes so the mosaic still covers where they were.
   if (!meta) lastChrome.metaLeft = 1;
   else if (metaBox && metaBox.width > 0) lastChrome.metaLeft = metaBox.left / W - padX;
   const logoBox = uvBox(logo, backend, W, H, padX, padY);
@@ -224,7 +223,7 @@ vec4 applyEffect(vec4 color, vec2 uv, vec2 resolution, vec4 uni[4]) {
     }
     vec2 srcUv = gridHop(zoomed, resolution, p);
     if (!inSoloChrome(srcUv, navRight, logo, crumbs, metaLeft)) srcUv = zoomed;
-    // Parked cells keep the frame from before the solo swap; each flips to
+    // Parked cells keep the frame from before the swap; each flips to
     // the live frame once it starts moving, so the swap mixes per tile.
     if (w > 3.5) {
       vec2 grid = max(floor(resolution / 32.0), vec2(4.0));
@@ -473,6 +472,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const radiusPx = props.radius ?? 48;
     const strengthMax = props.strength ?? 0.3;
+    const magnify = () => (componentView() ? 0 : strengthMax);
     const offset = props.offset ?? [0, 0];
 
     let targetX = 0.5;
@@ -535,14 +535,9 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const chromeUni = () => ({
       value6: chrome.navRight,
-      value7: mosaicChromeOnly() ? chrome.metaLeft : crumbProgress(),
-      // 1 = whole frame, 2 = snapshot mix, 3 = chrome only (occupancy stays),
-      // 4 = chrome only mixed with the pre-swap snapshot.
-      value8: intro || mosaicFullFrame()
-        ? 1
-        : mosaicChromeOnly()
-          ? mosaicChromeMix() && snapReady ? 4 : 3
-          : snapReady ? 2 : 0,
+      value7: crumbProgress(),
+      // 1 = whole frame, 2 = snapshot mix.
+      value8: intro || mosaicFullFrame() ? 1 : snapReady ? 2 : 0,
       value9: chrome.logo.minX,
       value10: chrome.logo.minY,
       value11: chrome.logo.maxX,
@@ -657,7 +652,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
           getDefaultEngine()?.requestFrame();
         }
 
-        if (mouseSettled && radiusSettled && !trailHot && !intro && !mosaicFullFrame() && !mosaicChromeOnly()) {
+        if (mouseSettled && radiusSettled && !trailHot && !intro && !mosaicFullFrame()) {
           return;
         }
 
@@ -707,7 +702,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const strikeUni = () => ({
       value1: mosaicProgress(),
-      value2: intro || mosaicFullFrame() || mosaicChromeOnly() ? 1 : 0,
+      value2: intro || mosaicFullFrame() ? 1 : 0,
       value3: snapReady ? 1 : 0,
       value5: strikeBox.from.minX,
       value6: strikeBox.from.minY,
@@ -775,6 +770,12 @@ export default function MouseDistortion(props: MouseDistortionProps) {
     void playMosaic(1);
     kick();
 
+    createEffect(() => {
+      if (!componentView()) return;
+      targetStrength = 0;
+      getDefaultEngine()?.requestFrame();
+    });
+
     setMosaicSnapshotRequester(
       () =>
         new Promise<boolean>((resolve) => {
@@ -782,7 +783,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
           snapWaiters.push(resolve);
           wantSnapshot = true;
           getDefaultEngine()?.requestFrame();
-          // Never hold a solo toggle hostage to a frame that does not come.
+          // Never hold mosaic snapshot waiters hostage to a frame that does not come.
           setTimeout(() => {
             const i = snapWaiters.indexOf(resolve);
             if (i < 0) return;
@@ -797,7 +798,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
       const oy = offset[1] / window.innerHeight;
       targetX = e.clientX / window.innerWidth + ox;
       targetY = e.clientY / window.innerHeight + oy;
-      targetStrength = strengthMax;
+      targetStrength = magnify();
       if (hasLastMove) {
         const dtMs = Math.max(e.timeStamp - lastMoveT, 1);
         const dist = Math.hypot(e.clientX - lastMoveX, e.clientY - lastMoveY);

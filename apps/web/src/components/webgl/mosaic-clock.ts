@@ -49,8 +49,6 @@ let pageEntry = false;
 let pageLeave = false;
 let leaveGate: Array<() => void> | null = null;
 let fullFrame = false;
-let chromeOnly = false;
-let chromeMix = false;
 let snapshotRequester: (() => Promise<boolean>) | undefined;
 let snapshotMode = false;
 let tickRaf = 0;
@@ -83,22 +81,6 @@ export function mosaicFullFrame() {
 
 export function setMosaicFullFrame(on: boolean) {
   fullFrame = on;
-  emit();
-}
-
-/** Mosaic nav / logo / meta only — occupancy stays put (solo enter/exit). */
-export function mosaicChromeOnly() {
-  return chromeOnly;
-}
-
-/** Chrome-only play mixes per tile with the snapshot taken before the swap. */
-export function mosaicChromeMix() {
-  return chromeOnly && chromeMix;
-}
-
-export function setMosaicChromeOnly(on: boolean, mixSnapshot = false) {
-  chromeOnly = on;
-  chromeMix = on && mixSnapshot;
   emit();
 }
 

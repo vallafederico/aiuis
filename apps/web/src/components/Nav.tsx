@@ -8,7 +8,7 @@ import {
   onMount,
 } from "solid-js";
 import { createAsync } from "@solidjs/router";
-import { A, onLeave, useLocation, useNavigate, usePreloadRoute } from "@acme/router";
+import { A, onLeave, useLocation, usePreloadRoute } from "@acme/router";
 import GlMark from "./webgl/GlMark";
 import GlRoundRect from "./webgl/GlRoundRect";
 import MsdfText from "./webgl/MsdfText";
@@ -25,17 +25,8 @@ import {
   navTotal,
   type NavSection,
 } from "~/lib/sections";
-import {
-  enterSolo,
-  enterSoloInstant,
-  exitSolo,
-  hasSoloQuery,
-  iconMorph,
-  isComponentPath,
-  resetSolo,
-  solo,
-  withSoloPath,
-} from "~/lib/solo";
+import { isComponentPath } from "~/lib/component-path";
+import { isComponentView, syncComponentView } from "~/lib/component-view";
 import { labelForTag } from "~/uis/meta";
 import { CountDigits } from "./CountDigits";
 import { NavHit, NavHitText, createWipe } from "./NavHit";
@@ -94,37 +85,16 @@ function NavMsdf(props: {
 export const Nav = () => {
   const location = useLocation();
   const preload = usePreloadRoute();
-  const [soloReady, setSoloReady] = createSignal(false);
 
-  onMount(() => {
-    if (isComponentPath(location.pathname) && hasSoloQuery(location.search)) {
-      enterSoloInstant();
-    }
-    setSoloReady(true);
-  });
+  onMount(() => syncComponentView(location.pathname));
 
-  createEffect((prev?: { path: string }) => {
-    if (!soloReady()) return prev;
-    const path = location.pathname;
-    const want = isComponentPath(path) && hasSoloQuery(location.search);
-    const pathChanged = prev != null && prev.path !== path;
-    if (want) {
-      if (!solo()) {
-        // Another page's mosaic already covers the landing. Same-path ?solo
-        // (Hide interface) has to play the solo enter itself.
-        if (pathChanged) enterSoloInstant();
-        else void enterSolo();
-      }
-    } else if (solo()) {
-      if (pathChanged) resetSolo();
-      else void exitSolo();
-    }
-    return { path };
+  createEffect(() => {
+    syncComponentView(location.pathname);
   });
 
   return (
     <>
-      <div class="fixed top-0 right-0 z-20 pr-gx py-[3svh]" data-ui-solo-hide>
+      <div class="fixed top-0 right-0 z-20 pr-gx py-[3svh]">
         <div class="w-grid-1" data-mosaic-chrome="logo">
           <A
             href="/"
@@ -145,6 +115,7 @@ export const Nav = () => {
         aria-label="Site"
         class="flex fixed top-0 left-0 z-20 flex-col h-lvh pl-gx"
         data-mosaic-chrome="nav"
+        data-ui-component-hide
       >
         <div
           class="relative flex flex-col justify-between h-full overflow-visible
@@ -158,9 +129,10 @@ export const Nav = () => {
       <Suspense>
         <CatalogDock pathname={location.pathname} />
       </Suspense>
+      <ComponentViewChrome pathname={location.pathname} />
     </>
   );
-}
+};
 
 function CatalogDock(props: { pathname: string }) {
   const catalog = createAsync(() => getNavCatalog(), { deferStream: true });
@@ -169,7 +141,7 @@ function CatalogDock(props: { pathname: string }) {
       {(sections) => <ComponentDock sections={sections()} pathname={props.pathname} />}
     </Show>
   );
-};
+}
 
 function NavCatalog(props: {
   pathname: string;
@@ -183,7 +155,7 @@ function NavCatalog(props: {
       <div class="relative self-start w-grids-1 shrink-0 h-[1em] text-sm leading-none">
         <Breadcrumbs sections={sections()} preload={props.preload} />
       </div>
-      <div data-ui-solo-hide class="flex flex-col">
+      <div class="flex flex-col">
         <div>
           <A
             href="/"
@@ -212,7 +184,6 @@ function NavCatalog(props: {
         </div>
       </div>
       <div
-        data-ui-solo-hide
         class="w-full tracking-wider font-garara
           flex-center"
       >
@@ -363,14 +334,10 @@ function lerp3(
   ];
 }
 
-/** Same hover as a data tag: pill fills blue, the mark knocks out to paper. */
 function DockHit(props: {
-  href?: string;
+  href: string;
   label: string;
-  pressed?: boolean;
-  onClick?: () => void;
-  kind: "prev" | "next" | "corners";
-  morph?: number;
+  kind: "prev" | "next";
 }) {
   const motion = createWipe(220);
   const pill = () => lerp3(PAPER, readCssColor("--color-key"), motion.wipe());
@@ -381,76 +348,60 @@ function DockHit(props: {
     onFocusIn: () => motion.enter(),
     onFocusOut: () => motion.leave(),
   };
-  const face = (
-    <>
-      <GlRoundRect class="pointer-events-none absolute inset-0" fill={pill()} />
-      <GlMark kind={props.kind} morph={props.morph} color={mark()} />
-    </>
-  );
-  if (props.href) {
-    return (
-      <A
-        href={props.href}
-        aria-label={props.label}
-        class="dock-hit relative flex items-center justify-center w-6 h-6"
-        {...handlers}
-      >
-        {face}
-      </A>
-    );
-  }
   return (
-    <button
-      type="button"
-      class="dock-hit relative flex items-center justify-center w-6 h-6"
-      aria-pressed={props.pressed}
+    <A
+      href={props.href}
       aria-label={props.label}
-      onClick={() => props.onClick?.()}
+      class="dock-hit relative flex items-center justify-center w-6 h-6"
       {...handlers}
     >
-      {face}
-    </button>
+      <GlRoundRect class="pointer-events-none absolute inset-0" fill={pill()} />
+      <GlMark kind={props.kind} color={mark()} />
+    </A>
   );
 }
 
 function ComponentDock(props: { sections: NavSection[]; pathname: string }) {
-  const location = useLocation();
-  const navigate = useNavigate();
   const neighbors = () => componentNeighbors(props.sections, props.pathname);
-  const hrefFor = (href: string) => (solo() ? withSoloPath(href) : href);
   return (
     <Show when={isComponentPath(props.pathname)}>
-      <div class="fixed bottom-[3svh] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 pointer-events-auto">
+      <div
+        data-ui-component-hide
+        class="fixed bottom-[3svh] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 pointer-events-auto"
+      >
         <Show when={neighbors()}>
           {(pair) => (
-            <DockHit
-              href={hrefFor(pair().prev.href)}
-              label={`Previous, ${pair().prev.title}`}
-              kind="prev"
-            />
+            <>
+              <DockHit
+                href={pair().prev.href}
+                label={`Previous, ${pair().prev.title}`}
+                kind="prev"
+              />
+              <DockHit
+                href={pair().next.href}
+                label={`Next, ${pair().next.title}`}
+                kind="next"
+              />
+            </>
           )}
         </Show>
-        <DockHit
-          kind="corners"
-          morph={iconMorph()}
-          pressed={solo()}
-          label={solo() ? "Show interface" : "Hide interface"}
-          onClick={() => {
-            navigate(
-              withSoloPath(location.pathname, location.search, !solo()),
-              { replace: true },
-            );
-          }}
-        />
-        <Show when={neighbors()}>
-          {(pair) => (
-            <DockHit
-              href={hrefFor(pair().next.href)}
-              label={`Next, ${pair().next.title}`}
-              kind="next"
-            />
-          )}
-        </Show>
+      </div>
+    </Show>
+  );
+}
+
+/** Component view's only chrome besides the logo: back to the schematic, and all UIs. */
+function ComponentViewChrome(props: { pathname: string }) {
+  const schematic = () => props.pathname.replace(/\/component\/?$/, "");
+  return (
+    <Show when={isComponentView(props.pathname)}>
+      <div class="fixed top-[3svh] left-gx z-30 pointer-events-auto" data-board-exclude>
+        <DockHit href={schematic()} label="Back to schematic" kind="prev" />
+      </div>
+      <div class="fixed right-gx bottom-[3svh] z-30 pointer-events-auto" data-board-exclude>
+        <NavHit href="/uis" class="relative inline-flex items-center">
+          <NavHitText text="UIs" font="AlteHaasGroteskBold" />
+        </NavHit>
       </div>
     </Show>
   );
@@ -556,29 +507,28 @@ const Breadcrumbs = (props: {
   return (
     <div
       data-mosaic-page="crumbs"
-      data-ui-solo-hide
       class="absolute right-0 top-0 flex overflow-visible flex-nowrap
         items-baseline w-max max-w-none whitespace-nowrap"
     >
-        <For each={trail()}>
-          {(crumb, index) => (
-            <>
-              <Show when={index() > 0}>
-                <span class="px-2 text-sm">
-                  <NavMsdf text="/" font="AlteHaasGroteskBold" />
-                </span>
-              </Show>
-              <NavHit
-                href={crumb.href}
-                class={`${TAP_LINK} nav-hit text-sm`}
-                current={index() === trail().length - 1}
-                onPointerEnter={warm(props.preload, crumb.href)}
-              >
-                <NavHitText text={crumb.title} font="AlteHaasGroteskBold" />
-              </NavHit>
-            </>
-          )}
-        </For>
+      <For each={trail()}>
+        {(crumb, index) => (
+          <>
+            <Show when={index() > 0}>
+              <span class="px-2 text-sm">
+                <NavMsdf text="/" font="AlteHaasGroteskBold" />
+              </span>
+            </Show>
+            <NavHit
+              href={crumb.href}
+              class={`${TAP_LINK} nav-hit text-sm`}
+              current={index() === trail().length - 1}
+              onPointerEnter={warm(props.preload, crumb.href)}
+            >
+              <NavHitText text={crumb.title} font="AlteHaasGroteskBold" />
+            </NavHit>
+          </>
+        )}
+      </For>
     </div>
   );
 };

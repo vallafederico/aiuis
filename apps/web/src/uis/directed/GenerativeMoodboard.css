@@ -15,6 +15,15 @@
   color: var(--color-key);
 }
 
+html.ui-component .mood-page {
+  grid-column: auto;
+  position: absolute;
+  inset: 0;
+}
+
+html.ui-component .mood-world {
+  inset: 0;
+}
 /* The drag / wheel surface: the whole column. */
 .mood-plane {
   position: absolute;
@@ -29,11 +38,20 @@
   cursor: grabbing;
 }
 
+/* Viewport-fixed clip for the pan / zoom world. Axes sit outside it. */
+.mood-fade {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
 /* The board at zoom 1. Symmetric so its midpoint starts on the screen centre;
    deep enough that the axis ends clear the dock. */
 .mood-world {
   position: absolute;
   inset: calc(3svh + 3rem) 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 /* Axes follow the board (positioned from script); this layer just holds them. */
@@ -43,23 +61,178 @@
   pointer-events: none;
 }
 
-/* One transform for the whole board: translate + scale around the axes origin. */
-.mood-world {
-  transform-origin: 50% 50%;
-  will-change: transform;
-}
-
+/* Invisible proxies: each tile is drawn in WebGL (mood-tile-gl.tsx), which
+   tracks this box and reads this opacity, and the wash's, every frame. The
+   rules below are animation state, not paint. */
 .mood-block {
   position: absolute;
+  margin: 0;
   translate: -50% -50%;
-  background: rgb(0 0 255 / var(--alpha, 0.12));
+  /* Parallax: --pan-x/y from the board, --depth per tile (GenerativeMoodboard.tsx). */
+  transform: translate3d(
+    calc(var(--pan-x, 0px) * var(--depth, 0)),
+    calc(var(--pan-y, 0px) * var(--depth, 0)),
+    0
+  );
+  opacity: 1;
+  /* left / top: tiles glide to their places when the axis view changes
+     (VIEW_SWITCH_MS in GenerativeMoodboard.tsx). */
+  transition:
+    opacity 0.35s ease,
+    left 1.1s cubic-bezier(0.65, 0, 0.35, 1),
+    top 1.1s cubic-bezier(0.65, 0, 0.35, 1);
   animation: mood-block-in 1.2s cubic-bezier(0.33, 1, 0.68, 1) 0.5s both;
+}
+
+/* Fading out is fast; coming back uses the base 0.35s. */
+.mood-world.is-focusing .mood-block {
+  opacity: 0.2;
+  transition-duration: 0.12s, 1.1s, 1.1s;
+}
+
+.mood-world.is-focusing .mood-block.is-near {
+  opacity: 1;
+}
+
+/* Midpoint placeholder: waits for a click before generating. */
+.mood-block.is-pending,
+.mood-world.is-focusing .mood-block.is-pending {
+  opacity: 1;
+  cursor: pointer;
+  animation: mood-block-in 0.4s ease both;
+}
+
+.mood-block.is-pending.is-generating {
+  cursor: progress;
+}
+
+/* The blend's image emerges from this layer: it deepens while generating,
+   then fades off the decoded image underneath. */
+/* The quad's box: larger than the tile so bent edges have room (inset set inline). */
+.mood-block-gl {
+  position: absolute;
+  pointer-events: none;
+}
+
+.mood-block-wash {
+  position: absolute;
+  inset: 0;
+  opacity: 0.13;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.mood-block.is-generating .mood-block-wash {
+  opacity: 0.92;
+  transition: opacity 9s cubic-bezier(0.15, 0.55, 0.3, 1);
+}
+
+.mood-block.is-revealed {
+  animation: none;
+}
+
+/* Drives the shader reveal in mood-tile-gl.tsx: the photo grows out of the blue. */
+.mood-block.is-revealed .mood-block-wash {
+  opacity: 0;
+  transition: opacity 1.6s cubic-bezier(0.45, 0, 0.2, 1);
 }
 
 @keyframes mood-block-in {
   from {
     opacity: 0.01;
   }
+}
+
+/* Bottom-left column: axis views above the minimap. */
+.mood-corner {
+  position: fixed;
+  left: var(--gx);
+  bottom: 3svh;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+/* Minimap: tiles as key blocks, the view as four corner brackets. A click
+   recentres the board. */
+.mood-map {
+  position: relative;
+  width: 7.5rem;
+  max-height: 30svh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-key);
+  cursor: pointer;
+}
+
+.mood-map-tile {
+  position: absolute;
+  background: currentColor;
+  transition:
+    left 1.1s cubic-bezier(0.65, 0, 0.35, 1),
+    top 1.1s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Axis views: the active pair is set in the key. */
+.mood-views {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.mood-view {
+  margin: 0;
+  padding: 0.15rem 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-key);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  opacity: 0.4;
+  cursor: pointer;
+  transition:
+    opacity 0.2s linear,
+    background-color 0.2s linear,
+    color 0.2s linear;
+}
+
+.mood-view:hover,
+.mood-view:focus-visible {
+  opacity: 1;
+}
+
+.mood-view.is-active {
+  background: var(--color-key);
+  color: var(--color-paper);
+  opacity: 1;
+}
+
+.mood-map-tile.is-blend {
+  opacity: 0.35;
+}
+
+.mood-map-view {
+  --corner: 0.45rem;
+  --stroke: 1.5px;
+  position: absolute;
+  pointer-events: none;
+  background:
+    linear-gradient(currentColor, currentColor) top left / var(--corner) var(--stroke),
+    linear-gradient(currentColor, currentColor) top left / var(--stroke) var(--corner),
+    linear-gradient(currentColor, currentColor) top right / var(--corner) var(--stroke),
+    linear-gradient(currentColor, currentColor) top right / var(--stroke) var(--corner),
+    linear-gradient(currentColor, currentColor) bottom left / var(--corner) var(--stroke),
+    linear-gradient(currentColor, currentColor) bottom left / var(--stroke) var(--corner),
+    linear-gradient(currentColor, currentColor) bottom right / var(--corner) var(--stroke),
+    linear-gradient(currentColor, currentColor) bottom right / var(--stroke) var(--corner);
+  background-repeat: no-repeat;
 }
 
 /* A 1px unit the script translates to the board and scales to its length.
@@ -125,5 +298,19 @@
   .mood-axis-label,
   .mood-block {
     animation: none;
+  }
+
+  .mood-block {
+    transition: none;
+  }
+
+  .mood-block.is-pending {
+    animation: none;
+  }
+
+  .mood-block-wash,
+  .mood-block.is-generating .mood-block-wash,
+  .mood-block.is-revealed .mood-block-wash {
+    transition: none;
   }
 }

@@ -19,7 +19,8 @@ import {
   type FaqItem,
 } from "~/lib/faq";
 import { createAsync } from "@acme/router";
-import gsap, { A, SplitText } from "~/lib/gsap";
+import gsap, { A } from "~/lib/gsap";
+import { SplitText } from "~/lib/split-text";
 import { getNavCatalog, navPieces } from "~/lib/sections";
 import "./Faqs.css";
 

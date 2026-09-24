@@ -9,9 +9,8 @@ import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
 import { CmsBody, CmsForeword } from "~/components/cms/CmsBody";
 import { CompPiece } from "~/components/cms/CompPiece";
 import { extractAside, hastToPlainText, type HastNode } from "~/components/cms/hast";
-import { liftKnownAsides } from "~/lib/article-asides";
 import { getPiece } from "~/lib/piece";
-import { resolveDirectedUi, resolveUi } from "~/uis/registry";
+import { resolveUi } from "~/uis/registry";
 
 export const route = {
   preload: ({ params }: { params: { slug: string } }) =>
@@ -73,9 +72,8 @@ export default function UisPiece() {
           }
         >
           {(p) => {
-            const extracted = extractAside(liftKnownAsides(p.body_hast), "cms-foreword");
+            const extracted = extractAside(p.body_hast, "cms-foreword");
             const Ui = resolveUi(p.component);
-            const Directed = resolveDirectedUi(p.component);
             return (
               <div class="contents">
                 <Metadata
@@ -88,6 +86,7 @@ export default function UisPiece() {
                 />
                 <Show
                   when={Ui}
+                  keyed
                   fallback={
                     <PageContent flow>
                       <ArticleFocus>
@@ -108,21 +107,20 @@ export default function UisPiece() {
                     </PageContent>
                   }
                 >
-                  <CompPiece
-                    title={p.title}
-                    body={p.excerpt}
-                    tags={p.tags}
-                    updated={p.updated}
-                    schematicsHref={`/uis/${p.slug}/schematics`}
-                  >
-                    <Show when={Directed} keyed fallback={<div class="uis-stage" />}>
-                      {(Feature) => (
-                        <Suspense>
-                          <Feature slug={p.slug} title={p.title} />
-                        </Suspense>
-                      )}
-                    </Show>
-                  </CompPiece>
+                  {(Feature) => (
+                    <CompPiece
+                      title={p.title}
+                      body={extracted.node ? hastToPlainText(extracted.node) : p.excerpt}
+                      tags={p.tags}
+                      updated={p.updated}
+                      altHref={`/uis/${p.slug}/component`}
+                      altLabel="Component"
+                    >
+                      <Suspense>
+                        <Feature slug={p.slug} title={p.title} />
+                      </Suspense>
+                    </CompPiece>
+                  )}
                 </Show>
               </div>
             );

@@ -2,7 +2,7 @@
 title: Image Generation
 slug: image-generation
 section: uis
-order: 7
+order: 4
 component: image-generation
 tags:
   - image-model

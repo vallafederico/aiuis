@@ -84,7 +84,7 @@ export default function MsdfText(props: MsdfTextProps) {
     syncSize();
   };
 
-  // The aa band scales with these. A read while hidden (solo mode,
+  // The aa band scales with these. A read while hidden (display:none,
   // mid-transition) returns 0 and would leave the glyphs soft once shown.
   const syncSize = () => {
     const rect = el.getBoundingClientRect();

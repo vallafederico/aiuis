@@ -1,0 +1,451 @@
+.pipe {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  color: var(--color-key);
+}
+
+/*
+ * Entrance: the page and the frame land first (the feature stage fades in at
+ * 200ms), then the pipeline assembles top to bottom. Pipeline.tsx starts the
+ * walkthrough after the last stage lands and mirrors these numbers.
+ */
+.pipe {
+  --pipe-delay: 450ms;
+  --pipe-stagger: 90ms;
+  --pipe-in: 1.2s;
+  --pipe-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pipe-live,
+.pipe-stage,
+.pipe-loop,
+.pipe-foot {
+  animation:
+    pipe-rise var(--pipe-in) var(--pipe-ease) both,
+    pipe-fade var(--pipe-in) cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation-delay: calc(var(--pipe-delay) + var(--i, 0) * var(--pipe-stagger));
+}
+
+/* The connector draws down after its stage arrives. */
+.pipe-edge::before {
+  transform-origin: top;
+  animation: pipe-draw 0.6s var(--pipe-ease) both;
+  animation-delay: calc(var(--pipe-delay) + var(--i, 0) * var(--pipe-stagger) + 250ms);
+}
+
+@keyframes pipe-rise {
+  from {
+    transform: translateY(0.8em);
+  }
+}
+
+@keyframes pipe-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pipe-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.uis-mock:has(.pipe) .uis-mock-kicker::after {
+  content: " · pipeline";
+}
+
+.pipe-stages {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pipe-row {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+}
+
+/* ——— steps: the role decides the line ——— */
+
+.pipe-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 7px 8px 8px;
+  border: 0;
+  outline: 1px solid var(--color-key);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  transition:
+    background-color 0.35s linear,
+    color 0.35s linear,
+    opacity 0.35s linear;
+}
+
+.pipe-step.is-expandable {
+  cursor: pointer;
+}
+
+.pipe-step.is-expandable:hover {
+  background: color-mix(in srgb, var(--color-key) 8%, transparent);
+}
+
+.pipe-step:focus-visible {
+  outline-width: 2px;
+}
+
+.pipe-step[data-role="reader"] {
+  outline-color: rgb(0 0 255 / 0.35);
+}
+
+.pipe-step[data-role="source"] {
+  outline-style: dashed;
+}
+
+.pipe-step[data-role="llm"],
+.pipe-step[data-role="image"],
+.pipe-step[data-role="jev"] {
+  outline-width: 2px;
+  outline-offset: -1px;
+}
+
+.pipe-step[data-role="jev"] {
+  outline-style: double;
+  outline-width: 3px;
+}
+
+.pipe-stage.is-active .pipe-step,
+.pipe-stage.is-active .pipe-step.is-expandable:hover {
+  background: var(--color-key);
+  color: var(--color-paper);
+}
+
+.pipe.is-live .pipe-stage:not(.is-active, .is-done) .pipe-step {
+  opacity: 0.4;
+}
+
+.pipe-stage.is-skip .pipe-step {
+  opacity: 0.25 !important;
+}
+
+.pipe-role {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.pipe-title {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.pipe-detail {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.pipe-meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  opacity: 0.6;
+}
+
+.pipe-more {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.pipe-inside {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid currentColor;
+}
+
+.pipe-fact {
+  font-size: 9.5px;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.pipe-fact::before {
+  content: "· ";
+}
+
+.pipe-file {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+}
+
+/* ——— connectors: a line with what flows along it ——— */
+
+.pipe-edge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 26px;
+  margin: 0;
+  padding: 4px 0 4px 18px;
+}
+
+.pipe-edge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  border-left: 1px solid var(--color-key);
+}
+
+.pipe-edge::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 5px;
+  border: 3.5px solid transparent;
+  border-top: 4px solid var(--color-key);
+  border-bottom: 0;
+}
+
+.pipe-edge span {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+
+.pipe-stage.is-active .pipe-edge span,
+.pipe-edge.is-note span {
+  opacity: 1;
+}
+
+.pipe-edge.is-note span {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: -0.02em;
+}
+
+.pipe-loop {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px dashed rgb(0 0 255 / 0.45);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  transition:
+    background-color 0.35s linear,
+    color 0.35s linear;
+}
+
+.pipe-loop.is-active {
+  background: var(--color-key);
+  color: var(--color-paper);
+}
+
+/* ——— live run ——— */
+
+.pipe-live {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgb(0 0 255 / 0.2);
+}
+
+.pipe-live-row {
+  display: flex;
+  gap: 6px;
+}
+
+.pipe-live-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 3px 0;
+  border: 0;
+  border-bottom: 1px solid rgb(0 0 255 / 0.35);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: -0.04em;
+}
+
+.pipe-live-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-key);
+}
+
+.pipe-live-input::placeholder {
+  color: var(--color-key);
+  opacity: 0.35;
+}
+
+.pipe-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.pipe-examples button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.pipe-examples button:hover {
+  opacity: 1;
+}
+
+.pipe-live-error {
+  margin: 0;
+  font-size: 10px;
+}
+
+/* ——— footer ——— */
+
+.pipe-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0 0;
+  border-top: 1px solid rgb(0 0 255 / 0.2);
+}
+
+.pipe-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.pipe-btn {
+  margin: 0;
+  padding: 2px 6px;
+  border: 0;
+  outline: 1px solid rgb(0 0 255 / 0.35);
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 0.2s linear,
+    color 0.2s linear;
+}
+
+.pipe-btn:hover:not(:disabled) {
+  background: var(--color-key);
+  color: var(--color-paper);
+}
+
+.pipe-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pipe-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.pipe-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pipe-legend i {
+  width: 12px;
+  height: 8px;
+  outline: 1px solid var(--color-key);
+}
+
+.pipe-legend [data-role="reader"] i {
+  outline-color: rgb(0 0 255 / 0.35);
+}
+
+.pipe-legend [data-role="source"] i {
+  outline-style: dashed;
+}
+
+.pipe-legend [data-role="llm"] i,
+.pipe-legend [data-role="image"] i {
+  outline-width: 2px;
+  outline-offset: -1px;
+}
+
+.pipe-legend [data-role="jev"] i {
+  outline-style: double;
+  outline-width: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipe-step,
+  .pipe-loop {
+    transition: none;
+  }
+
+  .pipe-live,
+  .pipe-stage,
+  .pipe-loop,
+  .pipe-foot,
+  .pipe-edge::before {
+    animation: none;
+  }
+}
