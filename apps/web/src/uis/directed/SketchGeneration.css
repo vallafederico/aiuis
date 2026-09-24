@@ -1,0 +1,220 @@
+.uis-feature:has(.sk-page) {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--grid-column-width));
+  column-gap: var(--gutter);
+  align-items: stretch;
+  justify-content: start;
+}
+
+/* Surface on columns 2–8, the provenance and brief on 9–11. The logo sits on 12. */
+.sk-page {
+  display: grid;
+  grid-column: 2 / span 10;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: var(--gutter);
+  row-gap: 1.1rem;
+  height: 100svh;
+  padding: 9svh 0 8svh;
+  color: var(--color-key);
+  pointer-events: none;
+}
+
+.sk-head {
+  display: flex;
+  grid-column: 1 / span 7;
+  grid-row: 1;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.sk-label,
+.sk-small {
+  flex: none;
+  margin: 0;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.sk-meter {
+  position: relative;
+  flex: 1;
+  height: 2px;
+}
+
+.sk-meter-track,
+.sk-meter-fill,
+.sk-meter-arm {
+  position: absolute;
+  inset: 0;
+}
+
+/* Holds its width when empty so the meter does not jump on first ink. */
+.sk-clear {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  width: 4.75rem;
+  min-height: 21px;
+  pointer-events: auto;
+}
+
+/* The page is the paper: no box, only the ink and a faint dot grid (in the shader). */
+.sk-surface {
+  position: relative;
+  grid-column: 1 / span 7;
+  grid-row: 2;
+  min-height: 0;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
+}
+
+/* The WebGL surface: the drawing area plus the margin its glow spills into. */
+.sk-bleed {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sk-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 8px;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.sk-error {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: clamp(1.1rem, 1.6vw, 1.5rem);
+  letter-spacing: -0.07em;
+  line-height: 1.1;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.sk-aside {
+  display: flex;
+  grid-column: 8 / span 3;
+  grid-row: 1 / span 2;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2.5rem;
+  min-height: 0;
+}
+
+.sk-provenance {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-height: 0;
+  animation: sk-rise 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Glyphs are MSDF; the DOM copy sets the wrap, so its tracking matches `tracking`. */
+.sk-prompt {
+  margin: 0;
+  font-size: clamp(1.2rem, 1.65vw, 1.85rem);
+  letter-spacing: -0.07em;
+  line-height: 1.02;
+}
+
+.sk-source {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  line-height: 1.2;
+}
+
+.sk-source.is-fallback {
+  opacity: 0.6;
+}
+
+.sk-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.sk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sk-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 60px;
+  background: transparent;
+  color: inherit;
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.32em;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sk-chip-fill {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sk-chip:focus-visible {
+  outline: 1px solid var(--color-key);
+  outline-offset: 2px;
+}
+
+@keyframes sk-rise {
+  from {
+    opacity: 0.01;
+    transform: translateY(0.8em);
+  }
+}
+
+@media (max-width: 768px) {
+  .sk-page {
+    grid-column: 1 / -1;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding: 12svh 0 4svh;
+  }
+
+  .sk-head,
+  .sk-surface {
+    grid-column: 1 / -1;
+  }
+
+  .sk-aside {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    gap: 1rem;
+  }
+
+  .sk-prompt {
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-provenance {
+    animation: none;
+  }
+}
