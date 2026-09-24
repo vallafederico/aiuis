@@ -6,7 +6,13 @@
  */
 
 /** UI pieces that are live. Every other `uis` piece is a draft. */
-export const PUBLISHED_UIS: ReadonlySet<string> = new Set(["faqs", "generative-moodboard"]);
+export const PUBLISHED_UIS: ReadonlySet<string> = new Set([
+  "faqs",
+  "infinite-article",
+  "generative-moodboard",
+  "sketch-generation",
+  "type-an-analytic",
+]);
 
 export type PieceStatus = "draft" | "published";
 
