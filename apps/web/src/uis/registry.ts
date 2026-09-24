@@ -32,6 +32,7 @@ export function resolveUi(name: string | null): Component<UiProps> | undefined {
 /** Art-directed pages for `/uis/:slug`. Schematics stay on the `uis` map. */
 export const directedUis: Record<string, Component<UiProps>> = {
   faqs: lazy(() => import("./directed/Faqs")),
+  "generative-moodboard": lazy(() => import("./directed/GenerativeMoodboard")),
 };
 
 export function resolveDirectedUi(name: string | null): Component<UiProps> | undefined {
