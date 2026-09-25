@@ -1,11 +1,13 @@
 /**
- * Catalog search + soft rule chips — judgment layer for the Navigation
- * chapter's contained demo.
+ * Catalog search + rule judgment over the published pieces. `searchCatalog`
+ * and the soft chips serve the Navigation demo; `judgeChip` is also the
+ * Filters judge (one noul per piece, via lib/filters.ts), whose passing
+ * rows are drawn to the search bar.
  *
  * Doctrine (uis/experiments.md): search RANKS the existing index in place,
- * a miss is silence not a bogus #1, and no judgment call happens when the
- * model layer is unavailable — we fall back to honest literal substring
- * matching (search) or to nothing at all (chips).
+ * a rule never adds a row, a miss is silence not a bogus #1, and no judgment
+ * call happens when the model layer is unavailable — we fall back to honest
+ * literal substring matching (search) or to nothing at all (rules).
  *
  * These functions never throw; they degrade to the literal fallback / null.
  */

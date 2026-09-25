@@ -8,9 +8,24 @@ const [componentView, setComponentView] = createSignal(false);
 const [componentLens, setComponentLens] = createSignal(0);
 
 /** Component views that keep the pointer lens, and how strong; the rest switch it off. */
-const LENS_COMPONENTS: Record<string, number> = { "generative-moodboard": 0.5, filters: 1 };
+const LENS_COMPONENTS: Record<string, number> = {
+  "generative-moodboard": 0.5,
+  filters: 1,
+  "sketch-generation": 1,
+};
+
+/** The open view's own lens strength, before any momentary scale. */
+let baseLens = 0;
 
 export { componentView, componentLens };
+
+/**
+ * Scale the open view's lens for a moment, 0 to 1, such as off while a pen is
+ * down so strokes land under it. The next route change resets it.
+ */
+export function scaleComponentLens(scale: number) {
+  setComponentLens(baseLens * Math.max(0, Math.min(1, scale)));
+}
 
 export function isComponentView(path: string) {
   const n = path.replace(/\/+$/, "") || "/";
@@ -32,5 +47,6 @@ export function syncComponentView(path: string) {
   applyComponentViewClass(on);
   setComponentView(on);
   const slug = componentSlug(path);
-  setComponentLens(slug ? (LENS_COMPONENTS[slug] ?? 0) : 0);
+  baseLens = slug ? (LENS_COMPONENTS[slug] ?? 0) : 0;
+  setComponentLens(baseLens);
 }

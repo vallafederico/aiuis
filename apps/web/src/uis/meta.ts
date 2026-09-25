@@ -67,7 +67,7 @@ export const uiTags: Record<string, string[]> = {
   "generative-moodboard": ["image-model", "axes", "mix"],
   "image-generation": ["image-model", "prompt", "iteration"],
   "sketch-generation": ["image-model", "prompt", "sketch"],
-  filters: ["jev", "select", "rank"],
+  filters: ["jev", "filter", "score"],
   "type-an-analytic": ["language-model", "generation", "prompt"],
 };
 

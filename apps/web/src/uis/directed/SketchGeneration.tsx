@@ -15,6 +15,7 @@ import MsdfText from "~/components/webgl/MsdfText";
 import GlRoundRect from "~/components/webgl/GlRoundRect";
 import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
 import { createWipe } from "~/components/NavHit";
+import { scaleComponentLens } from "~/lib/component-view";
 import { SketchGl } from "../sketch-generation-gl";
 import { createSketchSession, sketchChipLabel } from "../sketch-session";
 import "./SketchGeneration.css";
@@ -111,6 +112,14 @@ function Chip(props: { label: string; active?: boolean; onClick: () => void }) {
 export default function SketchGenerationDirected(_props: UiProps) {
   const [glError, setGlError] = createSignal<string | null>(null);
   const [arm, setArm] = createSignal(0);
+  const [penDown, setPenDown] = createSignal(false);
+
+  // The lens distorts the page and the image as it prints, but not under a
+  // pen: a stroke has to land exactly where it is drawn.
+  createEffect(() => {
+    scaleComponentLens(penDown() ? 0 : 1);
+  });
+  onCleanup(() => scaleComponentLens(1));
 
   let surface!: HTMLDivElement;
   let bleedEl!: HTMLDivElement;
@@ -263,11 +272,23 @@ export default function SketchGenerationDirected(_props: UiProps) {
         ref={surface}
         role="img"
         aria-label="Drawing surface. Draw with a mouse, pen, or finger; the image renders when you pause."
-        onPointerDown={session.onPointerDown}
+        onPointerDown={(event) => {
+          setPenDown(true);
+          session.onPointerDown(event);
+        }}
         onPointerMove={session.onPointerMove}
-        onPointerUp={session.onPointerUp}
-        onPointerCancel={session.onPointerUp}
-        onLostPointerCapture={session.onPointerUp}
+        onPointerUp={(event) => {
+          setPenDown(false);
+          session.onPointerUp(event);
+        }}
+        onPointerCancel={(event) => {
+          setPenDown(false);
+          session.onPointerUp(event);
+        }}
+        onLostPointerCapture={(event) => {
+          setPenDown(false);
+          session.onPointerUp(event);
+        }}
       >
         <div class="sk-bleed" ref={bleedEl} aria-hidden="true" />
         <Show when={phase() === "empty" && !shown() && !glError()}>
@@ -276,7 +297,11 @@ export default function SketchGenerationDirected(_props: UiProps) {
           </span>
         </Show>
         <Show when={glError()}>
-          <p class="sk-error">{glError()}</p>
+          {(message) => (
+            <div class="sk-error">
+              <CmsMsdfBlock text={message()} tracking={-0.07} />
+            </div>
+          )}
         </Show>
       </div>
 
@@ -291,8 +316,15 @@ export default function SketchGenerationDirected(_props: UiProps) {
                 <p class="sk-prompt">
                   <CmsMsdfBlock text={s().prompt} tracking={-0.07} />
                 </p>
-                <p class="sk-source" classList={{ "is-fallback": s().fallback }}>
-                  <MsdfText text={s().source.toUpperCase()} font="AlteHaasGroteskBold" tracking={0.32} weird />
+                <p class="sk-source">
+                  {/* WebGL text ignores CSS opacity: the fallback dims through alpha. */}
+                  <MsdfText
+                    text={s().source.toUpperCase()}
+                    font="AlteHaasGroteskBold"
+                    tracking={0.32}
+                    alpha={s().fallback ? 0.6 : 1}
+                    weird
+                  />
                 </p>
               </>
             )}

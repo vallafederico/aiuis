@@ -65,15 +65,13 @@ Draw on the pad. The site holds a closed set of prompts (short labels on screen;
 
 On generate the ink is snapshotted and blurred into proximity fields. Those fields paint a procedural underpainting per brief (masses, light, cast shadow, grain). The model gets the strokes as a plain line drawing, cropped to the drawing area, and edits from it with FLUX.2 [klein] 9B on Workers AI (reference image plus an instruction to keep the drawn composition; output at the drawing's aspect, 1024 px long side). Compared on the same sketch, klein 9B followed the composition best and answered in about 2–3 s; klein 4B took about 7–10 s and [dev] about 14 s with softer results, and feeding them the underpainting made them copy its embossed look. On error the server tries klein 4B, then `stable-diffusion-v1-5-inpainting` with the underpainting as init image (full mask, strength 0.75, so it acts as img2img). Without the binding, or if every model fails, the underpainting is the result, labelled "procedural". Wait: strokes bleed along a noise flow field under a scan band, while the pad strokes are re-read in drawn order. Arrival: the image develops outward from the ink, with a key-blue edge, then the overlaid strokes fade. Reduced motion is a crossfade. Hidden prompt pack and server call in `lib/sketch-generation.ts`.
 
-### Filters — stub (Wave 4)
+### Filters — live
 
-Hard tags cut exactly. Soft chips are typed Nouls; rows recede, then hide past a floor. Type a sentence to name a new chip when confidence is high; otherwise silence. Put-back for a bad chip. Floor is a mixing desk over stored scores (no extra call). Search ranks; filters cut. Same list.
+Every published chapter (CMS, `getFilterRows` in `lib/filters.ts`) is a ball on the stage. Type a need; after a 450ms pause Jev judges it with one noul per chapter in a single call (`judgeChip`), seeing title, summary, tags and a `kind` per section. A pass (≥ 0.5) springs to its own seat by the bar and turns key blue, pulled harder the higher it scores. The rest are left alone and keep moving. If nothing passes, nothing moves and the status says "Nothing here is “…”". Escape releases all. The list never gains a row; search only moves existing ones.
 
-**Visual center:** chip row + opacity choreography on the catalog. Not a results page.
+**Visual center:** WebGL spheres with printed titles around a central search bar. Balls fly in, then run free: roll with their motion, keep momentum (light drag), collide, bounce off walls. The pointer shoves them; the site's lens distortion is on. The bar is solid, so drawn balls gather around the words. Not a results page.
 
-**Reuse:** `catalog-search` / Images chip + floor patterns; seed catalog can be the Images tiles or the piece index.
-
-**Build:** live MockFrame in `Filters.tsx` (stub layout already). Jev for soft chips + typed-chip naming. Literal hard tags without a key.
+**Built:** `uis/directed/Filters.tsx` (physics, seats, search), `filter-ball-gl.ts` (lit sphere shader + title texture), `filter-bar-gl.tsx` (text, caret, underline and status on instanced MSDF glyphs). Hard tags and the relevance floor slider were dropped: pull strength already shows the score.
 
 ### Type an Analytic — generative dashboard (directed)
 
@@ -201,7 +199,7 @@ Fits the Image Generation chapter’s loop (iterate, know when to stop) as its o
 
 ## New components worth a chapter
 
-- **Filters** + **Type an Analytic** — next build (Wave 4). See stubs above.
+- **Filters** + **Type an Analytic** — built (Wave 4). See above.
 - **Inbox / rank** — same list, importance instead of nav order. Ranking as the default, not a search mode.
 - **Command palette** — natural language → typed action (open piece, apply chip, find span). Overlaps Type an Analytic; prefer Type an Analytic when the answer is a control, palette when the answer is navigation.
 - **Smart drop** — drop a tag, quote, or image onto a piece; Jev picks the slot (related / evidence / discard).
@@ -277,7 +275,7 @@ Steal the constraint, not a generated operating system. On this site the grid al
 3. Infinite Article (draft)
 4. Generative Moodboard (live)
 5. **Sketch Generation** (live)
-6. **Filters** (stub → Wave 4)
+6. **Filters** (live)
 7. **Type an Analytic** (stub → Wave 4; control set shared with Filters)
 
 Wave 4 reuses: rank a closed set, soft Nouls, exists gate, opacity as first response. Sketch Generation is generate-when-needed with the sketch as the visible ask.

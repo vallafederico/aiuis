@@ -627,7 +627,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
         );
         const speedRadiusPx = radiusPx * (1 + speedBoost);
         const heldRadiusPx = radiusPx * (1 + RADIUS_MAX_BOOST) * HOLD_SCALE;
-        const targetRadiusPx = holding ? heldRadiusPx : speedRadiusPx;
+        const targetRadiusPx = holding && !componentView() ? heldRadiusPx : speedRadiusPx;
         currentRadiusPx +=
           (targetRadiusPx - currentRadiusPx) * (1 - Math.exp(-RADIUS_K * dt));
         if (Math.abs(targetRadiusPx - currentRadiusPx) < 0.1) {
@@ -772,7 +772,17 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     createEffect(() => {
       if (!componentView()) return;
-      targetStrength = Math.min(targetStrength, magnify());
+      const cap = magnify();
+      targetStrength = Math.min(targetStrength, cap);
+      // A view that drops its lens (a pen going down) needs it gone this frame,
+      // not eased out over the first stretch of the stroke.
+      currentStrength = Math.min(currentStrength, cap);
+      // Component views have no hold zoom; drop one carried in from another page.
+      holding = false;
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = 0;
+      }
       getDefaultEngine()?.requestFrame();
     });
 

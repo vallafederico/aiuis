@@ -11,7 +11,7 @@ export type FilterRow = {
   tags: string[];
 };
 
-/** The closed list Filters cuts. Same pieces `judgeChip` scores, in nav order. */
+/** The closed list Filters moves. Same pieces `judgeChip` scores, in nav order. */
 export const getFilterRows = query(async (): Promise<FilterRow[]> => {
   "use server";
   const { listSeoPieces } = await import("~/lib/llm-seo");
@@ -26,12 +26,12 @@ export const getFilterRows = query(async (): Promise<FilterRow[]> => {
   }));
 }, "filter-rows");
 
-/** A row at or above this passes a chip outright. */
+/** A row at or above this passes the rule and is drawn to the bar. */
 export const KEEP_AT = 0.5;
 
 /**
  * A typed rule, judged once per row. Null is silence: no model, a failed
- * call, or no row that clearly passes. The chip only exists when one does.
+ * call, or no row that clearly passes. Nothing moves unless one does.
  */
 export async function judgeFilterRule(
   rule: string,

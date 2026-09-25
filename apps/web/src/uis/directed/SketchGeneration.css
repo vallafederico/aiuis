@@ -135,10 +135,6 @@
   line-height: 1.2;
 }
 
-.sk-source.is-fallback {
-  opacity: 0.6;
-}
-
 .sk-controls {
   display: flex;
   flex-direction: column;
