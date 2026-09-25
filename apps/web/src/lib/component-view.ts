@@ -8,7 +8,7 @@ const [componentView, setComponentView] = createSignal(false);
 const [componentLens, setComponentLens] = createSignal(0);
 
 /** Component views that keep the pointer lens, and how strong; the rest switch it off. */
-const LENS_COMPONENTS: Record<string, number> = { "generative-moodboard": 0.5 };
+const LENS_COMPONENTS: Record<string, number> = { "generative-moodboard": 0.5, filters: 1 };
 
 export { componentView, componentLens };
 

@@ -15,10 +15,14 @@ export const PUBLISHED_UIS: ReadonlySet<string> = new Set([
   "type-an-analytic",
 ]);
 
-export type PieceStatus = "draft" | "published";
+/** UI pieces still being worked out: hidden everywhere, even from drafts in dev. */
+export const SHELVED_UIS: ReadonlySet<string> = new Set(["image-generation"]);
+
+export type PieceStatus = "shelved" | "draft" | "published";
 
 export function pieceStatus(section: string, slug: string): PieceStatus {
   if (section !== "uis") return "published";
+  if (SHELVED_UIS.has(slug)) return "shelved";
   return PUBLISHED_UIS.has(slug) ? "published" : "draft";
 }
 
@@ -32,5 +36,7 @@ export function showDrafts(): boolean {
 
 /** Whether this piece may be listed or served in the current environment. */
 export function isPieceVisible(section: string, slug: string): boolean {
-  return showDrafts() || pieceStatus(section, slug) === "published";
+  const status = pieceStatus(section, slug);
+  if (status === "shelved") return false;
+  return showDrafts() || status === "published";
 }
