@@ -14,13 +14,11 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const seedsDir = join(root, "seeds");
 
-// Hosted default pieces schema: section enum is notes|foundations|product
-// (not preface|foundations|uis). :::foreword / :::notes stay in the body;
+// The hosted pieces schema uses the site's sections (preface|foundations|uis),
+// seeded from schema/pieces.md. :::foreword / :::notes stay in the body;
 // schema/directives/{name}.md registers them so derive emits the asides.
-const SITE_TO_HOSTED_SECTION = { preface: "notes", foundations: "foundations", uis: "product" };
-
 function hostedSection(section) {
-  return SITE_TO_HOSTED_SECTION[section] ?? section;
+  return section;
 }
 
 function walk(dir, base = dir) {
@@ -267,12 +265,8 @@ try {
 if (!piecesFields.tags) {
   const piecesSchemaFile = files.find((f) => f.path === "schema/pieces.md");
   if (piecesSchemaFile) {
-    const hostedPiecesSchema = piecesSchemaFile.content.replace(
-      "values: [preface, foundations, uis]",
-      "values: [notes, foundations, product]",
-    );
     const { res: patchRes, body: patchBody } = await adminSeed(
-      [{ path: "schema/pieces.md", content: hostedPiecesSchema }],
+      [{ path: "schema/pieces.md", content: piecesSchemaFile.content }],
       { reindex: false },
     );
     if (patchRes.status === 403 || patchRes.status === 401) {
@@ -409,6 +403,53 @@ for (const file of pieceFiles) {
     }
     console.error(`[error] ${slug}: ${message}`);
     process.exitCode = 1;
+  }
+}
+
+// Site-wide documents (the `site` collection): JSON frontmatter plus a `body`,
+// created once, then kept in sync field by field.
+const siteFiles = revertAsides
+  ? []
+  : files.filter((f) => f.path.startsWith("content/site/") && f.path.endsWith(".json"));
+for (const file of siteFiles) {
+  const { body = "", ...frontmatter } = JSON.parse(file.content);
+  const slug = frontmatter.slug;
+  try {
+    const created = await callTool(apiUrl, token, "create_doc", { collection: "site", frontmatter, body });
+    await callTool(apiUrl, token, "publish", { id: created.id, base_rev: created.rev });
+    console.log(`[ok] site/${slug}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("slug_conflict") && !message.includes("already exists")) {
+      console.error(`[error] site/${slug}: ${message}`);
+      process.exitCode = 1;
+      continue;
+    }
+    try {
+      const doc = await callTool(apiUrl, token, "read_doc", { id: `site/${slug}` });
+      const edits = Object.entries(frontmatter)
+        .filter(([key, value]) => key !== "slug" && JSON.stringify(doc.frontmatter?.[key]) !== JSON.stringify(value))
+        .map(([field, value]) => ({ op: "set_field", field, value }));
+      const current = typeof doc.body === "string" ? doc.body : "";
+      if (body && current.trim() !== body.trim()) {
+        edits.push(current.trim() ? { op: "str_replace", old: current, new: body } : { op: "append", text: body });
+      }
+      if (edits.length === 0) {
+        console.log(`[skip] site/${slug}: up to date`);
+        continue;
+      }
+      const edited = await callTool(apiUrl, token, "edit_doc", {
+        id: doc.frontmatter._id,
+        base_rev: doc.frontmatter._rev,
+        note: "Sync site settings from seeds",
+        edits,
+      });
+      await callTool(apiUrl, token, "publish", { id: doc.frontmatter._id, base_rev: edited.rev });
+      console.log(`[updated] site/${slug}`);
+    } catch (syncError) {
+      console.error(`[error] site/${slug} update: ${syncError instanceof Error ? syncError.message : syncError}`);
+      process.exitCode = 1;
+    }
   }
 }
 

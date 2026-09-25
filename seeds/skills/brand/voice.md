@@ -4,7 +4,7 @@ name: brand-voice
 audience: [content-agent, human]
 attach: global
 mode: always
-description: "Scientific essay voice for aiu.is: direct claims, philosophy and science citations, no em dashes, chapter length"
+description: "Scientific essay voice for aiu.is: direct claims, concrete scenes and exact numbers, one governing image, philosophy and science citations, no em dashes, chapter length"
 lint:
   banned_terms: ["synergy", "cutting-edge", "next-generation", "best-in-class", "game-changer", "seamless", "leverage", "utilize", "—"]
   max_sentence_words: 40
@@ -24,6 +24,40 @@ A design judgment the author is making can stand as theirs. A claim about percep
 Do not perform excitement. Do not perform neutrality. If the evidence is partial, say what it supports and what it does not. If a decision was close, say so.
 
 Do not announce what you are about to say. No "this chapter explores", no "we will discuss". Cut the preamble. Do not close by restating the opening.
+
+## Craft
+
+Technical and warm at once: an argument a builder can check, written with a writer's ear. The moves below are the ones that do that.
+
+**Open on something the reader can see.** A scene, a sound on screen, an exact number. Not an abstraction. "A spinner turns for eleven seconds" before "latency erodes trust". A run of three concrete openers is allowed once, at the start.
+
+> One grey spinner. One "thinking…" that never says about what. One answer that arrives already sure of itself. Each is a small promise the interface cannot keep.
+
+**Correct a belief.** Name what the reader probably assumes, then what is true. "You might think a faster model fixes this. It moves the wait; it does not remove it."
+
+**Give the piece one image and keep it.** Name a single governing figure early (a coat of paint, a cow path, a lens) and return to it when the argument turns. One image per piece. Two start to argue with each other.
+
+**Find the reframing number.** Show where the time, attention, or error actually goes, in real units, with its source. Build it in one full sentence, then land it in a short one.
+
+> Hammer (1990) followed an insurance application through 22 days of process that held 17 minutes of work. Make every step twice as fast and you save eight minutes.
+
+**Let rhythm carry the claim.** A long sentence that accumulates detail (still under 40 words), then a short one that states what it means. Lists of three, not four. Vary paragraph openings.
+
+**Sort before you explain.** When a system has kinds, name the buckets, give each a test and one example, and say which way the hard cases fall. A taxonomy is an argument the reader can apply.
+
+**Show one worked case.** Before and after, as real steps, not adjectives. Count what disappeared.
+
+**State the objection in the reader's words, then answer it.** One per piece, the strongest one.
+
+**Contrast the small with the large.** A single token, a single frame, a single hover, and what it carries. The detail earns the scale.
+
+**Let the abstract act, if the claim survives it.** "The spinner asks for patience it has not earned" is fine when the essay then says why. Do not personify a model to make it sound like it wants things.
+
+**One dry aside per piece, at most.** Wit that clarifies. No sarcasm at the reader, no profanity, no "are you kidding me".
+
+**End on something the reader can do, or on what the claim leaves open.**
+
+Not borrowed from the essays that taught these moves: hype, predictions of doom, sales calls to action, vendor comparisons, and first-person authority claims ("I've spoken to 300 CEOs"). The evidence carries the authority here.
 
 ## Punctuation
 

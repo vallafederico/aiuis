@@ -5,8 +5,8 @@ section: foundations
 order: 4
 ---
 
-Interaction patterns for AI interfaces differ from those for deterministic software because the system's response is neither instant nor certain. This chapter catalogs the interaction primitives (prompt submission, streaming, interruption, correction, regeneration) and describes when to use each.
+Deterministic software answers at once, and answers the same way each time. An AI interface's response is neither instant nor certain, so its interaction patterns differ. The primitives catalogued here are prompt submission, streaming, interruption, correction, and regeneration, each with when to use it.
 
 :::notes
-Patterns are presented as decision trees, not as prescriptions; the right choice depends on latency budget and error tolerance.
+Patterns are presented as decision trees, not prescriptions. The right choice depends on latency budget and error tolerance.
 :::

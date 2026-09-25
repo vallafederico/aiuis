@@ -1,0 +1,12 @@
+{
+  "title": "Site",
+  "slug": "site",
+  "author": "Federico",
+  "author_url": "https://federic.ooo/",
+  "links": [
+    { "label": "Portfolio", "href": "https://federic.ooo/" },
+    { "label": "Twitter", "href": "https://federic.ooo/s/twitter" },
+    { "label": "Instagram", "href": "https://federic.ooo/s/instagram" }
+  ],
+  "body": "Site-wide data: the author and the outbound links, read wherever the site needs them."
+}
