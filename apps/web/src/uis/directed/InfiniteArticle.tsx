@@ -3,6 +3,7 @@ import { isServer } from "solid-js/web";
 import type { UiProps } from "../types";
 import type { ArticleBlock, ArticlePath, ReadingTrace } from "~/lib/article-stream";
 import { nestedScroll } from "~/lib/utils/nested-scroll";
+import GlFill from "~/components/webgl/GlFill";
 import "./InfiniteArticle.css";
 
 const OPENING: ArticleBlock[] = [
@@ -56,6 +57,8 @@ function showKicker(block: ArticleBlock): string | undefined {
 }
 
 type MarginNote = { quote: string; text: string; writing: boolean; side: "left" | "right" };
+const PLATE_EDGES = ["is-top", "is-right", "is-bottom", "is-left"] as const;
+
 /** A plate is shown as the canvas it was cleaned on, or as the raw src if that failed. */
 type Plate = { src: string; alt: string; canvas?: HTMLCanvasElement };
 
@@ -225,7 +228,10 @@ function ArticlePiece(props: {
       </For>
       <Show when={props.plate}>
         {(plate) => (
-          <figure class="inf-plate">
+          <figure class="inf-plate" classList={{ "is-pending": !plate().canvas && !plate().src }}>
+            <Show when={!plate().canvas && !plate().src}>
+              <For each={PLATE_EDGES}>{(edge) => <GlFill class={`inf-plate-edge ${edge}`} />}</For>
+            </Show>
             <Show
               when={plate().canvas}
               fallback={

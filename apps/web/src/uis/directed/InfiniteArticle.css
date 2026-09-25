@@ -186,6 +186,53 @@
   background: var(--color-paper);
 }
 
+/* Still being drawn: a hairline box at its final size, so the article reads as
+   continuing below. The paper would hide the quads behind the DOM. */
+.inf-plate.is-pending {
+  position: relative;
+  background: transparent;
+}
+
+/* GlFill quads: each keeps its CSS paint until its quad is up (data-gl). */
+.inf-plate-edge {
+  position: absolute;
+  background: currentColor;
+}
+
+.inf-plate-edge[data-gl] {
+  background: transparent;
+}
+
+.inf-plate-edge.is-top,
+.inf-plate-edge.is-bottom {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.inf-plate-edge.is-left,
+.inf-plate-edge.is-right {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.inf-plate-edge.is-top {
+  top: 0;
+}
+
+.inf-plate-edge.is-bottom {
+  bottom: 0;
+}
+
+.inf-plate-edge.is-left {
+  left: 0;
+}
+
+.inf-plate-edge.is-right {
+  right: 0;
+}
+
 .inf-plate img,
 .inf-plate canvas {
   display: block;
