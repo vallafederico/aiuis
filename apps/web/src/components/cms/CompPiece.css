@@ -145,3 +145,11 @@ html.ui-component .uis-feature {
   align-self: flex-start;
   font-size: 0.8rem;
 }
+
+/* The strike fills the padded link box: a call to action, not a text link. */
+.uis-meta-cta {
+  padding: 0.45em 0.8em 0.4em;
+  font-size: 18px;
+  line-height: 1;
+  white-space: nowrap;
+}

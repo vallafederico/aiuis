@@ -4,6 +4,7 @@ import {
   onCleanup,
   onMount,
   splitProps,
+  untrack,
   useContext,
   type JSX,
 } from "solid-js";
@@ -135,7 +136,7 @@ export default function MsdfText(props: MsdfTextProps) {
 
   createEffect(() => {
     if (!webgl.loaded) return;
-    const { text, font, tracking, lineHeight, weird, blur, color, alpha, knockout, knockoutFill } = local;
+    const { text, font, tracking, lineHeight, weird, blur, color, knockout, knockoutFill } = local;
     const current = ++generation;
 
     loadMsdfFont(font ?? "Garara")
@@ -143,7 +144,8 @@ export default function MsdfText(props: MsdfTextProps) {
         if (disposed || current !== generation) return;
 
         const layoutColor = color ?? readCssColor("--color-key");
-        const layoutAlpha = alpha ?? 1.0;
+        // Opacity is a live uniform (effect below); a fade must not rebuild the item every frame.
+        const layoutAlpha = untrack(() => local.alpha) ?? 1.0;
         const layout = {
           tracking,
           lineHeight,
@@ -183,6 +185,11 @@ export default function MsdfText(props: MsdfTextProps) {
         window.requestAnimationFrame(syncSize);
       })
       .catch((error) => console.error("[MsdfText]", local.text, error));
+  });
+
+  createEffect(() => {
+    const alpha = local.alpha ?? 1;
+    item?.setUni({ value1: alpha * (local.articleLine ? focus.alpha : 1) });
   });
 
   createEffect(() => {

@@ -115,7 +115,8 @@ export default function UisPiece() {
                       tags={p.tags}
                       updated={p.updated}
                       altHref={`/uis/${p.slug}/component`}
-                      altLabel="Component"
+                      altLabel="See Demo"
+                      altInverted
                     >
                       <Suspense>
                         <Feature slug={p.slug} title={p.title} />

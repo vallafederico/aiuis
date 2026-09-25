@@ -54,17 +54,25 @@ export function createWipe(duration = DURATION) {
   onCleanup(() => {
     if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(raf);
   });
-  return { wipe, enter: () => go(1), leave: () => go(0) };
+  const reset = () => {
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(raf);
+    setWipe(0);
+  };
+  return { wipe, enter: () => go(1), leave: () => go(0), reset };
 }
 
-function HoverStrike(props: { wipe: number }) {
+function HoverStrike(props: { wipe: number; box?: boolean }) {
   return (
     <GlRoundRect
       layer={8}
       radius={0}
       wipe={props.wipe}
       fill={readCssColor("--color-key")}
-      class="pointer-events-none absolute top-1/2 -right-[0.28em] -left-[0.16em] h-[1.15em] -translate-y-1/2"
+      class={
+        props.box
+          ? "pointer-events-none absolute inset-0"
+          : "pointer-events-none absolute top-1/2 -right-[0.28em] -left-[0.16em] h-[1.15em] -translate-y-1/2"
+      }
     />
   );
 }
@@ -75,11 +83,22 @@ export function NavHit(props: {
   current?: boolean;
   end?: boolean;
   onPointerEnter?: () => void;
+  /**
+   * Rests fully struck with the text knocked out; hover and focus wipe the strike away.
+   * The strike fills the whole link box, so padding on the link pads the fill.
+   */
+  inverted?: boolean;
+  /** 0–1 entrance of the inverted strike; it only wipes in as far as this. */
+  reveal?: number;
   children: JSX.Element;
 }) {
   const motion = createWipe();
+  const wipe = () =>
+    props.inverted && !props.current
+      ? (props.reveal ?? 1) * (1 - motion.wipe())
+      : motion.wipe();
   return (
-    <WipeCtx.Provider value={motion.wipe}>
+    <WipeCtx.Provider value={wipe}>
       <A
         href={props.href}
         {...externalLinkProps(props.href)}
@@ -96,8 +115,8 @@ export function NavHit(props: {
         }}
         onFocusOut={() => motion.leave()}
       >
-        <Show when={!props.current && motion.wipe() > 0.001}>
-          <HoverStrike wipe={motion.wipe()} />
+        <Show when={!props.current && wipe() > 0.001}>
+          <HoverStrike wipe={wipe()} box={props.inverted} />
         </Show>
         {props.children}
       </A>
