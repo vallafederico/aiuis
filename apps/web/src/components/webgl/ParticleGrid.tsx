@@ -1,4 +1,4 @@
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createParticles, type ParticlesController } from "shooosh";
 import { componentView } from "~/lib/component-view";
@@ -25,8 +25,14 @@ export default function ParticleGrid() {
 
   let particles: ParticlesController | undefined;
 
+  const phoneQuery = window.matchMedia("(max-width: 768px)");
+  const [phone, setPhone] = createSignal(phoneQuery.matches);
+  const onPhoneChange = (event: MediaQueryListEvent) => setPhone(event.matches);
+  phoneQuery.addEventListener("change", onPhoneChange);
+  onCleanup(() => phoneQuery.removeEventListener("change", onPhoneChange));
+
   createEffect(() => {
-    if (!webgl.loaded || componentView()) {
+    if (!webgl.loaded || componentView() || phone()) {
       particles?.destroy();
       particles = undefined;
       return;
