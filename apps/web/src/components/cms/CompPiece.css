@@ -5,10 +5,45 @@
   position: relative;
   height: 100svh;
   overflow: hidden;
-  /* Break out of main's 2/12 inline padding so occupancy sits on the gx grid. */
+  /* Break out of main's inline padding so occupancy sits on the gx grid. */
   width: 100vw;
-  margin-left: calc(-2 / 12 * 100vw);
+  margin-left: calc(-1 * var(--main-inset));
   pointer-events: none;
+}
+
+/* Phones: the schematic, then its meta as a block underneath, in page flow. */
+@media (max-width: 768px) {
+  .uis-page {
+    height: auto;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .uis-page .uis-feature {
+    position: relative;
+    inset: auto;
+    min-height: 100svh;
+    padding: calc(3svh + 6.5rem) var(--gx) 2rem;
+  }
+
+  .uis-page .uis-meta {
+    position: static;
+    height: auto;
+    justify-content: flex-start;
+    padding: 0 var(--gx) calc(3svh + 4rem);
+  }
+
+  .uis-page .uis-meta-col {
+    width: 100%;
+  }
+
+  /* The schematic grows with its content; the page scrolls, not a box inside it. */
+  .uis-mock {
+    width: 100% !important;
+    max-width: 100%;
+    height: auto !important;
+    max-height: none !important;
+  }
 }
 
 /* Component view: a full-viewport container. Layout (grid, centring) stays the component's. */

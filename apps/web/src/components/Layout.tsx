@@ -27,7 +27,7 @@ const GlobalLayout = (props: { children: JSX.Element; bare?: boolean }) => {
       id="content"
       tabindex="-1"
       use:scroll
-      style={props.bare ? undefined : "padding-inline: calc(2/12*100vw)"}
+      style={props.bare ? undefined : "padding-inline: var(--main-inset)"}
     >
       {props.children}
     </main>

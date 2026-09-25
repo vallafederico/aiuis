@@ -21,3 +21,11 @@
   display: flex;
   padding-block: 0.22rem;
 }
+
+/* Phones: no sidebar to clear; the index sits on the page edge, full width. */
+@media (max-width: 768px) {
+  .section-index {
+    width: 100%;
+    margin-left: 0;
+  }
+}

@@ -8,6 +8,7 @@ import {
   onMount,
 } from "solid-js";
 import { createAsync } from "@solidjs/router";
+import { getDefaultEngine } from "shooosh";
 import { A, onLeave, useLocation, usePreloadRoute } from "@acme/router";
 import GlMark from "./webgl/GlMark";
 import GlRoundRect from "./webgl/GlRoundRect";
@@ -30,7 +31,7 @@ import { isComponentView, syncComponentView } from "~/lib/component-view";
 import { labelForTag } from "~/uis/meta";
 import { getSite } from "~/lib/site-settings";
 import { CountDigits } from "./CountDigits";
-import { NavHit, NavHitText, createWipe } from "./NavHit";
+import { NavHit, NavHitButton, NavHitText, createWipe } from "./NavHit";
 
 function normalizePath(path: string) {
   if (!path || path === "/") return "/";
@@ -86,15 +87,42 @@ function NavMsdf(props: {
 export const Nav = () => {
   const location = useLocation();
   const preload = usePreloadRoute();
+  /** Phones: the sidebar is a full-screen index behind the toggle. */
+  const [open, setOpen] = createSignal(false);
 
-  onMount(() => syncComponentView(location.pathname));
+  onMount(() => {
+    syncComponentView(location.pathname);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    onCleanup(() => window.removeEventListener("keydown", onKey));
+  });
 
   createEffect(() => {
     syncComponentView(location.pathname);
+    setOpen(false);
+  });
+
+  // The page is WebGL text over the DOM, so the overlay cannot just cover it:
+  // `index-open` takes the page out of layout (its quads cull), then redraw.
+  createEffect(() => {
+    document.documentElement.classList.toggle("index-open", open());
+    getDefaultEngine()?.requestFrame();
   });
 
   return (
     <>
+      <div class="nav-toggle" data-mosaic-chrome="nav-toggle">
+        <NavHitButton
+          class={`${TAP_LINK} nav-hit text-sm`}
+          active={open()}
+          label={open() ? "Close the index" : "Open the index"}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <NavHitText text={open() ? "Close" : "Index"} font="AlteHaasGroteskBold" />
+        </NavHitButton>
+      </div>
       <div class="fixed top-0 right-0 z-20 pr-gx py-[3svh]">
         <div class="w-grid-1" data-mosaic-chrome="logo">
           <A
@@ -117,6 +145,7 @@ export const Nav = () => {
         class="flex fixed top-0 left-0 z-20 flex-col h-lvh pl-gx"
         data-mosaic-chrome="nav"
         data-ui-component-hide
+        data-open={open() ? "" : undefined}
       >
         <div
           class="relative flex flex-col justify-between h-full overflow-visible
@@ -132,7 +161,7 @@ export const Nav = () => {
       </Suspense>
       <ComponentViewChrome pathname={location.pathname} />
       <Suspense>
-        <SocialLinks pathname={location.pathname} />
+        <SocialLinks pathname={location.pathname} indexOpen={open()} />
       </Suspense>
     </>
   );
@@ -412,14 +441,20 @@ function ComponentViewChrome(props: { pathname: string }) {
 }
 
 /** Outbound links from the CMS `site` document, on every page but a full-page component. */
-function SocialLinks(props: { pathname: string }) {
+/** Pages without body text under the bottom-right corner. */
+const CORNER_CLEAR = new Set(["/", "/preface", "/foundations", "/uis"]);
+
+function SocialLinks(props: { pathname: string; indexOpen: boolean }) {
   const site = createAsync(() => getSite(), { deferStream: true });
   const shown = () => !!site() && !/^\/uis\/[^/]+\/component$/.test(normalizePath(props.pathname));
+  /** On a phone, reading pages keep the links in the index instead of over the text. */
+  const reading = () => !CORNER_CLEAR.has(normalizePath(props.pathname)) && !props.indexOpen;
   return (
     <Show when={shown() && site()!.links.length > 0}>
       <ul
-        class="fixed right-gx bottom-[3svh] z-30 flex items-center gap-3 text-[0.8rem] pointer-events-auto"
+        class="social-links fixed right-gx bottom-[3svh] z-30 flex items-center gap-3 text-[0.8rem] pointer-events-auto"
         data-board-exclude
+        data-reading={reading() ? "" : undefined}
         aria-label="Elsewhere"
       >
         <For each={site()!.links}>

@@ -942,7 +942,62 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
     kick();
   };
 
+  /** Touches on the board, for two-finger pinch zoom. */
+  const touches = new Map<number, { x: number; y: number }>();
+  let pinch: { dist: number; z: number; mx: number; my: number } | null = null;
+
+  const pinchSpan = () => {
+    const [a, b] = [...touches.values()];
+    return {
+      dist: Math.max(1, Math.hypot(b!.x - a!.x, b!.y - a!.y)),
+      mx: (a!.x + b!.x) / 2,
+      my: (a!.y + b!.y) / 2,
+    };
+  };
+
+  const startPinch = () => {
+    // A second finger turns whatever the first was doing into a pinch.
+    clearTimeout(focusTimer);
+    focusTimer = 0;
+    if (drag?.dragging) plane.classList.remove("is-dragging");
+    drag = null;
+    clearFocus();
+    fling.x = fling.y = 0;
+    centering = false;
+    const span = pinchSpan();
+    pinch = { dist: span.dist, z: target.z, mx: span.mx, my: span.my };
+  };
+
+  const movePinch = () => {
+    if (!pinch) return;
+    const span = pinchSpan();
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinch.z * (span.dist / pinch.dist)));
+    // Like the wheel: the world point under the fingers stays put, and the
+    // midpoint moving pans the board.
+    const c = fromCentre(span.mx, span.my);
+    const ratio = next / target.z;
+    target.x = c.x - (c.x - target.x) * ratio + (span.mx - pinch.mx);
+    target.y = c.y - (c.y - target.y) * ratio + (span.my - pinch.my);
+    target.z = next;
+    pinch.mx = span.mx;
+    pinch.my = span.my;
+    kick();
+  };
+
   const onPointerDown = (event: PointerEvent) => {
+    if (event.pointerType === "touch") {
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touches.size === 2) {
+        try {
+          plane.setPointerCapture(event.pointerId);
+        } catch {
+          // Pointer already gone; the pinch still ends on pointerup / cancel.
+        }
+        startPinch();
+        return;
+      }
+      if (touches.size > 2) return;
+    }
     if (event.button !== 0) return;
     // Grabbing the board stops any glide where it is.
     fling.x = fling.y = 0;
@@ -978,6 +1033,13 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
   };
 
   const onPointerMove = (event: PointerEvent) => {
+    if (touches.has(event.pointerId)) {
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinch) {
+        movePinch();
+        return;
+      }
+    }
     if (!drag) {
       onHover(event);
       return;
@@ -1018,6 +1080,13 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
   };
 
   const endDrag = (event: PointerEvent) => {
+    touches.delete(event.pointerId);
+    if (pinch) {
+      // The finger left over after a pinch is not a click or a drag.
+      if (touches.size < 2) pinch = null;
+      kick();
+      return;
+    }
     if (!drag || event.pointerId !== drag.id) return;
     const { dragging, swapping, t } = drag;
     drag = null;

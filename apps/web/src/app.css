@@ -214,6 +214,85 @@ main {
   min-height: 100svh;
 }
 
+/* The sidebar and meta column hold the outer 2/12 on desktop; phones use the whole width. */
+:root {
+  --main-inset: calc(2 / 12 * 100vw);
+}
+
+/* ——— phones: the sidebar becomes a full-screen index behind the "Index" toggle ——— */
+.nav-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --main-inset: 0px;
+  }
+
+  .nav-toggle {
+    position: fixed;
+    top: 3svh;
+    left: var(--gx);
+    z-index: 40;
+    display: block;
+  }
+
+  html.ui-component .nav-toggle {
+    display: none;
+  }
+
+  nav[aria-label="Site"] {
+    display: none;
+  }
+
+  nav[aria-label="Site"][data-open] {
+    display: flex;
+    inset: 0;
+    z-index: 30;
+    width: 100%;
+    height: 100svh;
+    padding-right: var(--gx);
+    overflow-y: auto;
+  }
+
+  nav[aria-label="Site"][data-open] > div {
+    width: 100%;
+    min-height: 100%;
+    padding-top: calc(3svh + 3rem);
+  }
+
+  /* The page is WebGL over the DOM: while the index is open it leaves layout,
+     so its quads cull instead of drawing through the overlay. */
+  html.index-open main,
+  html.index-open [data-ui-component-hide]:not(nav) {
+    display: none;
+  }
+
+  nav[aria-label="Site"] [data-mosaic-page="crumbs"] {
+    display: none;
+  }
+
+  html.index-open .social-links {
+    z-index: 40;
+  }
+
+  /* Reading pages: the corner links would sit on the text; they live in the index. */
+  .social-links[data-reading] {
+    display: none;
+  }
+
+  /* Chapters: set for a phone, not a lectern. */
+  .cms-body.text-\[2rem\] {
+    font-size: 1.3rem;
+    line-height: 1.35;
+  }
+
+  .cms-body h2,
+  h1 .text-6xl {
+    font-size: 2rem;
+  }
+}
+
 /* utilities */
 @layer utilities {
   .flex-center {

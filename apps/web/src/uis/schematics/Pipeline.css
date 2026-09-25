@@ -443,6 +443,33 @@
   outline-width: 3px;
 }
 
+/* Phones: the pipeline reads in page flow, and parallel steps stack. */
+@media (max-width: 768px) {
+  .pipe {
+    overflow: visible;
+  }
+
+  .pipe-title {
+    font-size: 15px;
+  }
+
+  .pipe-detail,
+  .pipe-fact {
+    font-size: 11px;
+  }
+
+  .pipe-foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .pipe-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pipe-step,
   .pipe-loop {

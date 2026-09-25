@@ -343,6 +343,20 @@ html.ui-component .mood-world {
   .mood-page {
     grid-column: 1 / -1;
   }
+
+  /* A smaller corner: the board is most of a phone screen. */
+  .mood-corner {
+    gap: 0.6rem;
+  }
+
+  .mood-map {
+    width: 5rem;
+  }
+
+  .mood-view {
+    min-height: 22px;
+    font-size: 0.8rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
