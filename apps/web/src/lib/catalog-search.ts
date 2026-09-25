@@ -28,9 +28,17 @@ export type ChipResult = {
 type CatalogEntry = {
   slug: string;
   section: string;
+  /** What the piece is, in words: the section alone does not tell the judge. */
+  kind: string;
   title: string;
   summary: string;
   tags: string[];
+};
+
+const KIND: Record<string, string> = {
+  preface: "front matter about the site itself",
+  foundations: "an essay on designing AI interfaces",
+  uis: "a chapter with a working interactive prototype you can use on the site",
 };
 
 async function loadCatalog(): Promise<CatalogEntry[]> {
@@ -38,6 +46,7 @@ async function loadCatalog(): Promise<CatalogEntry[]> {
   return pieces.map(({ slug, section, title, summary, tags }) => ({
     slug,
     section,
+    kind: KIND[section] ?? section,
     title,
     summary,
     tags,

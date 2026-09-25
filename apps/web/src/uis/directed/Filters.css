@@ -1,0 +1,315 @@
+.uis-feature:has(.flt-page) {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--grid-column-width));
+  column-gap: var(--gutter);
+  align-items: center;
+  justify-content: start;
+}
+
+.flt-page {
+  display: flex;
+  grid-column: 4 / span 6;
+  flex-direction: column;
+  gap: 1.1rem;
+  max-height: 80svh;
+  color: var(--color-key);
+}
+
+.flt-ask,
+.flt-controls,
+.flt-row-inner {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  column-gap: var(--gutter);
+}
+
+.flt-n {
+  grid-column: 1;
+  padding-top: 0.7em;
+  font-family: var(--font-garara);
+  font-size: 10px;
+  font-variation-settings: "wght" 0;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.flt-mono {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.flt-ask {
+  flex-shrink: 0;
+  align-items: start;
+}
+
+.flt-ask-input {
+  grid-column: 2 / -1;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0.4rem;
+  border: 0;
+  border-bottom: 1px solid rgb(0 0 255 / 0.28);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  letter-spacing: -0.09em;
+  line-height: 1.08;
+}
+
+.flt-ask-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-key);
+}
+
+.flt-ask-input::placeholder {
+  color: var(--color-key);
+  opacity: 0.28;
+}
+
+.flt-ask-input:disabled {
+  opacity: 0.45;
+}
+
+.flt-controls {
+  flex-shrink: 0;
+  row-gap: 0.8rem;
+}
+
+.flt-chips,
+.flt-tags {
+  display: flex;
+  grid-column: 2 / -1;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 24px;
+  padding: 0 0.3rem 0 0.7rem;
+  border-radius: 60px;
+  background: var(--color-key);
+  color: var(--color-paper);
+  font-size: 0.95rem;
+  letter-spacing: -0.045em;
+}
+
+.flt-chip.is-pending {
+  padding-right: 0.7rem;
+  background: rgb(0 0 255 / 0.12);
+  color: var(--color-key);
+}
+
+.flt-chip-x {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.flt-chip-x:hover,
+.flt-chip-x:focus-visible {
+  background: var(--color-paper);
+  color: var(--color-key);
+  outline: none;
+}
+
+.flt-cursor {
+  width: 0.5em;
+  height: 1em;
+  background: currentColor;
+  animation: flt-cursor 1s steps(1, end) infinite;
+}
+
+@keyframes flt-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
+.flt-tag {
+  min-height: 24px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 60px;
+  background: rgb(0 0 255 / 0.07);
+  color: inherit;
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s linear,
+    color 0.2s linear;
+}
+
+.flt-tag:hover {
+  background: rgb(0 0 255 / 0.16);
+}
+
+.flt-tag[aria-pressed="true"] {
+  background: var(--color-key);
+  color: var(--color-paper);
+}
+
+.flt-tag:focus-visible {
+  outline: 1px solid var(--color-key);
+  outline-offset: 2px;
+}
+
+.flt-meta {
+  display: flex;
+  grid-column: 2 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.flt-floor {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.95rem;
+  letter-spacing: -0.045em;
+}
+
+.flt-floor:has(input:disabled) {
+  opacity: 0.35;
+}
+
+.flt-floor input {
+  width: 9rem;
+  accent-color: var(--color-key);
+}
+
+.flt-list {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+/* Hidden rows fold shut instead of leaving: the list stays the list. */
+.flt-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: var(--alpha, 1);
+  transition:
+    grid-template-rows 0.9s var(--expo-out, cubic-bezier(0.19, 1, 0.22, 1)),
+    opacity 0.5s linear;
+}
+
+.flt-row.is-hidden {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.flt-row-inner {
+  min-height: 0;
+  overflow: hidden;
+  align-items: start;
+}
+
+.flt-title {
+  grid-column: 2 / span 4;
+  padding-top: 0.35rem;
+  color: inherit;
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+  letter-spacing: -0.09em;
+  line-height: 1.08;
+  text-decoration: none;
+}
+
+.flt-title:hover,
+.flt-title:focus-visible {
+  background: var(--color-key);
+  color: var(--color-paper);
+  outline: none;
+}
+
+.flt-score {
+  grid-column: 6;
+  justify-self: end;
+  padding-top: 0.9em;
+}
+
+.flt-row-meta {
+  grid-column: 2 / -1;
+  padding: 0.3rem 0 0.6rem;
+  opacity: 0.6;
+}
+
+/* First paint, like FAQs: rows rise and fade in, staggered by --i. */
+.flt-ask,
+.flt-controls,
+.flt-row-inner {
+  animation:
+    faq-line-rise 1.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    faq-line-fade 1.2s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation-delay: calc(0.1s + var(--i, 0) * 0.06s);
+}
+
+.flt-controls {
+  --i: 1;
+}
+
+.flt-row-inner {
+  animation-delay: calc(0.25s + var(--i, 0) * 0.06s);
+}
+
+@media (max-width: 768px) {
+  .flt-page {
+    grid-column: 1 / -1;
+    max-height: none;
+    /* Clears the logo, which ends about 118px down on a phone. */
+    padding-top: 2.5rem;
+  }
+
+  .flt-list {
+    overflow: visible;
+  }
+
+  .flt-meta {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flt-ask,
+  .flt-controls,
+  .flt-row-inner {
+    animation: none;
+  }
+
+  .flt-row {
+    transition: none;
+  }
+
+  .flt-cursor {
+    animation: none;
+  }
+}

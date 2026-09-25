@@ -8,6 +8,7 @@
 /** UI pieces that are live. Every other `uis` piece is a draft. */
 export const PUBLISHED_UIS: ReadonlySet<string> = new Set([
   "faqs",
+  "filters",
   "infinite-article",
   "generative-moodboard",
   "sketch-generation",

@@ -2,7 +2,7 @@
  * TypeSafe System One (Jev) — the site's judgment layer.
  *
  * Server-side only: import this inside "use server" functions. Reads
- * TYPESAFE_API_KEY the same way cms.ts reads its env (process.env).
+ * TYPESAFE_API_KEY, else AI_GATEWAY_API_KEY, from process.env like cms.ts.
  * Batch every question for a given state into ONE systemOne call —
  * questions run in parallel on the API side.
  */
@@ -33,19 +33,68 @@ export type NoulAnswer = {
   noul: number;
 };
 
-const API_URL = "https://api.typesafe.ai/v1/systemone";
-const MODEL = "jev-latest";
 const TIMEOUT_MS = 10_000;
 const RETRY_BACKOFF_MS = 800;
 
-function apiKey(): string | undefined {
-  const value =
-    typeof process !== "undefined" ? process.env.TYPESAFE_API_KEY : undefined;
+/**
+ * TypeSafe direct, or Jev on the Vercel AI Gateway. The gateway calls a
+ * noul `boolean` and answers with `probability`; `systemOne` maps both ways
+ * so callers only ever see nouls.
+ */
+type Endpoint = { url: string; model: string; key: string; gateway: boolean };
+
+function readEnv(name: string): string | undefined {
+  const value = typeof process !== "undefined" ? process.env[name] : undefined;
   return value?.trim() || undefined;
 }
 
+function endpoint(): Endpoint | undefined {
+  const direct = readEnv("TYPESAFE_API_KEY");
+  if (direct) {
+    return {
+      url: "https://api.typesafe.ai/v1/systemone",
+      model: "jev-latest",
+      key: direct,
+      gateway: false,
+    };
+  }
+  const gateway = readEnv("AI_GATEWAY_API_KEY");
+  if (gateway) {
+    return {
+      url: "https://ai-gateway.vercel.sh/v1/evaluate",
+      model: "typesafe-ai/jev",
+      key: gateway,
+      gateway: true,
+    };
+  }
+  return undefined;
+}
+
 export function judgeAvailable(): boolean {
-  return Boolean(apiKey());
+  return Boolean(endpoint());
+}
+
+type WireAnswer =
+  | ChoiceAnswer
+  | NoulAnswer
+  | { type: "boolean"; probability: number };
+
+function toWire(questions: Record<string, ChoiceQuestion | NoulQuestion>) {
+  return Object.fromEntries(
+    Object.entries(questions).map(([id, question]) => [
+      id,
+      question.type === "noul" ? { ...question, type: "boolean" } : question,
+    ]),
+  );
+}
+
+function fromWire(answers: Record<string, WireAnswer>): Record<string, ChoiceAnswer | NoulAnswer> {
+  return Object.fromEntries(
+    Object.entries(answers).map(([id, answer]) => [
+      id,
+      answer.type === "boolean" ? { type: "noul", noul: answer.probability } : answer,
+    ]),
+  );
 }
 
 export function choice(
@@ -65,30 +114,34 @@ export function noul(
 /**
  * One judgment request. Returns null on missing key or any failure —
  * callers treat null as "no judgment" and keep their fallback path.
- * Retries once on 429/529.
+ * Retries once on 429/502/503/529.
  */
 export async function systemOne(
   state: unknown,
   questions: Record<string, ChoiceQuestion | NoulQuestion>,
 ): Promise<Record<string, ChoiceAnswer | NoulAnswer> | null> {
-  const key = apiKey();
-  if (!key) return null;
+  const target = endpoint();
+  if (!target) return null;
 
-  const body = JSON.stringify({ state, model: MODEL, questions });
+  const body = JSON.stringify({
+    state,
+    model: target.model,
+    questions: target.gateway ? toWire(questions) : questions,
+  });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(target.url, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${key}`,
+          Authorization: `Bearer ${target.key}`,
           "Content-Type": "application/json",
         },
         body,
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
 
-      if (response.status === 429 || response.status === 529) {
+      if ([429, 502, 503, 529].includes(response.status)) {
         if (attempt === 0) {
           await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS));
           continue;
@@ -103,9 +156,9 @@ export async function systemOne(
       }
 
       const parsed = (await response.json()) as {
-        answers?: Record<string, ChoiceAnswer | NoulAnswer>;
+        answers?: Record<string, WireAnswer>;
       };
-      return parsed.answers ?? null;
+      return parsed.answers ? fromWire(parsed.answers) : null;
     } catch (error) {
       console.warn("judge: systemOne unreachable", error);
       return null;

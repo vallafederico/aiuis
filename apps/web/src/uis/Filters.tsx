@@ -1,6 +1,6 @@
 /**
- * Schematic of Filters as designed. The component is not built yet; every
- * step says so, and names the live helper it would reuse.
+ * Schematic of Filters: how the component page (directed/Filters.tsx) cuts
+ * the site's own chapter list.
  */
 import { MockFrame } from "./Mock";
 import { Pipeline, type PipelineSpec } from "./schematics/Pipeline";
@@ -13,9 +13,10 @@ const PIPELINE: PipelineSpec = {
         {
           role: "source",
           title: "A closed list",
-          detail: "Filters only cut and recede rows that already exist. There is no results page.",
-          inside: ["Not built yet.", "Would reuse the image catalog or the chapter index."],
-          file: "uis/Filters.tsx",
+          detail: "The published chapters of this site, straight from the CMS. There is no results page.",
+          meta: "title · summary · tags",
+          inside: ["The same list the sidebar reads.", "Filters only cut and recede rows that already exist."],
+          file: "lib/filters.ts",
         },
       ],
       out: "the rows, in place",
@@ -25,28 +26,21 @@ const PIPELINE: PipelineSpec = {
         {
           role: "code",
           title: "Hard tags",
-          detail: "Exact data labels cut rows. No model.",
-          inside: ["Not built yet.", "filterByProvenance in lib/images.ts already does this for images."],
-          file: "lib/images.ts",
-        },
-        {
-          role: "jev",
-          title: "Soft chips",
-          detail: "A chip is one judgment per row. Rows that fail recede, then hide past the floor.",
-          meta: "jev · one noul per row",
-          inside: [
-            "Not built yet.",
-            "judgeImageChip and judgeChip already score rows this way elsewhere.",
-            "Elsewhere: hidden below 0.5, receding from 0.3.",
-          ],
-          file: "lib/catalog-search.ts",
+          detail: "Exact CMS tags cut rows. A row carries every picked tag or it folds away. No model.",
+          inside: ["Several tags narrow together.", "Unpicking one puts its rows back."],
+          file: "uis/directed/Filters.tsx",
         },
         {
           role: "jev",
           title: "Type a chip",
-          detail: "A sentence becomes a new chip only when the judgment is confident; otherwise nothing.",
-          inside: ["Not built yet.", "A weak match must not invent a chip."],
-          file: "uis/Filters.tsx",
+          detail: "A typed rule becomes one yes-or-no judgment per row, all in a single call.",
+          meta: "jev · one noul per row",
+          inside: [
+            "The judge sees each row's title, summary, tags and kind.",
+            "Only a rule some row passes at 0.5 becomes a chip.",
+            "Otherwise the field stays quiet: a weak match is not a wrong filter.",
+          ],
+          file: "lib/catalog-search.ts",
         },
       ],
       out: "a score per row per chip, stored",
@@ -56,9 +50,10 @@ const PIPELINE: PipelineSpec = {
         {
           role: "code",
           title: "The floor",
-          detail: "A relevance floor mixes over the stored scores. Moving it calls no model.",
-          inside: ["Not built yet.", "Live in the image and navigation prototypes as a 0 to 0.5 range."],
-          file: "uis/Images.tsx",
+          detail: "A row scores as its weakest chip. Under 0.5 it recedes; under the floor it hides.",
+          meta: "floor 0 to 0.5",
+          inside: ["Moving the floor re-mixes stored scores. It calls no model."],
+          file: "uis/directed/Filters.tsx",
         },
       ],
       out: "keep, recede or hide, per row",
@@ -68,14 +63,13 @@ const PIPELINE: PipelineSpec = {
         {
           role: "reader",
           title: "Sees the list move",
-          detail: "The list stays the list. A wrong chip can be put back.",
-          inside: ["Not built yet."],
-          file: "uis/Filters.tsx",
+          detail: "The list stays the list. Removing a chip puts every row it hid back.",
+          file: "uis/directed/Filters.tsx",
         },
       ],
     },
   ],
-  loop: "another chip or a moved floor reshapes the same list",
+  loop: "another chip, a tag or a moved floor reshapes the same list",
 };
 
 export default function Filters(_props: UiProps) {
