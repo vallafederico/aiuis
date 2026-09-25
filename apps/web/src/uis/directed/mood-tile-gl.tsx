@@ -30,8 +30,11 @@ const PAD = 0.3;
  * sit on a higher layer, so it is kept in sync but should not linger.
  */
 const SWAP_OVERLAP_MS = 150;
-/** Control-point grid per side: the displacement is linear inside each cell. */
-const SUBDIVISIONS = 4;
+/**
+ * Control-point grid per side: the displacement is linear inside each cell.
+ * Finer costs nothing per pixel (each lookup reads its cell's four corners).
+ */
+const SUBDIVISIONS = 8;
 
 /**
  * Items are fixed 4-vertex quads, so the paper is deformed in the fragment
@@ -217,11 +220,11 @@ function queueFull(src: string) {
 /** Bend spring: under-damped, so a sheet flops back a little when the board stops. */
 const BEND_K = 140;
 const BEND_DAMP = 14;
-/** Zoom bow spring: softer and near critically damped, no wobble. */
+/** Zoom bow spring: over-damped (ratio ≈ 1.1), so a sheet eases back flat and never bounces past it. */
 const CUP_K = 60;
-const CUP_DAMP = 15;
-/** Each tile's springs run between these multiples of the base stiffness. */
-const SPRING_SPREAD: [number, number] = [0.55, 1.45];
+const CUP_DAMP = 17;
+/** Each tile's springs run between these multiples of the base stiffness; wider staggers the settle. */
+const SPRING_SPREAD: [number, number] = [0.35, 1.75];
 
 /** One tile's own bend and bow, chasing the shared target at its own pace. */
 function createTileSpring(stiffness: number) {
@@ -273,7 +276,10 @@ export function MoodTileGl(props: {
   paper: Paper;
   /** Load the full-size texture (zoomed in, or this tile hovered / focused). */
   full: boolean;
+  /** Ms from mount until the tile's CSS entrance has landed; it keeps writing until then. */
+  enterMs?: number;
 }) {
+  const enterUntil = performance.now() + (props.enterMs ?? 0);
   let el!: HTMLSpanElement;
   let item: ItemController | undefined;
   let shaders: ReturnType<typeof tileShaders> | undefined;
@@ -314,7 +320,11 @@ export function MoodTileGl(props: {
     const next = sample();
     const bent = Math.abs(next.x) + Math.abs(next.y) + Math.abs(next.cup) > 0.0005;
     // setUni marks the engine dirty; only write on change so the page can idle.
+    // While it flies in, write every frame: it starts culled off screen, and the
+    // engine must keep drawing until it lands.
+    const entering = now < enterUntil;
     if (
+      !entering &&
       !moving &&
       !bent &&
       Math.abs(next.opacity - last.opacity) < 0.002 &&

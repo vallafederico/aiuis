@@ -14,6 +14,7 @@ import {
   type Widget,
   type WidgetData,
 } from "~/lib/dashboard";
+import { nestedScroll } from "~/lib/utils/nested-scroll";
 import "./TypeAnAnalytic.css";
 
 const STORAGE_KEY = "aiuis:dashboard:v2";
@@ -93,16 +94,19 @@ async function stream(body: unknown, signal: AbortSignal, onEvent: (event: Event
 
 // ——— visuals ——————————————————————————————————————————————————
 
+/** Chart x units per bucket. A 1-unit viewBox stretched ~50x blurs animated bars. */
+const UNIT = 100;
+
 function Spark(props: { points: Point[] }) {
   const max = () => Math.max(1e-9, ...props.points.map((p) => p.v));
   const path = () =>
     props.points
-      .map((p, i) => `${i === 0 ? "M" : "L"}${i} ${100 - (p.v / max()) * 100}`)
+      .map((p, i) => `${i === 0 ? "M" : "L"}${i * UNIT} ${100 - (p.v / max()) * 100}`)
       .join(" ");
   return (
     <svg
       class="need-spark"
-      viewBox={`0 0 ${Math.max(1, props.points.length - 1)} 100`}
+      viewBox={`0 0 ${Math.max(1, props.points.length - 1) * UNIT} 100`}
       preserveAspectRatio="none"
       aria-hidden="true"
     >
@@ -137,7 +141,13 @@ function Trend(props: { data: Extract<WidgetData, { kind: "trend" }> }) {
 
   return (
     <div class="need-chart">
-      <svg class="need-chart-svg" viewBox={`0 0 ${Math.max(1, n())} 100`} preserveAspectRatio="none" aria-hidden="true">
+      <svg
+        class="need-chart-svg"
+        viewBox={`0 0 ${Math.max(1, n()) * UNIT} 100`}
+        preserveAspectRatio="none"
+        shape-rendering="crispEdges"
+        aria-hidden="true"
+      >
         <Index each={stacked()}>
           {(_, i) => {
             const segments = () => {
@@ -155,8 +165,8 @@ function Trend(props: { data: Extract<WidgetData, { kind: "trend" }> }) {
                   <rect
                     class="need-chart-bar"
                     data-series={seg.si}
-                    x={i + 0.14}
-                    width={0.72}
+                    x={(i + 0.14) * UNIT}
+                    width={0.72 * UNIT}
                     y={seg.top}
                     height={Math.max(seg.height, 0)}
                     style={{ "--i": String(i) }}
@@ -167,7 +177,7 @@ function Trend(props: { data: Extract<WidgetData, { kind: "trend" }> }) {
           }}
         </Index>
         <Show when={props.data.mark}>
-          {(mark) => <line class="need-chart-mark" x1="0" x2={n()} y1={y(mark().v)} y2={y(mark().v)} />}
+          {(mark) => <line class="need-chart-mark" x1="0" x2={n() * UNIT} y1={y(mark().v)} y2={y(mark().v)} />}
         </Show>
       </svg>
       <div class="need-chart-axis">
@@ -455,7 +465,7 @@ export default function TypeAnAnalyticDirected(_props: UiProps) {
   });
 
   return (
-    <div class="need-page" data-lenis-prevent classList={{ "is-empty": !board(), "is-busy": busy() }} data-phase={phase()}>
+    <div class="need-page" ref={(el) => onMount(() => nestedScroll(el))} classList={{ "is-empty": !board(), "is-busy": busy() }} data-phase={phase()}>
       <div class="need-top">
         <form
           class="need-ask"

@@ -186,7 +186,8 @@
   background: var(--color-paper);
 }
 
-.inf-plate img {
+.inf-plate img,
+.inf-plate canvas {
   display: block;
   width: 100%;
   height: 100%;

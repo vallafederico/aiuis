@@ -28,6 +28,7 @@ import {
 import { isComponentPath } from "~/lib/component-path";
 import { isComponentView, syncComponentView } from "~/lib/component-view";
 import { labelForTag } from "~/uis/meta";
+import { getSite } from "~/lib/site-settings";
 import { CountDigits } from "./CountDigits";
 import { NavHit, NavHitText, createWipe } from "./NavHit";
 
@@ -130,6 +131,9 @@ export const Nav = () => {
         <CatalogDock pathname={location.pathname} />
       </Suspense>
       <ComponentViewChrome pathname={location.pathname} />
+      <Suspense>
+        <SocialLinks pathname={location.pathname} />
+      </Suspense>
     </>
   );
 };
@@ -403,6 +407,31 @@ function ComponentViewChrome(props: { pathname: string }) {
           <NavHitText text="UIs" font="AlteHaasGroteskBold" />
         </NavHit>
       </div>
+    </Show>
+  );
+}
+
+/** Outbound links from the CMS `site` document, on every page but a full-page component. */
+function SocialLinks(props: { pathname: string }) {
+  const site = createAsync(() => getSite(), { deferStream: true });
+  const shown = () => !!site() && !/^\/uis\/[^/]+\/component$/.test(normalizePath(props.pathname));
+  return (
+    <Show when={shown() && site()!.links.length > 0}>
+      <ul
+        class="fixed right-gx bottom-[3svh] z-30 flex items-center gap-3 text-[0.8rem] pointer-events-auto"
+        data-board-exclude
+        aria-label="Elsewhere"
+      >
+        <For each={site()!.links}>
+          {(link) => (
+            <li>
+              <NavHit href={link.href} class={`${TAP_LINK} nav-hit`}>
+                <NavHitText text={link.label} font="AlteHaasGroteskBold" />
+              </NavHit>
+            </li>
+          )}
+        </For>
+      </ul>
     </Show>
   );
 }

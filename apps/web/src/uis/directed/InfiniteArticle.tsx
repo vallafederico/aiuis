@@ -1,6 +1,8 @@
 import { For, Show, createSignal, onCleanup, onMount, type JSX } from "solid-js";
+import { isServer } from "solid-js/web";
 import type { UiProps } from "../types";
 import type { ArticleBlock, ArticlePath, ReadingTrace } from "~/lib/article-stream";
+import { nestedScroll } from "~/lib/utils/nested-scroll";
 import "./InfiniteArticle.css";
 
 const OPENING: ArticleBlock[] = [
@@ -54,10 +56,15 @@ function showKicker(block: ArticleBlock): string | undefined {
 }
 
 type MarginNote = { quote: string; text: string; writing: boolean; side: "left" | "right" };
-type Plate = { src: string; alt: string };
+/** A plate is shown as the canvas it was cleaned on, or as the raw src if that failed. */
+type Plate = { src: string; alt: string; canvas?: HTMLCanvasElement };
 
-/** Snap every pixel that is not blue ink to the page paper, so the field cannot drift. */
-function matchPlatePaper(src: string): Promise<string> {
+/**
+ * Snap every pixel that is not blue ink to the page paper, so the field cannot
+ * drift. The cleaned canvas is shown as is: re-encoding it to a PNG data URL
+ * was a long main-thread task, and a late <img> became the page LCP.
+ */
+function matchPlatePaper(src: string): Promise<HTMLCanvasElement | null> {
   const raw = getComputedStyle(document.documentElement).getPropertyValue("--color-paper").trim();
   const hex = /^#?([0-9a-f]{6})$/i.exec(raw);
   const paper = hex
@@ -75,7 +82,7 @@ function matchPlatePaper(src: string): Promise<string> {
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx || !canvas.width || !canvas.height) {
-        resolve(src);
+        resolve(null);
         return;
       }
       ctx.drawImage(img, 0, 0);
@@ -92,9 +99,9 @@ function matchPlatePaper(src: string): Promise<string> {
         data[i + 2] = paper[2]!;
       }
       ctx.putImageData(frame, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
+      resolve(canvas);
     };
-    img.onerror = () => resolve(src);
+    img.onerror = () => resolve(null);
     img.src = src;
   });
 }
@@ -219,8 +226,15 @@ function ArticlePiece(props: {
       <Show when={props.plate}>
         {(plate) => (
           <figure class="inf-plate">
-            <Show when={plate().src}>
-              <img src={plate().src} alt={plate().alt} />
+            <Show
+              when={plate().canvas}
+              fallback={
+                <Show when={plate().src}>
+                  <img src={plate().src} alt={plate().alt} />
+                </Show>
+              }
+            >
+              {(canvas) => canvas()}
             </Show>
           </figure>
         )}
@@ -457,9 +471,11 @@ export default function InfiniteArticleDirected(props: UiProps) {
         if (!res.ok) throw new Error(`Plate ${res.status}`);
         const body = (await res.json()) as { src?: string };
         if (!body.src || disposed) throw new Error("Empty plate");
-        const src = await matchPlatePaper(body.src);
+        const canvas = await matchPlatePaper(body.src);
         if (disposed) return;
-        setPlates((prev) => ({ ...prev, [index]: { src, alt } }));
+        canvas?.setAttribute("role", "img");
+        canvas?.setAttribute("aria-label", alt);
+        setPlates((prev) => ({ ...prev, [index]: { src: body.src!, alt, canvas: canvas ?? undefined } }));
       } catch (cause) {
         if (disposed || controller.signal.aborted) return;
         console.error("[infinite article]", cause);
@@ -600,6 +616,7 @@ export default function InfiniteArticleDirected(props: UiProps) {
 
   onMount(() => {
     shownAt = performance.now();
+    nestedScroll(scroller);
     scroller.addEventListener("scroll", onScroll, { passive: true });
     scroller.addEventListener("pointermove", onPointer);
     scroller.addEventListener("pointerleave", clearNear);
@@ -618,6 +635,8 @@ export default function InfiniteArticleDirected(props: UiProps) {
 
   onCleanup(() => {
     disposed = true;
+    // Also runs when SSR re-renders a resolved Suspense; a throw there hangs the stream.
+    if (isServer) return;
     abort?.abort();
     figureAbort?.abort();
     for (const controller of noteAborts.values()) controller.abort();
@@ -633,7 +652,7 @@ export default function InfiniteArticleDirected(props: UiProps) {
   });
 
   return (
-    <div ref={scroller} class="inf-page" data-lenis-prevent>
+    <div ref={scroller} class="inf-page">
       <article class="inf-article">
         <Line note={notes().title}>
           <h1 class="inf-title" data-inf-area data-area="title" data-block="-1">

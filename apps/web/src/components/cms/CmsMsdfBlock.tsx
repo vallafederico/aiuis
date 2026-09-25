@@ -1,8 +1,8 @@
-import { createEffect, createMemo, createRoot, createSignal, For, onCleanup, onMount, useContext } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, For, onCleanup, onMount, Show, useContext } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import MsdfText from "~/components/webgl/MsdfText";
-import { loadMsdfFont, getMsdfFontMetricsSync, type BmFont } from "~/components/webgl/msdf-text";
+import { loadMsdfMetrics, getMsdfFontMetricsSync, type BmFont } from "~/components/webgl/msdf-text";
 import { PieceReadContext } from "~/components/ArticleFocus";
 import { normalizeMsdfText } from "./normalizeMsdfText";
 import { wrapMsdfText } from "./wrapMsdfText";
@@ -41,9 +41,9 @@ function ensureFontEntry(fontName: string): FontEntry {
     // Seed synchronously if metrics were statically imported — no async tick needed.
     const syncM = getMsdfFontMetricsSync(fontName);
     if (syncM) setMetrics(syncM);
-    // Always kick off the full load (needed for texture); metrics signal stays stable.
-    if (!isServer) {
-      loadMsdfFont(fontName).then(({ metrics: m }) => setMetrics(m));
+    // Wrapping needs metrics only; MsdfText loads the atlas once the scene is up.
+    else if (!isServer) {
+      loadMsdfMetrics(fontName).then(setMetrics);
     }
   });
   fontMetricsStore.set(fontName, entry);
@@ -72,13 +72,15 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
     if (w) setWidth(w);
   });
 
+  const normalized = createMemo(() => normalizeMsdfText(props.text, fontEntry().charset()));
+  const measured = () => !!fontEntry().metrics() && !!width();
+
   const wrapped = createMemo(() => {
-    const normalized = normalizeMsdfText(props.text, fontEntry().charset());
     const m = fontEntry().metrics();
     const w = width();
-    if (!m || !w) return normalized;
+    if (!m || !w) return normalized();
     const fontSizePx = parseFloat(getComputedStyle(container).fontSize) || m.info.size;
-    return wrapMsdfText(m, normalized, w, fontSizePx, props.tracking);
+    return wrapMsdfText(m, normalized(), w, fontSizePx, props.tracking);
   });
 
   const lines = createMemo(() => wrapped().split("\n"));
@@ -93,23 +95,42 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
           : undefined
       }
     >
-      <For each={lines()}>
-        {(line) =>
-          line === "" ? (
-            <span class="block invisible">{" "}</span>
-          ) : (
-            <span class="block">
-              <MsdfText
-                text={line}
-                font={props.font ?? "AlteHaasGroteskBold"}
-                tracking={props.tracking}
-                alpha={props.alpha}
-                articleLine={articleLine}
-              />
-            </span>
-          )
+      {/* Until the box is measured (SSR, first client frame) the HTML copy wraps
+          natively, so the block is already its wrapped height: no layout shift
+          when the MSDF lines replace it. */}
+      <Show
+        when={measured()}
+        fallback={
+          <span
+            class="block"
+            data-msdf
+            style={{
+              "white-space": "pre-wrap",
+              "letter-spacing": `${props.tracking ?? -0.06}em`,
+            }}
+          >
+            {normalized()}
+          </span>
         }
-      </For>
+      >
+        <For each={lines()}>
+          {(line) =>
+            line === "" ? (
+              <span class="block invisible">{" "}</span>
+            ) : (
+              <span class="block">
+                <MsdfText
+                  text={line}
+                  font={props.font ?? "AlteHaasGroteskBold"}
+                  tracking={props.tracking}
+                  alpha={props.alpha}
+                  articleLine={articleLine}
+                />
+              </span>
+            )
+          }
+        </For>
+      </Show>
     </span>
   );
 }

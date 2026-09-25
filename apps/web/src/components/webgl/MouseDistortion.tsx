@@ -3,7 +3,7 @@ import { isServer } from "solid-js/web";
 import { createPostProcessor, getDefaultEngine } from "shooosh";
 import { createLensTrail, type LensTrail } from "./mouse-trail-field";
 import { onEnter, onLeave } from "@acme/router";
-import { componentView } from "~/lib/component-view";
+import { componentLens, componentView } from "~/lib/component-view";
 import { webgl } from "~/lib/stores/webglStore";
 import {
   crumbProgress,
@@ -472,7 +472,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     const radiusPx = props.radius ?? 48;
     const strengthMax = props.strength ?? 0.3;
-    const magnify = () => (componentView() ? 0 : strengthMax);
+    const magnify = () => (componentView() ? strengthMax * componentLens() : strengthMax);
     const offset = props.offset ?? [0, 0];
 
     let targetX = 0.5;
@@ -772,7 +772,7 @@ export default function MouseDistortion(props: MouseDistortionProps) {
 
     createEffect(() => {
       if (!componentView()) return;
-      targetStrength = 0;
+      targetStrength = Math.min(targetStrength, magnify());
       getDefaultEngine()?.requestFrame();
     });
 
@@ -824,6 +824,8 @@ export default function MouseDistortion(props: MouseDistortionProps) {
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
       clearHoldTimer();
+      // Component views use press-and-hold to drag their own surfaces: no hold zoom.
+      if (componentView()) return;
       holdTimer = window.setTimeout(() => {
         holdTimer = 0;
         if (!alive) return;

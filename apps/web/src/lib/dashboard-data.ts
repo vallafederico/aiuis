@@ -1,7 +1,7 @@
 /**
  * Server-only data behind the Type an Analytic dashboard.
  *
- * Cloudflare (zone traffic, Workers AI neurons) reads CF_API_TOKEN; the zone
+ * Cloudflare (zone traffic, Workers AI neurons) reads CF_ANALYTICS_TOKEN; the zone
  * and account are looked up from the site host unless CF_ZONE_ID /
  * CF_ACCOUNT_ID are set. AI spend reads AI_GATEWAY_API_KEY. Content reads the
  * published catalog. A missing key makes a widget `unavailable`, never invented.
@@ -36,7 +36,7 @@ function env(name: string): string | undefined {
 /** Which sources can answer right now — the model is told, so it builds on what exists. */
 export function sourcesAvailable(): Record<Source, boolean> {
   return {
-    cloudflare: Boolean(env("CF_API_TOKEN")),
+    cloudflare: Boolean(env("CF_ANALYTICS_TOKEN")),
     "ai-gateway": Boolean(env("AI_GATEWAY_API_KEY")),
     content: true,
   };
@@ -139,8 +139,8 @@ async function optional<T>(load: () => Promise<T>, empty: T): Promise<{ value: T
 // ——— Cloudflare ———————————————————————————————————————————————
 
 async function cfFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = env("CF_API_TOKEN");
-  if (!token) throw new Unavailable("Cloudflare needs CF_API_TOKEN.");
+  const token = env("CF_ANALYTICS_TOKEN");
+  if (!token) throw new Unavailable("Cloudflare needs CF_ANALYTICS_TOKEN.");
   const res = await fetch(`${CF_API}${path}`, {
     ...init,
     headers: {

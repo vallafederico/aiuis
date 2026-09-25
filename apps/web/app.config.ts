@@ -7,6 +7,25 @@ import { shoooshShaders } from "../../../shooosh/package/build/index.ts";
 import glReloadPlugin from "./vite/vite-plugin-gl-reload";
 import componentDataAttr from "./vite/vite-pulugin-component-attrs";
 
+/**
+ * vinxi emits the route's <link rel="modulepreload"> tags at default (high)
+ * priority, so ~30 hydration chunks compete with the render-blocking CSS and
+ * fonts for the first paint. Low priority lets the page paint first.
+ */
+function lowPriorityModulePreloads() {
+	const from = `: { rel: "modulepreload" }`;
+	return {
+		name: "aiuis:low-priority-modulepreload",
+		transform(code: string, id: string) {
+			if (!id.includes("vinxi/lib/manifest/prod-server-manifest")) return;
+			if (!code.includes(from)) {
+				throw new Error("[aiuis:low-priority-modulepreload] vinxi manifest changed; update the pattern.");
+			}
+			return code.replace(from, `: { rel: "modulepreload", fetchPriority: "low" }`);
+		},
+	};
+}
+
 const shoooshRoot = new URL("../../../shooosh/package/", import.meta.url);
 const contentSoftwareRoot = new URL("../../../content.software/", import.meta.url);
 
@@ -47,6 +66,9 @@ export default defineConfig({
 			"/api/**": { prerender: false },
 			"/llms.txt": { prerender: false },
 			"/llms-full.txt": { prerender: false },
+		},
+		rollupConfig: {
+			plugins: [lowPriorityModulePreloads()],
 		},
 	},
 	vite: {

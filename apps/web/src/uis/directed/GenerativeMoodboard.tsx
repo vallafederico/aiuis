@@ -10,6 +10,9 @@ import {
 } from "~/lib/moodboard";
 import { MOODBOARD_SEED_TILES } from "~/lib/moodboard-seeds";
 import { mixMoodboardPair } from "~/lib/moodboard-mix";
+import GlFill from "~/components/webgl/GlFill";
+import MsdfText from "~/components/webgl/MsdfText";
+import { NavHitButton, NavHitText } from "~/components/NavHit";
 import { MoodTileGl, createEngineHeat, textureFor, type Paper } from "./mood-tile-gl";
 import "./GenerativeMoodboard.css";
 
@@ -17,7 +20,14 @@ import "./GenerativeMoodboard.css";
 const TILE_LAYER = 2;
 const TILE_LAYER_BLEND = 3;
 const TILE_LAYER_NEAR = 4;
-const TILE_LAYER_HOVER = 5;
+/** A blend being drawn sits above every other tile. */
+const TILE_LAYER_GENERATING = 5;
+/**
+ * The engine draws equal layers in creation order, and a tile re-creates its
+ * quad on every re-layer (focus, blend, generate). A fixed per-tile offset
+ * keeps the resting stack order.
+ */
+const TILE_ORDER_STEP = 0.001;
 
 type Block = {
   id: string;
@@ -51,6 +61,8 @@ const WHEEL_ZOOM = 0.0016;
 const VIEW_K = 18;
 /** Follow rate while dragging: a slight lag behind the pointer. */
 const DRAG_K = 14;
+/** Follow rate for the glide that centres a new generation: slow and deliberate. */
+const CENTER_K = 3.2;
 /** Glide decay after release (1/s); higher stops sooner. */
 const FLING_FRICTION = 4.5;
 /** Below this (px/s) the glide stops. */
@@ -60,8 +72,45 @@ const FLING_MAX = 4000;
 const FLING_STALE_MS = 90;
 /** Pointer movement before pan replaces press-to-focus (px). */
 const DRAG_SLOP = 7;
+/** A press waits this long before focusing, so the start of a drag does not flash the fade. */
+const FOCUS_DELAY_MS = 180;
 /** Parallax: each tile moves this much more or less than the pan (±, share of it). */
 const PARALLAX = 0.09;
+
+/** Seed photos fly in one by one over this long (s), in a stable shuffled order. */
+const ENTER_SPREAD_S = 2.4;
+/** Matches mood-block-fly in GenerativeMoodboard.css: 0.5s wait, 1.4s flight. */
+const ENTER_MS = (0.5 + ENTER_SPREAD_S + 1.4) * 1000;
+/** How far out a seed photo starts its flight (vmax), past the screen edge. */
+const ENTER_DISTANCE = 85;
+
+function hash01(id: string, salt: number) {
+  let h = salt;
+  for (let i = 0; i < id.length; i++) h = (h * 33 + id.charCodeAt(i)) | 0;
+  return ((h >>> 0) % 1000) / 1000;
+}
+
+function enterDelayOf(id: string) {
+  return hash01(id, 7) * ENTER_SPREAD_S;
+}
+
+/**
+ * Where a seed photo flies in from: outward from the board's centre through
+ * its own spot, so the board assembles from all around. Tiles near the
+ * centre take a stable random angle instead.
+ */
+function enterFrom(id: string, p: Point) {
+  let dx = p.x - 0.5;
+  let dy = 0.5 - p.y;
+  let len = Math.hypot(dx, dy);
+  if (len < 0.08) {
+    const a = hash01(id, 13) * Math.PI * 2;
+    dx = Math.cos(a);
+    dy = Math.sin(a);
+    len = 1;
+  }
+  return { x: (dx / len) * ENTER_DISTANCE, y: (dy / len) * ENTER_DISTANCE };
+}
 
 /** Stable per-tile depth in [-PARALLAX, PARALLAX], from the id. */
 function depthOf(id: string) {
@@ -77,7 +126,14 @@ const BEND_MAX = 0.18;
 const VIEW_SWITCH_MS = 1100;
 /** Minimap margin around the tiles, as a share of their extent. */
 const MAP_MARGIN = 0.12;
-
+/** Pan limit: the tiles always reach at least this share into the view from each edge. */
+const PAN_KEEP = 0.3;
+/** Minimap quads sit above the board's tiles and axes (up to 6), below the logo (10). */
+const MAP_LAYER = 7;
+/** The view marker's corners: a horizontal and a vertical bar at each. */
+const MAP_CORNERS = ["tl-h", "tl-v", "tr-h", "tr-v", "bl-h", "bl-v", "br-h", "br-v"].map(
+  (c) => `mood-map-corner is-${c}`,
+);
 /** Zoom bow per e-fold/s of zoom, and its cap. */
 const CUP_PER_RATE = 0.05;
 const CUP_MAX = 0.14;
@@ -99,7 +155,7 @@ function seedBlocks(tiles: MoodTile[]): Block[] {
     src: tile.src ?? "",
     alt: tile.caption,
     scores: tile.scores,
-    w: (0.1 + tile.scores.sparseDense * 0.04) * sizeFactor(tile.id),
+    w: (0.062 + tile.scores.sparseDense * 0.026) * sizeFactor(tile.id),
     aspect: tile.aspect ?? 3 / 4,
   }));
 }
@@ -132,18 +188,24 @@ function layoutFor(blocks: Block[], pair: AxisPair): Map<string, Point> {
   return new Map(points.map((p) => [p.id, p]));
 }
 
+/**
+ * A portrait tile on a landscape board spans about twice as much of the board's
+ * height as of its width, so vertical gaps are measured in that squashed unit.
+ */
+const SEPARATE_Y_SCALE = 2;
+
 /** Light nudge for true overlaps/ties in score-space (relative scores spread naturally). */
-function separateBlocks(blocks: Point[], minDist = 0.06): Point[] {
+function separateBlocks(blocks: Point[], minDist = 0.13): Point[] {
   const out = blocks.map((b) => ({ ...b }));
   const pad = 0.04;
   const clamp01 = (v: number) => Math.min(1 - pad, Math.max(pad, v));
 
-  for (let iter = 0; iter < 48; iter++) {
+  for (let iter = 0; iter < 96; iter++) {
     let moved = false;
     for (let i = 0; i < out.length; i++) {
       for (let j = i + 1; j < out.length; j++) {
         let dx = out[j].x - out[i].x;
-        let dy = out[j].y - out[i].y;
+        let dy = (out[j].y - out[i].y) / SEPARATE_Y_SCALE;
         let d = Math.hypot(dx, dy);
         if (d < 1e-5) {
           // Identical scores: fan out on a stable angle from the id.
@@ -159,9 +221,9 @@ function separateBlocks(blocks: Point[], minDist = 0.06): Point[] {
         const ux = dx / d;
         const uy = dy / d;
         out[i].x = clamp01(out[i].x - ux * push);
-        out[i].y = clamp01(out[i].y - uy * push);
+        out[i].y = clamp01(out[i].y - uy * push * SEPARATE_Y_SCALE);
         out[j].x = clamp01(out[j].x + ux * push);
-        out[j].y = clamp01(out[j].y + uy * push);
+        out[j].y = clamp01(out[j].y + uy * push * SEPARATE_Y_SCALE);
         moved = true;
       }
     }
@@ -190,11 +252,11 @@ function overlaps(a: Rect, b: Rect) {
   );
 }
 
-/** HTML, not MSDF: nothing inside the board goes through the WebGL lens. */
+/** WebGL text like the rest of the board; the hidden HTML copy keeps the box the script measures. */
 function AxisLabel(props: { text: string; ref: (el: HTMLSpanElement) => void }) {
   return (
     <span ref={props.ref} class="mood-axis-label">
-      {props.text}
+      <MsdfText text={props.text} font="AlteHaasGroteskBold" />
     </span>
   );
 }
@@ -297,6 +359,22 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
     const cy = 1 - p.y;
     return { left: cx - b.w / 2, right: cx + b.w / 2, top: cy - h / 2, bottom: cy + h / 2 };
   };
+
+  /** Where the tiles are, in world units, without margin. */
+  const tileExtent = createMemo(() => {
+    let left = Infinity;
+    let right = -Infinity;
+    let top = Infinity;
+    let bottom = -Infinity;
+    for (const b of blocks()) {
+      const r = worldBox(b);
+      left = Math.min(left, r.left);
+      right = Math.max(right, r.right);
+      top = Math.min(top, r.top);
+      bottom = Math.max(bottom, r.bottom);
+    }
+    return Number.isFinite(left) ? { left, right, top, bottom } : { left: 0, right: 1, top: 0, bottom: 1 };
+  });
 
   /** What the minimap covers: every tile and the resting view, with a margin. */
   const mapExtent = createMemo(() => {
@@ -451,9 +529,10 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
   /** Hover must rest this long on the placeholder before a blend starts. */
   const HOVER_PREFETCH_MS = 120;
   let hoverTimer = 0;
+  let focusTimer = 0;
   let hovering = false;
 
-  /** The tile under the cursor, drawn above the rest. */
+  /** The tile under the cursor; it loads full size while nothing is focused. */
   const [hoveredId, setHoveredId] = createSignal<string | null>(null);
 
   const tileUnder = (clientX: number, clientY: number) => {
@@ -503,6 +582,7 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
     if (!request) return;
 
     setGeneratingFlag(pendingId, true);
+    centerOn(pending);
 
     const fail = (error: unknown) => {
       if (disposed) return;
@@ -723,6 +803,48 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
 
   /** Release velocity in px/s; the board glides on it after a drag. */
   const fling = { x: 0, y: 0 };
+  /** The slow centring glide is running; any drag or wheel takes over at the normal rate. */
+  let centering = false;
+
+  /**
+   * Glide so this tile sits in the middle of the screen, at the current zoom.
+   * On screen a tile is at pan + (u − ½)·size·zoom + pan·depth (parallax), so
+   * the pan that centres it is −(u − ½)·size·zoom / (1 + depth), per axis.
+   */
+  const centerOn = (b: Block) => {
+    const r = worldBox(b);
+    const depth = depthFor(b);
+    const z = target.z;
+    fling.x = fling.y = 0;
+    target.x = (-((r.left + r.right) / 2 - 0.5) * box.worldW * z) / (1 + depth);
+    target.y = (-((r.top + r.bottom) / 2 - 0.5) * box.worldH * z) / (1 + depth);
+    centering = true;
+    kick();
+  };
+
+  /**
+   * Keep the tiles on screen: the world is centred in the plane and scales
+   * about its centre, so a world point u sits at centre + pan + (u − ½)·size·zoom.
+   * A glide into the limit stops on that axis.
+   */
+  const clampPan = () => {
+    const ext = tileExtent();
+    const z = target.z;
+    const axis = (pan: number, lo: number, hi: number, size: number, span: number) => {
+      const keep = span * PAN_KEEP;
+      const min = keep - span / 2 - (hi - 0.5) * size * z;
+      const max = span / 2 - keep - (lo - 0.5) * size * z;
+      // Zoomed far out the tiles fit either way: hold them centred.
+      if (min > max) return (min + max) / 2;
+      return Math.min(max, Math.max(min, pan));
+    };
+    const x = axis(target.x, ext.left, ext.right, box.worldW, box.w);
+    const y = axis(target.y, ext.top, ext.bottom, box.worldH, box.h);
+    if (x !== target.x) fling.x = 0;
+    if (y !== target.y) fling.y = 0;
+    target.x = x;
+    target.y = y;
+  };
 
   const tick = (now: number) => {
     const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
@@ -735,7 +857,10 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
       fling.y *= decay;
       if (Math.hypot(fling.x, fling.y) < FLING_MIN) fling.x = fling.y = 0;
     }
-    const pan = 1 - Math.exp(-(drag ? DRAG_K : VIEW_K) * dt);
+    if (box.w > 0) clampPan();
+    if (drag) centering = false;
+    if (centering && Math.hypot(target.x - view.x, target.y - view.y) < 0.5) centering = false;
+    const pan = 1 - Math.exp(-(drag ? DRAG_K : centering ? CENTER_K : VIEW_K) * dt);
     const zoom = 1 - Math.exp(-VIEW_K * dt);
     const before = { x: view.x, y: view.y, z: view.z };
     view.x += (target.x - view.x) * pan;
@@ -803,6 +928,7 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
 
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
+    centering = false;
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? plane.clientHeight : 1;
     // Pinch arrives as ctrl+wheel with small deltas; give it more reach.
     const gain = event.ctrlKey ? WHEEL_ZOOM * 6 : WHEEL_ZOOM;
@@ -833,9 +959,17 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
       dragging: false,
       swapping,
     };
-    // Fresh focus: pick the two nearest. Already focused: wait for click
-    // (pointerup without drag) to swap the farther for the clicked tile.
-    if (!swapping) pickFocus(event.clientX, event.clientY);
+    // Fresh focus: pick the two nearest, once the press has held still a
+    // moment. Already focused: wait for click (pointerup without drag) to swap
+    // the farther for the clicked tile.
+    clearTimeout(focusTimer);
+    focusTimer = 0;
+    if (!swapping) {
+      focusTimer = window.setTimeout(() => {
+        focusTimer = 0;
+        if (drag && !drag.dragging) pickFocus(drag.x, drag.y);
+      }, FOCUS_DELAY_MS);
+    }
     try {
       plane.setPointerCapture(event.pointerId);
     } catch {
@@ -853,10 +987,14 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
     if (!drag.dragging) {
       const slop = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
       if (slop < DRAG_SLOP) {
-        // Only chase the cursor while establishing the initial pair.
-        if (!drag.swapping) pickFocus(event.clientX, event.clientY);
+        drag.x = event.clientX;
+        drag.y = event.clientY;
+        // Only chase the cursor while establishing the initial pair, once it shows.
+        if (!drag.swapping && !focusTimer) pickFocus(event.clientX, event.clientY);
         return;
       }
+      clearTimeout(focusTimer);
+      focusTimer = 0;
       clearFocus();
       drag.dragging = true;
       fling.x = fling.y = 0;
@@ -896,6 +1034,12 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
     } else if (swapping && hitsPlaceholder(event.clientX, event.clientY)) {
       startMix();
     } else {
+      // A quick click released before the delay still focuses.
+      if (!swapping && focusTimer) {
+        clearTimeout(focusTimer);
+        focusTimer = 0;
+        if (event.type !== "pointercancel") pickFocus(event.clientX, event.clientY);
+      }
       if (swapping) swapFarther(event.clientX, event.clientY);
       const ids = focusedIds();
       if (ids && ids.length === 2) placePlaceholder(ids);
@@ -906,6 +1050,8 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
   onMount(() => {
     measure();
     paint();
+    // The quads read the proxies' CSS fade each frame; keep drawing through the staggered intro.
+    heat(ENTER_MS + 200);
     plane.addEventListener("wheel", onWheel, { passive: false });
     const resize = new ResizeObserver(() => {
       measure();
@@ -929,6 +1075,7 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
     disposed = true;
     disposeHeat();
     clearTimeout(hoverTimer);
+    clearTimeout(focusTimer);
     cancelAnimationFrame(raf);
     plane?.removeEventListener("wheel", onWheel);
   });
@@ -951,7 +1098,7 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
             classList={{ "is-focusing": focusedIds() !== null }}
           >
             <For each={blocks()}>
-              {(block) => {
+              {(block, index) => {
                 const near = () => focusedIds()?.includes(block.id) ?? false;
                 return (
                 <figure
@@ -971,21 +1118,34 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
                     width: `calc(${block.w * 100}% * var(--tile-scale, 1))`,
                     "aspect-ratio": String(block.aspect),
                     "--depth": String(depthFor(block)),
+                    "--enter": block.sources ? "0s" : `${enterDelayOf(block.id).toFixed(3)}s`,
+                    ...(block.sources
+                      ? {}
+                      : (() => {
+                          const from = enterFrom(block.id, posOf(block));
+                          return { "--fly-x": `${from.x.toFixed(1)}vmax`, "--fly-y": `${from.y.toFixed(1)}vmax` };
+                        })()),
                   }}
                 >
                   <MoodTileGl
                     id={block.id}
                     paper={paper}
-                    full={zoomedIn() || near() || hoveredId() === block.id}
+                    full={
+                      zoomedIn() ||
+                      near() ||
+                      // Faded tiles stay put: a hover swap under the fade reads as a flash.
+                      (focusedIds() === null && hoveredId() === block.id)
+                    }
                     src={srcOf(block)}
+                    enterMs={block.sources ? 0 : (0.5 + enterDelayOf(block.id) + 1.4) * 1000 + 100}
                     layer={
-                      hoveredId() === block.id
-                        ? TILE_LAYER_HOVER
+                      (isGenerating(block)
+                        ? TILE_LAYER_GENERATING
                         : near()
                           ? TILE_LAYER_NEAR
                           : isBlend(block)
                             ? TILE_LAYER_BLEND
-                            : TILE_LAYER
+                            : TILE_LAYER) + index() * TILE_ORDER_STEP
                     }
                   />
                   <Show when={block.pending}>
@@ -999,10 +1159,10 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
         </div>
         <div class="mood-axes">
           <span ref={axisX} class="mood-axis is-x" aria-hidden="true">
-            <i />
+            <GlFill />
           </span>
           <span ref={axisY} class="mood-axis is-y" aria-hidden="true">
-            <i />
+            <GlFill />
           </span>
           <AxisLabel text={x().low} ref={(el) => (labels.xLow = el)} />
           <AxisLabel text={x().high} ref={(el) => (labels.xHigh = el)} />
@@ -1014,16 +1174,14 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
         <nav class="mood-views" aria-label="Axes">
           <For each={AXIS_VIEWS}>
             {(v) => (
-              <button
-                type="button"
+              <NavHitButton
                 class="mood-view"
-                classList={{ "is-active": v.id === viewId() }}
-                aria-pressed={v.id === viewId()}
-                title={`${AXIS_LABELS[v.pair.x].low} ↔ ${AXIS_LABELS[v.pair.x].high} × ${AXIS_LABELS[v.pair.y].low} ↔ ${AXIS_LABELS[v.pair.y].high}`}
+                active={v.id === viewId()}
+                label={`${v.name}: ${AXIS_LABELS[v.pair.x].low} to ${AXIS_LABELS[v.pair.x].high}, ${AXIS_LABELS[v.pair.y].low} to ${AXIS_LABELS[v.pair.y].high}`}
                 onClick={() => switchView(v.id)}
               >
-                {v.name}
-              </button>
+                <NavHitText text={v.name} font="AlteHaasGroteskBold" />
+              </NavHitButton>
             )}
           </For>
         </nav>
@@ -1036,14 +1194,14 @@ export default function GenerativeMoodboardDirected(_props: UiProps) {
         >
           <For each={blocks()}>
             {(block) => (
-              <span
-                class="mood-map-tile"
-                classList={{ "is-blend": isBlend(block) }}
-                style={mapRect(block)}
-              />
+              <span class="mood-map-tile" style={mapRect(block)}>
+                <GlFill layer={MAP_LAYER} alpha={isBlend(block) ? 0.35 : 1} />
+              </span>
             )}
           </For>
-          <span ref={mapView} class="mood-map-view" />
+          <span ref={mapView} class="mood-map-view">
+            <For each={MAP_CORNERS}>{(corner) => <GlFill class={corner} layer={MAP_LAYER} />}</For>
+          </span>
         </button>
       </div>
     </div>

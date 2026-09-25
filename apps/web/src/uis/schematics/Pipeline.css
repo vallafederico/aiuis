@@ -46,9 +46,11 @@
   }
 }
 
+/* Not 0: content first painted under opacity 0 is not an LCP candidate, so
+   LCP would land when the last stage finishes arriving. */
 @keyframes pipe-fade {
   from {
-    opacity: 0;
+    opacity: 0.01;
   }
 }
 
@@ -152,7 +154,7 @@
   font-weight: 700;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 .pipe-title {
@@ -175,7 +177,7 @@
   font-size: 7px;
   letter-spacing: 0.06em;
   line-height: 1.4;
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 .pipe-more {
@@ -211,7 +213,7 @@
   font-family: var(--font-mono);
   font-size: 7px;
   letter-spacing: 0.06em;
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 /* ——— connectors: a line with what flows along it ——— */
@@ -322,11 +324,15 @@
 .pipe-examples {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 8px;
+  gap: 0 8px;
   margin: 0;
 }
 
+/* 24px tap targets (WCAG 2.5.8) around 8px type. */
 .pipe-examples button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -336,7 +342,7 @@
   font-size: 8px;
   letter-spacing: 0.04em;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0.8;
 }
 
 .pipe-examples button:hover {
@@ -365,6 +371,8 @@
 }
 
 .pipe-btn {
+  min-width: 24px;
+  min-height: 24px;
   margin: 0;
   padding: 2px 6px;
   border: 0;

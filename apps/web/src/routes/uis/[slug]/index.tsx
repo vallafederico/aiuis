@@ -11,6 +11,7 @@ import { CompPiece } from "~/components/cms/CompPiece";
 import { extractAside, hastToPlainText, type HastNode } from "~/components/cms/hast";
 import { getPiece } from "~/lib/piece";
 import { resolveUi } from "~/uis/registry";
+import "~/uis/schematics.css";
 
 export const route = {
   preload: ({ params }: { params: { slug: string } }) =>

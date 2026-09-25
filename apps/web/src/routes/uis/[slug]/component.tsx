@@ -8,6 +8,7 @@ import { CompPiece } from "~/components/cms/CompPiece";
 import { extractAside, hastToPlainText, type HastNode } from "~/components/cms/hast";
 import { getPiece } from "~/lib/piece";
 import { resolveDirectedUi, resolveUi } from "~/uis/registry";
+import "~/uis/directed/directed.css";
 
 export const route = {
   preload: ({ params }: { params: { slug: string } }) =>

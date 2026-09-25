@@ -9,6 +9,8 @@
  * watch each stage light up with what it actually produced.
  */
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { isServer } from "solid-js/web";
+import { nestedScroll } from "~/lib/utils/nested-scroll";
 import "./Pipeline.css";
 
 export type Role = "reader" | "code" | "llm" | "jev" | "image" | "source";
@@ -113,6 +115,8 @@ export function Pipeline(props: { spec: PipelineSpec; live?: LiveRun }) {
     );
   });
   onCleanup(() => {
+    // Also runs when SSR re-renders a resolved Suspense; a throw there hangs the stream.
+    if (isServer) return;
     window.clearInterval(timer);
     window.clearTimeout(introTimer);
     abort?.abort();
@@ -171,7 +175,7 @@ export function Pipeline(props: { spec: PipelineSpec; live?: LiveRun }) {
   const stageState = (i: number): StageState | undefined => states()[i];
 
   return (
-    <div class="pipe" data-lenis-prevent classList={{ "is-live": isLive() }}>
+    <div class="pipe" ref={(el) => onMount(() => nestedScroll(el))} classList={{ "is-live": isLive() }}>
       <Show when={props.live}>
         {(live) => (
           <form

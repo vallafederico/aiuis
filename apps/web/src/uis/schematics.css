@@ -1,0 +1,9 @@
+/* Schematic UI styles, in the /uis/:slug route CSS: their lazy chunks load
+   CSS only on the client, so SSR would paint them unstyled and shift. */
+@import "./Mock.css";
+@import "./schematics/Pipeline.css";
+@import "./Find.css";
+@import "./ImageGeneration.css";
+@import "./Images.css";
+@import "./Navigation.css";
+@import "./TypeAnAnalytic.css";

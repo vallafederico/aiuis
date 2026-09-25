@@ -1,5 +1,5 @@
 .section-index {
-  /* Columns 4–9, the centered six. Links fill it so the hover reaches the last one. */
+  /* Columns 4–9, the centered six. */
   width: var(--spacing-grids-6);
   /* Column 4: one column clear of the two-column nav.
      Main is padded by 2/12 of the viewport, so cancel that and sit on the column edge. */
@@ -10,6 +10,7 @@
   width: 0.9em;
 }
 
+/* Items share the heading's lead column: numbers under the icon, titles under the title. */
 .section-index ul {
   display: flex;
   flex-direction: column;
@@ -19,8 +20,4 @@
 .section-index li {
   display: flex;
   padding-block: 0.22rem;
-}
-
-.section-index li a {
-  flex-grow: 1;
 }

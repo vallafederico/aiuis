@@ -1,5 +1,8 @@
+import { Suspense } from "solid-js";
 import { Title, Meta, Link } from "@solidjs/meta";
+import { createAsync } from "@solidjs/router";
 import { SITE } from "~/lib/site";
+import { getSite } from "~/lib/site-settings";
 
 const DEFAULTS = {
   title: "aiuis",
@@ -33,22 +36,34 @@ export default function Metadata({
       : `${SITE.url}${markdown}`
     : undefined;
 
-  const jsonLd = canonical
-    ? {
-        "@context": "https://schema.org",
-        "@type": type === "article" ? "Article" : "WebSite",
-        name: title,
-        headline: title,
-        description,
-        url: canonical,
-        isPartOf: {
-          "@type": "WebSite",
-          name: "aiuis",
-          url: SITE.url,
-        },
-        ...(dateModified ? { dateModified } : {}),
-      }
-    : null;
+  const site = createAsync(() => getSite(), { deferStream: true });
+  const jsonLd = () => {
+    if (!canonical) return null;
+    const s = site();
+    const author = s
+      ? {
+          "@type": "Person",
+          name: s.author,
+          url: s.authorUrl,
+          sameAs: s.links.map((link) => link.href).filter((href) => href !== s.authorUrl),
+        }
+      : undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": type === "article" ? "Article" : "WebSite",
+      name: title,
+      headline: title,
+      description,
+      url: canonical,
+      isPartOf: {
+        "@type": "WebSite",
+        name: "aiuis",
+        url: SITE.url,
+      },
+      ...(author ? { author } : {}),
+      ...(dateModified ? { dateModified } : {}),
+    };
+  };
 
   return (
     <>
@@ -73,10 +88,12 @@ export default function Metadata({
         <Link rel="alternate" type="text/markdown" href={markdownHref} />
       )}
       <Link rel="describedby" href={`${SITE.url}/llms.txt`} />
-      {jsonLd && (
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd).replace(/</g, "\\u003c")}
-        </script>
+      {canonical && (
+        <Suspense>
+          <script type="application/ld+json">
+            {(JSON.stringify(jsonLd()) ?? "null").replace(/</g, "\\u003c")}
+          </script>
+        </Suspense>
       )}
     </>
   );

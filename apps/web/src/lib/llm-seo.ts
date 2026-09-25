@@ -187,6 +187,14 @@ export async function buildLlmsTxt(): Promise<string> {
     lines.push("");
   }
 
+  const { loadSiteSettings } = await import("~/lib/site-settings");
+  const site = await loadSiteSettings();
+  lines.push("## Author", "", `- [${site.author}](${site.authorUrl})`);
+  for (const link of site.links) {
+    if (link.href !== site.authorUrl) lines.push(`- [${link.label}](${link.href})`);
+  }
+  lines.push("");
+
   const extra = fileCmsLinks();
   if (extra.length > 0) {
     lines.push("## Optional", "", ...extra, "");

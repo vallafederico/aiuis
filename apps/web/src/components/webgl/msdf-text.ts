@@ -26,6 +26,7 @@ export type MsdfFontAssets = {
 };
 
 const fontCache = new Map<string, Promise<MsdfFontAssets>>();
+const metricsCache = new Map<string, Promise<BmFont>>();
 
 /** Metrics available synchronously (statically imported at module load). */
 const syncMetricsCache = new Map<string, BmFont>();
@@ -49,12 +50,24 @@ export function getCharMap(font: BmFont): Map<string, BmChar> {
   return m;
 }
 
+/** Metrics only (layout, wrapping): the JSON, without the atlas. */
+export function loadMsdfMetrics(font: string): Promise<BmFont> {
+  const sync = syncMetricsCache.get(font);
+  if (sync) return Promise.resolve(sync);
+  let cached = metricsCache.get(font);
+  if (!cached) {
+    cached = fetch(`/msdf/${font}.json`).then((r) => r.json() as Promise<BmFont>);
+    metricsCache.set(font, cached);
+  }
+  return cached;
+}
+
 /** Atlas + metrics from `pnpm msdf` (public/msdf). Engine must be ready. */
 export function loadMsdfFont(font: string): Promise<MsdfFontAssets> {
   let cached = fontCache.get(font);
   if (!cached) {
     cached = Promise.all([
-      fetch(`/msdf/${font}.json`).then((r) => r.json() as Promise<BmFont>),
+      loadMsdfMetrics(font),
       loadTexture(`/msdf/${font}.sdf.webp`, { fit: "stretch", format: "rgb", data: true }),
     ]).then(([metrics, texture]) => ({ metrics, texture }));
     fontCache.set(font, cached);

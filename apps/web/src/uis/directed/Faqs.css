@@ -98,6 +98,8 @@
 
 .faq-page-q {
   grid-column: 2 / -1;
+  /* WCAG 2.5.8 tap target; single mobile lines are ~17px tall. */
+  min-height: 24px;
   margin: 0;
   padding: 0;
   border: 0;

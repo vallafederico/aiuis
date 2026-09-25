@@ -9,21 +9,33 @@ type CfEnv = {
 };
 
 const PROXY_KEY = "__aiuisPlatformProxy";
+const PROXY_FAILED_KEY = "__aiuisPlatformProxyFailedAt";
+/** After a failed proxy start, wait this long before trying again. */
+const PROXY_RETRY_MS = 30_000;
 
 type PlatformProxy = { env: CfEnv };
 
 async function platformEnv(): Promise<CfEnv | undefined> {
   if (!import.meta.env.DEV) return undefined;
-  const cached = (globalThis as Record<string, unknown>)[PROXY_KEY] as
-    | PlatformProxy
-    | undefined;
+  const store = globalThis as Record<string, unknown>;
+  const cached = store[PROXY_KEY] as PlatformProxy | undefined;
   if (cached) return cached.env;
-  const { getPlatformProxy } = await import("wrangler");
-  const proxy = (await getPlatformProxy({
-    persist: true,
-  })) as PlatformProxy;
-  (globalThis as Record<string, unknown>)[PROXY_KEY] = proxy;
-  return proxy.env;
+  const failedAt = store[PROXY_FAILED_KEY] as number | undefined;
+  if (failedAt && Date.now() - failedAt < PROXY_RETRY_MS) return undefined;
+  try {
+    const { getPlatformProxy } = await import("wrangler");
+    const proxy = (await getPlatformProxy({
+      persist: true,
+    })) as PlatformProxy;
+    store[PROXY_KEY] = proxy;
+    return proxy.env;
+  } catch (error) {
+    // The remote AI binding needs a wrangler login with Workers permissions.
+    // Callers treat a missing binding as "Workers AI unavailable".
+    store[PROXY_FAILED_KEY] = Date.now();
+    console.warn("cf-ai: wrangler platform proxy unavailable", error);
+    return undefined;
+  }
 }
 
 export async function getAi(): Promise<AiBinding | null> {

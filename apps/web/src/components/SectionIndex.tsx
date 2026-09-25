@@ -48,7 +48,7 @@ export default function SectionIndex(props: { href: string }) {
             <For each={section()?.items ?? []}>
               {(item, index) => (
                 <li class="flex items-center">
-                  <NavHit href={item.href} class="relative inline-flex grow items-center min-h-6 min-w-6 nav-hit">
+                  <NavHit href={item.href} class="relative inline-flex items-center min-h-6 min-w-6 nav-hit">
                     <span class="w-15 shrink-0 text-[.7em] font-garara font-[10]">
                       <NavHitText text={`${index() + 1}.`} font="Garara-10" />
                     </span>

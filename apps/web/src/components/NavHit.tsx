@@ -11,6 +11,7 @@ import { A } from "@acme/router";
 import GlRoundRect from "./webgl/GlRoundRect";
 import MsdfText from "./webgl/MsdfText";
 import { readCssColor } from "./webgl/css-color";
+import { externalLinkProps } from "~/lib/links";
 
 const WipeCtx = createContext<() => number>(() => 0);
 
@@ -81,6 +82,7 @@ export function NavHit(props: {
     <WipeCtx.Provider value={motion.wipe}>
       <A
         href={props.href}
+        {...externalLinkProps(props.href)}
         end={props.end}
         class={props.class}
         aria-current={props.current ? "page" : undefined}
@@ -99,6 +101,45 @@ export function NavHit(props: {
         </Show>
         {props.children}
       </A>
+    </WipeCtx.Provider>
+  );
+}
+
+/**
+ * NavHit for a button: the same hover strike and knocked-out WebGL text. An
+ * `active` button holds the strike full, the text knocked out of it.
+ */
+export function NavHitButton(props: {
+  class?: string;
+  active?: boolean;
+  /** Accessible name when it should say more than the visible label. */
+  label?: string;
+  onClick: () => void;
+  children: JSX.Element;
+}) {
+  const motion = createWipe();
+  const wipe = () => (props.active ? 1 : motion.wipe());
+  return (
+    <WipeCtx.Provider value={wipe}>
+      <button
+        type="button"
+        class={props.class}
+        aria-pressed={props.active ?? false}
+        aria-label={props.label}
+        onClick={() => props.onClick()}
+        onPointerEnter={() => motion.enter()}
+        onPointerLeave={() => motion.leave()}
+        // A button keeps focus after a click; only keyboard focus holds the strike.
+        onFocusIn={(event) => {
+          if ((event.currentTarget as HTMLElement).matches(":focus-visible")) motion.enter();
+        }}
+        onFocusOut={() => motion.leave()}
+      >
+        <Show when={wipe() > 0.001}>
+          <HoverStrike wipe={wipe()} />
+        </Show>
+        {props.children}
+      </button>
     </WipeCtx.Provider>
   );
 }

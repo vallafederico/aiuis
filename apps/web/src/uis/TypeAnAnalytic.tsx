@@ -69,7 +69,7 @@ const PIPELINE: PipelineSpec = {
           inside: [
             "httpRequests1dGroups, or 1hGroups for 24h.",
             "Pages and devices come from sampled adaptive groups, html only.",
-            "Needs CF_API_TOKEN; zone and account are looked up from the host.",
+            "Needs CF_ANALYTICS_TOKEN; zone and account are looked up from the host.",
           ],
           file: "lib/dashboard-data.ts",
         },

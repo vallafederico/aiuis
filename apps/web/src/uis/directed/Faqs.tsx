@@ -22,6 +22,7 @@ import { createAsync } from "@acme/router";
 import gsap, { A } from "~/lib/gsap";
 import { SplitText } from "~/lib/split-text";
 import { getNavCatalog, navPieces } from "~/lib/sections";
+import { nestedScroll } from "~/lib/utils/nested-scroll";
 import "./Faqs.css";
 
 const LINE_STAGGER = 0.16;
@@ -362,7 +363,7 @@ export default function FaqsDirected(_props: UiProps) {
       data-intro={introCss() ? "" : undefined}
       style={{ "--n": String(items().length) }}
     >
-      <ol class="faq-page-list">
+      <ol class="faq-page-list" ref={(el) => onMount(() => nestedScroll(el))}>
         <Index each={items()}>
           {(item, index) => (
             <FaqLine
