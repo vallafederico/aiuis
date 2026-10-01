@@ -3,15 +3,12 @@ import { createAsync } from "@solidjs/router";
 import { useParams } from "@solidjs/router";
 import { HttpStatusCode } from "@solidjs/start";
 import Metadata from "~/components/Metadata";
-import { ArticleFocus } from "~/components/ArticleFocus";
 import PageContent from "~/components/PageContent";
-import CmsMsdfBlock from "~/components/cms/CmsMsdfBlock";
-import { CmsBody, CmsForeword } from "~/components/cms/CmsBody";
 import { CompPiece } from "~/components/cms/CompPiece";
 import { extractAside, hastToPlainText, type HastNode } from "~/components/cms/hast";
 import { getPiece } from "~/lib/piece";
-import { resolveUi } from "~/uis/registry";
-import "~/uis/schematics.css";
+import { resolveDirectedUi, resolveUi } from "~/uis/registry";
+import "~/uis/directed/directed.css";
 
 export const route = {
   preload: ({ params }: { params: { slug: string } }) =>
@@ -35,6 +32,12 @@ function metaDescription(piece: {
   return `${text.slice(0, 157).trimEnd()}…`;
 }
 
+function forewordText(body: HastNode | null): string | null {
+  const { node } = extractAside(body, "cms-foreword");
+  return node ? hastToPlainText(node).trim() || null : null;
+}
+
+/** The art-directed component, the UI's primary page; schematics sit behind it. */
 export default function UisPiece() {
   const params = useParams();
   const data = createAsync(() => getPiece(params.slug, "uis"), { deferStream: true });
@@ -61,7 +64,7 @@ export default function UisPiece() {
         }
       >
         <Show
-          when={piece()}
+          when={piece() && resolveUi(piece()!.component) ? piece() : null}
           keyed
           fallback={
             <>
@@ -73,8 +76,7 @@ export default function UisPiece() {
           }
         >
           {(p) => {
-            const extracted = extractAside(p.body_hast, "cms-foreword");
-            const Ui = resolveUi(p.component);
+            const Directed = resolveDirectedUi(p.component);
             return (
               <div class="contents">
                 <Metadata
@@ -85,45 +87,20 @@ export default function UisPiece() {
                   markdown={`/uis/${p.slug}.md`}
                   dateModified={p.updatedIso}
                 />
-                <Show
-                  when={Ui}
-                  keyed
-                  fallback={
-                    <PageContent flow>
-                      <ArticleFocus>
-                        <h1 class="mb-8">
-                          <CmsMsdfBlock text={p.title} class="text-6xl -tracking-widest" />
-                        </h1>
-                        <Show when={extracted.node}>
-                          {(node) => (
-                            <div class="cms-foreword-wrap mb-8 w-grids-4">
-                              <CmsForeword node={node()} />
-                            </div>
-                          )}
-                        </Show>
-                        <article class="cms-body max-w-none text-[2rem] leading-snug">
-                          <CmsBody hast={extracted.rest} />
-                        </article>
-                      </ArticleFocus>
-                    </PageContent>
-                  }
+                <CompPiece
+                  title={p.title}
+                  body={forewordText(p.body_hast) ?? p.excerpt}
+                  tags={p.tags}
+                  updated={p.updated}
                 >
-                  {(Feature) => (
-                    <CompPiece
-                      title={p.title}
-                      body={extracted.node ? hastToPlainText(extracted.node) : p.excerpt}
-                      tags={p.tags}
-                      updated={p.updated}
-                      altHref={`/uis/${p.slug}/component`}
-                      altLabel="See Demo"
-                      altInverted
-                    >
+                  <Show when={Directed} keyed fallback={<div class="uis-stage" />}>
+                    {(Feature) => (
                       <Suspense>
                         <Feature slug={p.slug} title={p.title} />
                       </Suspense>
-                    </CompPiece>
-                  )}
-                </Show>
+                    )}
+                  </Show>
+                </CompPiece>
               </div>
             );
           }}

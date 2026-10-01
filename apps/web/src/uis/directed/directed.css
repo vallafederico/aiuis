@@ -1,4 +1,4 @@
-/* Directed UI styles, in the /uis/:slug/component route CSS: their lazy
+/* Directed UI styles, in the /uis/:slug route CSS: their lazy
    chunks load CSS only on the client, so SSR would paint them unstyled. */
 @import "./Faqs.css";
 @import "./Filters.css";

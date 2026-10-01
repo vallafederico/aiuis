@@ -54,7 +54,7 @@ export function navTotal(sections: NavSection[]) {
 }
 
 /** Sub-views of a UI piece; prev / next keep whichever one you are on. */
-const UIS_SUFFIXES = ["/component", "/schematics"];
+const UIS_SUFFIXES = ["/schematics", "/component"];
 
 function uisSuffix(path: string) {
   const normalized = normalizePath(path);
@@ -81,7 +81,7 @@ export function componentNeighbors(sections: NavSection[], pathname: string) {
   const base = uisBasePath(pathname);
   const index = items.findIndex((item) => normalizePath(item.href) === base);
   if (index < 0) return null;
-  const suffix = uisSuffix(pathname) === "/component" ? "/component" : "";
+  const suffix = uisSuffix(pathname) === "/schematics" ? "/schematics" : "";
   const withSuffix = (item: NavItem): NavItem => ({
     ...item,
     href: `${normalizePath(item.href)}${suffix}`,

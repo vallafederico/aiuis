@@ -32,10 +32,10 @@ const GARARA_COMPONENTS = new Set(["faqs", "type-an-analytic"]);
  */
 function pageFonts(path = "/") {
   const fonts = ["AlteHaasGroteskBold"];
-  const ui = /^\/uis\/([^/]+)(\/component)?\/?$/.exec(path);
-  const component = ui?.[2] ? ui[1]! : null;
+  const ui = /^\/uis\/([^/]+)(\/schematics)?\/?$/.exec(path);
+  const component = ui && !ui[2] ? ui[1]! : null;
   if (!component || GARARA_COMPONENTS.has(component)) fonts.push("Garara");
-  if (ui && !component) fonts.push("ChivoMono-Regular", "ChivoMono-Bold");
+  if (ui?.[2]) fonts.push("ChivoMono-Regular", "ChivoMono-Bold");
   if (component === "type-an-analytic") fonts.push("ChivoMono-Regular");
   return fonts;
 }

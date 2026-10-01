@@ -14,6 +14,7 @@ export type CmsMsdfBlockProps = {
   lineHeight?: number;
   tracking?: number;
   alpha?: number;
+  layer?: number;
 };
 
 const RESIZE_DEBOUNCE_MS = 100;
@@ -124,6 +125,7 @@ export default function CmsMsdfBlock(props: CmsMsdfBlockProps) {
                   font={props.font ?? "AlteHaasGroteskBold"}
                   tracking={props.tracking}
                   alpha={props.alpha}
+                  layer={props.layer}
                   articleLine={articleLine}
                 />
               </span>

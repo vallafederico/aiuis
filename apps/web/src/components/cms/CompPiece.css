@@ -153,3 +153,91 @@ html.ui-component .uis-feature {
   line-height: 1;
   white-space: nowrap;
 }
+
+/* Corner how-to on the component view: the blurb's voice, never catches the pointer. */
+.uis-howto {
+  padding: 10px 12px;
+  width: min(15rem, calc(100vw - 2 * var(--spacing-gx, 1rem)));
+  font-size: 12px;
+  line-height: 1.3;
+  letter-spacing: -0.053em;
+  text-align: right;
+  text-wrap: balance;
+  pointer-events: none;
+  user-select: none;
+}
+
+.uis-howto-fill {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.uis-howto-left {
+  text-align: left;
+}
+
+/* The schematic link closes the how-to card: key strike, label knocked out. */
+.uis-howto-cta {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 0.45em 0.8em 0.4em;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: normal;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.uis-howto:not(.uis-howto-left) .uis-howto-cta {
+  margin-left: auto;
+}
+
+/* DOM UIs: the card is plain DOM so it stays above DOM content (the canvas sits below it). */
+.uis-howto-dom {
+  display: flow-root;
+  z-index: 50;
+  background: #dfdfdf;
+  font-family: var(--font-sans);
+}
+
+.uis-howto-dom p {
+  margin: 0;
+}
+
+.uis-strike-dom {
+  position: relative;
+  display: block;
+  width: max-content;
+  font-weight: 700;
+  text-decoration: none;
+  isolation: isolate;
+}
+
+.uis-strike-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-key);
+  pointer-events: none;
+}
+
+.uis-strike-label {
+  position: relative;
+  display: block;
+  color: var(--color-key);
+}
+
+/* Paper text over the strike, clipped by the same edge as the fill. */
+.uis-strike-ko {
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  color: var(--color-paper, #fff);
+  pointer-events: none;
+}
+
+
+.uis-howto {
+  display: flex;
+  flex-direction: column;
+}

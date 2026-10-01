@@ -31,6 +31,8 @@ type MsdfTextProps = JSX.HTMLAttributes<HTMLSpanElement> & {
   blur?: ProgressiveBlur;
   color?: [number, number, number];
   alpha?: number;
+  /** Draw order; defaults to the text layer (10). */
+  layer?: number;
   weird?: boolean;
   knockout?: boolean;
   /** Whole-string invert (tags) instead of a left-to-right wipe. */
@@ -54,6 +56,7 @@ export default function MsdfText(props: MsdfTextProps) {
     "blur",
     "color",
     "alpha",
+    "layer",
     "weird",
     "knockout",
     "knockoutFill",
@@ -178,7 +181,7 @@ export default function MsdfText(props: MsdfTextProps) {
             value11: local.wipeSpan ?? 1,
             value14: 0,
           },
-          layer: coverCtx ? 12 : undefined,
+          layer: local.layer ?? (coverCtx ? 12 : undefined),
         });
         queueMicrotask(pushCover);
         if (local.articleLine) applyFocus(focus);

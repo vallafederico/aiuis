@@ -29,12 +29,12 @@ export function scaleComponentLens(scale: number) {
 
 export function isComponentView(path: string) {
   const n = path.replace(/\/+$/, "") || "/";
-  return /^\/uis\/[^/]+\/component$/.test(n);
+  return /^\/uis\/[^/]+$/.test(n);
 }
 
-function componentSlug(path: string): string | null {
+export function componentSlug(path: string): string | null {
   const n = path.replace(/\/+$/, "") || "/";
-  return n.match(/^\/uis\/([^/]+)\/component$/)?.[1] ?? null;
+  return n.match(/^\/uis\/([^/]+)$/)?.[1] ?? null;
 }
 
 function applyComponentViewClass(on: boolean) {
