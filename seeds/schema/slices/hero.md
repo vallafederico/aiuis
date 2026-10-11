@@ -2,6 +2,12 @@
 _kind: slice_schema
 type: hero
 intent: "Opening frame — establishes what the page is and why the reader is in the right place. Scanning, not reading."
+preview: { title: "{title}", subtitle: "{subtitle}" }
+when: "First slice of a page that needs a headline and one next step."
+when_not: "Anywhere but first. Utility pages (legal, 404) that open straight into prose."
+hints:
+  - "title is the value proposition in 60 characters, not the page name."
+  - "Use variant split only with a visual worth showing above the fold."
 fields:
   title: { type: string, required: true, max: 60 }
   subtitle: { type: text, max: 160 }

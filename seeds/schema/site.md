@@ -2,12 +2,13 @@
 _kind: schema
 collection: site
 body: markdown
+preview: { subtitle: "{author} · {updated}", media: settings }
 fields:
   title: { type: string, required: true, max: 80 }
-  slug: { type: slug, required: true, from: title }
-  author: { type: string, required: true, max: 80 }
-  author_url: { type: string, required: true, max: 300 }
-  links: { type: array, max_items: 12, items: { type: object, fields: { label: { type: string, required: true, max: 40 }, href: { type: string, required: true, max: 300 } } } }
+  slug: { type: slug, required: true, from: title, description: "Always site: the site reads site/site." }
+  author: { type: string, required: true, max: 80, description: "The name credited on the site and in its structured data." }
+  author_url: { type: string, required: true, max: 300, title: "Author URL", description: "The author's own site, a full URL." }
+  links: { type: array, max_items: 12, title: "Outbound links", description: "In order, bottom right of every page and in /llms.txt. Labels of one or two words.", items: { type: object, fields: { label: { type: string, required: true, max: 40 }, href: { type: string, required: true, max: 300 } } } }
 indexes: []
 ---
 # Writing guidelines for `site`

@@ -2,6 +2,11 @@
 _kind: slice_schema
 type: cta
 intent: "Call to action — one clear next step. Use once per page, at the end or at a natural decision point."
+preview: { title: "{primary.label}", subtitle: "{heading}" }
+when: "The page asks the reader to do one thing: at the end, or right after the content that motivates it."
+when_not: "Decoration, or a second CTA that leads to the same place."
+hints:
+  - "primary.label is an action verb plus an object: Read the docs, not Docs."
 fields:
   heading: { type: string, max: 60 }
   body: { type: text, max: 200 }

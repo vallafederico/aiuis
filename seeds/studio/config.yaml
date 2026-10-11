@@ -1,0 +1,72 @@
+_kind: studio
+title: aiu.is
+# Top tabs. Saved queries and external links live in the structure below.
+tools:
+  - structure
+  - review
+  - { id: context, title: Knowledge }
+  - media
+  - queries
+  - analytics
+  - guide
+  - settings
+structure:
+  - title: Chapters
+    items:
+      - type: collection
+        collection: pieces
+        title: All pieces
+        icon: book-open
+        badge: drafts
+        description: "Every chapter of aiu.is, in all three sections"
+        layout: table
+        columns: [title, section, order, tags, updated, status]
+      - type: list
+        collection: pieces
+        title: Preface
+        icon: bookmark
+        description: "Served at /preface/{slug}: foreword, credits, changelog"
+        filter: { where: 'section == "preface"' }
+        layout: table
+        columns: [title, order, updated, status]
+        new: { initial: { section: preface } }
+      - type: list
+        collection: pieces
+        title: Foundations
+        icon: library
+        description: "Served at /foundations/{slug}: the essays the UIs build on"
+        filter: { where: 'section == "foundations"' }
+        layout: table
+        columns: [title, order, updated, status]
+        new: { initial: { section: foundations } }
+      - type: list
+        collection: pieces
+        title: UIs
+        icon: sparkles
+        description: "Served at /uis/{slug}: one chapter per live experiment; which ones are live is set in apps/web/src/lib/publish.ts"
+        filter: { where: 'section == "uis"' }
+        layout: table
+        columns: [title, order, tags, updated, status]
+        new: { initial: { section: uis } }
+  - title: Site
+    items:
+      - { type: singleton, collection: site, slug: site, title: Site settings, icon: settings, description: "Author, author link and the outbound links in the corner of every page, in /llms.txt and the structured data" }
+      # Defined on the project but not read by the site: kept out of the pane, their URLs still open.
+      - { type: collection, collection: pages, title: Pages, icon: layout-template, hidden: true, description: "Not read by the site; no documents" }
+      - { type: collection, collection: posts, title: Posts, icon: newspaper, hidden: true, description: "Not read by the site; no documents" }
+  - title: Quick links
+    items:
+      - type: query
+        title: Recently edited
+        icon: clock
+        description: "The 20 pieces changed last"
+        query: '*[_type == "piece"] | order(_updatedAt desc) [0...20] { _type, title, "slug": slug.current, _updatedAt }'
+      - { type: link, title: Live site, icon: external-link, url: "https://aiu.is" }
+      - { type: link, title: llms.txt, icon: external-link, url: "https://aiu.is/llms.txt" }
+document:
+  panes: [form, preview, source, history]
+  defaultPane: form
+  actions: [publish, unpublish, archive, revert]
+# The site has no draft preview route, so Studio keeps the CMS's neutral preview.
+preview:
+  mode: neutral
