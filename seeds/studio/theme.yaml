@@ -1,0 +1,23 @@
+_kind: studio-theme
+# The site's own two colours: paper (#e9e9ea) as the light background and the
+# key blue (#0000ff) as the accent. The rest is Studio's default palette; the
+# dark accent is the key blue lifted to pass 3:1 on the dark surfaces.
+colors:
+  bg: "#e9e9ea"
+  panel: "#ffffff"
+  text: "#0a0a0a"
+  muted: "#55555a"
+  accent: "#0000ff"
+  err: "#b42f2f"
+dark:
+  bg: "#070707"
+  panel: "#0f0f0f"
+  text: "#f0f0f0"
+  muted: "#a3a3a3"
+  accent: "#7a85ff"
+  err: "#fca5a5"
+font:
+  family: inter
+  size: 14
+radius: 8
+density: comfortable

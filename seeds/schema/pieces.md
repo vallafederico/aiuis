@@ -2,18 +2,21 @@
 _kind: schema
 collection: pieces
 body: markdown
+preview: { subtitle: "{section} · {order} · {updated}", badges: [status, tags] }
 fields:
-  title: { type: string, required: true, max: 120 }
-  slug: { type: slug, required: true, from: title }
-  section: { type: enum, values: [preface, foundations, uis], required: true }
-  order: { type: number, required: true }
-  description: { type: text, max: 200 }
-  component: { type: slug }
-  tags: { type: tax, taxonomy: data, max_items: 4 }
+  title: { type: string, required: true, max: 120, description: "Sentence case, no trailing period." }
+  slug: { type: slug, required: true, from: title, description: "The URL is /{section}/{slug}." }
+  section: { type: enum, values: [preface, foundations, uis], required: true, description: "The nav heading it sits under: preface, foundations or uis." }
+  order: { type: number, integer: true, required: true, description: "Position in its section, from 1 with no gaps. Renumber the others when you insert one." }
+  description: { type: text, max: 200, description: "One-sentence teaser for the listing. No DATA labels here; those go in tags." }
+  component: { type: slug, title: "UI component", description: "uis pieces only: the UI in apps/web/src/uis. Empty uses the slug." }
+  tags: { type: tax, taxonomy: data, max_items: 4, title: "DATA tags", description: "One model tag plus one or two primitive tags." }
 indexes: [section, order, tags]
 ---
 
 # Writing guidelines for `pieces`
+
+A piece is one chapter of aiu.is: an essay in Preface or Foundations, or the write-up of a live UI experiment in UIs. Each is served at `/{section}/{slug}`.
 
 Tone, punctuation, citations, and length follow the brand-voice skill. A chapter is one essay, 450 to 700 words. The first paragraph is the excerpt: one or two sentences that stand alone. On a piece with a `component`, that opening is one sentence.
 

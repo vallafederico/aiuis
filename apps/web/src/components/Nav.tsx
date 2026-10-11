@@ -12,6 +12,7 @@ import { getDefaultEngine } from "shooosh";
 import { A, onLeave, useLocation, usePreloadRoute } from "@acme/router";
 import GlMark from "./webgl/GlMark";
 import GlRoundRect from "./webgl/GlRoundRect";
+import CmsMsdfBlock from "./cms/CmsMsdfBlock";
 import MsdfText from "./webgl/MsdfText";
 import SdfImage from "./webgl/SdfImage";
 import { readCssColor } from "./webgl/css-color";
@@ -27,7 +28,8 @@ import {
   type NavSection,
 } from "~/lib/sections";
 import { isComponentPath } from "~/lib/component-path";
-import { isComponentView, syncComponentView } from "~/lib/component-view";
+import { hintsDom, hintsLeft, uiHints } from "~/uis/hints";
+import { componentSlug, isComponentView, syncComponentView } from "~/lib/component-view";
 import { labelForTag } from "~/uis/meta";
 import { getSite } from "~/lib/site-settings";
 import { CountDigits } from "./CountDigits";
@@ -423,18 +425,110 @@ function ComponentDock(props: { sections: NavSection[]; pathname: string }) {
   );
 }
 
-/** Component view's only chrome besides the logo: back to the schematic, and all UIs. */
+/** Card over the experiment: pill-grey fill above its WebGL, key-colour text above the fill. */
+const HOWTO_CARD_LAYER = 40;
+const HOWTO_PILL: [number, number, number] = [0.8745, 0.8745, 0.8745];
+
+/**
+ * NavHit's inverted look in plain DOM: a key strike with the label knocked out
+ * to paper, wiped away from the right on hover or focus. Driven by createWipe,
+ * so the duration and easing are NavHit's own.
+ */
+function DomStrikeLink(props: { href: string; label: string; class?: string }) {
+  const motion = createWipe();
+  const clip = () => `inset(0 ${(motion.wipe() * 100).toFixed(2)}% 0 0)`;
+  return (
+    <A
+      href={props.href}
+      class={`${props.class ?? ""} uis-strike-dom`}
+      onPointerEnter={() => motion.enter()}
+      onPointerLeave={() => motion.leave()}
+      onFocusIn={() => motion.enter()}
+      onFocusOut={() => motion.leave()}
+    >
+      <span class="uis-strike-fill" style={{ "clip-path": clip() }} aria-hidden="true" />
+      <span class="uis-strike-label">{props.label}</span>
+      <span class="uis-strike-label uis-strike-ko" style={{ "clip-path": clip() }} aria-hidden="true">
+        {props.label}
+      </span>
+    </A>
+  );
+}
+
+function HowToCard(props: {
+  lines: string[];
+  href: string;
+  /** Plain DOM instead of WebGL, for UIs whose content is DOM and would draw over a canvas card. */
+  dom?: boolean;
+  left?: boolean;
+  class?: string;
+}) {
+  const label = "See Schematic";
+  return (
+    <div
+      class={`uis-howto${props.left ? " uis-howto-left" : ""}${props.dom ? " uis-howto-dom" : ""} ${props.class ?? ""}`}
+      data-board-exclude
+    >
+      <Show
+        when={props.dom}
+        fallback={
+          <GlRoundRect class="uis-howto-fill" layer={HOWTO_CARD_LAYER} radius={0} fill={HOWTO_PILL} />
+        }
+      >
+        {null}
+      </Show>
+      <For each={props.lines}>
+        {(line) => (
+          <p>
+            <Show when={props.dom} fallback={<CmsMsdfBlock text={line} tracking={-0.053} layer={HOWTO_CARD_LAYER + 1} />}>
+              {line}
+            </Show>
+          </p>
+        )}
+      </For>
+      <Show
+        when={props.dom}
+        fallback={
+          <NavHit
+            href={props.href}
+            inverted
+            layer={HOWTO_CARD_LAYER + 1}
+            class="uis-howto-cta pointer-events-auto relative inline-flex items-center"
+          >
+            <NavHitText text={label} font="AlteHaasGroteskBold" layer={HOWTO_CARD_LAYER + 2} />
+          </NavHit>
+        }
+      >
+        <DomStrikeLink href={props.href} label={label} class="uis-howto-cta" />
+      </Show>
+    </div>
+  );
+}
+
+/** Component view's only chrome besides the logo: all UIs (the schematic link lives in the card). */
 function ComponentViewChrome(props: { pathname: string }) {
-  const schematic = () => props.pathname.replace(/\/component\/?$/, "");
+  const slug = () => componentSlug(props.pathname) ?? "";
+  const lines = () => uiHints[slug()] ?? [];
+  const left = () => hintsLeft.has(slug());
+  const dom = () => hintsDom.has(slug());
+  const href = () => `/uis/${slug()}/schematics`;
   return (
     <Show when={isComponentView(props.pathname)}>
-      <div class="fixed top-[3svh] left-gx z-30 pointer-events-auto" data-board-exclude>
-        <DockHit href={schematic()} label="Back to schematic" kind="prev" />
-      </div>
-      <div class="fixed right-gx bottom-[3svh] z-30 pointer-events-auto" data-board-exclude>
-        <NavHit href="/uis" class="relative inline-flex items-center">
-          <NavHitText text="UIs" font="AlteHaasGroteskBold" />
-        </NavHit>
+      <Show when={left()}>
+        <HowToCard lines={lines()} href={href()} dom={dom()} left class="fixed left-gx bottom-[3svh] z-30" />
+      </Show>
+      <div
+        class="fixed right-gx bottom-[3svh] z-30 flex flex-col items-end gap-3 pointer-events-none"
+        data-board-exclude
+      >
+        <Show when={!left()}>
+          <HowToCard lines={lines()} href={href()} dom={dom()} class="relative" />
+        </Show>
+        <div class="pointer-events-auto">
+          <NavHit href="/uis" class="relative inline-flex items-center">
+            <NavHitText text="UIs" font="AlteHaasGroteskBold" />
+          </NavHit>
+        </div>
       </div>
     </Show>
   );
@@ -446,7 +540,7 @@ const CORNER_CLEAR = new Set(["/", "/preface", "/foundations", "/uis"]);
 
 function SocialLinks(props: { pathname: string; indexOpen: boolean }) {
   const site = createAsync(() => getSite(), { deferStream: true });
-  const shown = () => !!site() && !/^\/uis\/[^/]+\/component$/.test(normalizePath(props.pathname));
+  const shown = () => !!site() && !isComponentView(props.pathname);
   /** On a phone, reading pages keep the links in the index instead of over the text. */
   const reading = () => !CORNER_CLEAR.has(normalizePath(props.pathname)) && !props.indexOpen;
   return (

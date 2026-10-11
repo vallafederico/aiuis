@@ -61,10 +61,10 @@ export function createWipe(duration = DURATION) {
   return { wipe, enter: () => go(1), leave: () => go(0), reset };
 }
 
-function HoverStrike(props: { wipe: number; box?: boolean }) {
+function HoverStrike(props: { wipe: number; box?: boolean; layer?: number }) {
   return (
     <GlRoundRect
-      layer={8}
+      layer={props.layer ?? 8}
       radius={0}
       wipe={props.wipe}
       fill={readCssColor("--color-key")}
@@ -90,6 +90,8 @@ export function NavHit(props: {
   inverted?: boolean;
   /** 0–1 entrance of the inverted strike; it only wipes in as far as this. */
   reveal?: number;
+  /** WebGL draw layer of the strike, for links that sit over another quad (default 8). */
+  layer?: number;
   children: JSX.Element;
 }) {
   const motion = createWipe();
@@ -116,7 +118,7 @@ export function NavHit(props: {
         onFocusOut={() => motion.leave()}
       >
         <Show when={!props.current && wipe() > 0.001}>
-          <HoverStrike wipe={wipe()} box={props.inverted} />
+          <HoverStrike wipe={wipe()} box={props.inverted} layer={props.layer} />
         </Show>
         {props.children}
       </A>
@@ -173,6 +175,7 @@ export function NavHitText(props: {
   alpha?: number;
   /** The nav's distorted letterforms; off for links set in body copy. */
   weird?: boolean;
+  layer?: number;
 }) {
   const wipe = useContext(WipeCtx);
   const [box, setBox] = createSignal({ origin: 0, span: 1 });
@@ -209,6 +212,7 @@ export function NavHitText(props: {
         lineHeight={props.lineHeight}
         class={props.class}
         alpha={props.alpha}
+        layer={props.layer}
         knockout
         wipe={wipe()}
         wipeOrigin={box().origin}

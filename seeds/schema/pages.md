@@ -15,6 +15,8 @@ indexes: []
 ---
 # Writing guidelines for `pages`
 
+Not read by the site yet: aiu.is renders `pieces` and `site` only, so a page written here is not published anywhere.
+
 Pages are composed from slices. Always begin with `get_schema` before authoring — slice types, allowed combinations, and position rules are enforced by the write path and will reject invalid compositions.
 
 Start with a hero slice unless the page is a bare utility page (legal, 404). The hero sets the frame; everything after must justify its existence relative to the hero's promise.

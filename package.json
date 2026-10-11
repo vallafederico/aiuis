@@ -15,7 +15,7 @@
     "score:moodboard": "pnpm --dir scripts/score-moodboard exec tsx score-moodboard-tiles.ts",
     "deploy:web": "pnpm --filter web run deploy",
     "seed:content": "node scripts/seed-content-software.mjs",
-    "content": "pnpm --dir ../content.software exec -- node packages/cli/bin/content.mjs",
+    "content": "node ../content.software/packages/cli/bin/content.mjs",
     "lint": "oxlint"
   },
   "devDependencies": {

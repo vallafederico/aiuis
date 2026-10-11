@@ -2,6 +2,10 @@
 _kind: slice_schema
 type: prose
 intent: "Rich text body content — paragraphs, lists, code, headings. The workhorse slice."
+when: "Body copy: one idea per slice, headings from h2."
+when_not: "A call to action (use cta) or anything needing raw HTML (needs its own slice type)."
+hints:
+  - "Split a slice that covers two topics so each can be moved on its own."
 fields: {}
 body: markdown
 ---

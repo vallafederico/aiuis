@@ -13,6 +13,8 @@ indexes: [date, tags]
 ---
 # Writing guidelines for `posts`
 
+Not read by the site yet: aiu.is renders `pieces` and `site` only, so a post written here is not published anywhere.
+
 Titles in sentence case. No title case, no trailing period.
 
 Excerpt is the first paragraph — write it to stand alone. Readers on index pages see only the excerpt; make it earn a click or make it complete enough that no click is needed.

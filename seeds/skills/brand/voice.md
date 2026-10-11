@@ -4,6 +4,7 @@ name: brand-voice
 audience: [content-agent, human]
 attach: global
 mode: always
+tags: [essay, citations]
 description: "Scientific essay voice for aiu.is: direct claims, concrete scenes and exact numbers, one governing image, philosophy and science citations, no em dashes, chapter length"
 lint:
   banned_terms: ["synergy", "cutting-edge", "next-generation", "best-in-class", "game-changer", "seamless", "leverage", "utilize", "—"]

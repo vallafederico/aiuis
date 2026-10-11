@@ -36,6 +36,8 @@ terms:
   - { slug: mix, title: MIX, description: "Blend or interpolate from neighbors (gap-click, between A and B)." }
   - { slug: iteration, title: ITERATION, description: "Regenerate or refine in place from a single result." }
   - { slug: scroll, title: SCROLL, description: "Continuous scroll as the surface the model writes into." }
+  - { slug: sketch, title: SKETCH, description: "A rough drawing is the input the model reads or completes." }
+  - { slug: filter, title: FILTER, description: "The model keeps or drops items from a set by a stated criterion." }
 ---
 
 DATA labels for `/uis` chapters. Shown under Data on component pages and as `/data/:tag` indexes.
